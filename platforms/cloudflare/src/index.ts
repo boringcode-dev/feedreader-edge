@@ -19,7 +19,7 @@ export default {
     const repo = new D1Repository(env.DB);
     const sources = build();
 
-    if (url.pathname === "/") return handleHome(url, repo);
+    if (url.pathname === "/") return handleHome(url, env, repo);
     if (url.pathname === "/healthz") return handleHealthz(sources, repo);
     if (url.pathname === "/api/items") return handleItemsApi(url, repo);
     if (url.pathname === "/api/refresh") {
@@ -39,12 +39,14 @@ export default {
   },
 };
 
-async function handleHome(url: URL, repo: D1Repository): Promise<Response> {
-  const source = normalizeSource(url.searchParams.get("source") ?? "");
-  const searchQuery = normalizeSearchQuery(url.searchParams.get("q") ?? "");
+async function handleHome(url: URL, env: Env, repo: D1Repository): Promise<Response> {
+  const protocolAction = normalizeProtocolAction(url.searchParams.get("open"));
+  const source = normalizeSource(url.searchParams.get("source") ?? protocolAction.source);
+  const searchQuery = normalizeSearchQuery(url.searchParams.get("q") ?? protocolAction.query);
   const querySource = source === "all" ? "" : source;
   const canonicalUrl = `${url.origin}${url.pathname}${url.search}`;
   const socialImageUrl = `${url.origin}/og-image.png?v=1`;
+  const appVersion = env.APP_VERSION?.trim() || "dev";
 
   const { items, hasNext } = await feedItems(repo, PAGE_SIZE, 0, querySource, [], searchQuery);
   const snapshots = await dashboard(build(), repo, 1);
@@ -62,6 +64,7 @@ async function handleHome(url: URL, repo: D1Repository): Promise<Response> {
     currentYear: new Date().getUTCFullYear(),
     canonicalUrl,
     socialImageUrl,
+    appVersion,
   });
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
 }
@@ -180,6 +183,34 @@ function normalizeSourceList(raw: string): string[] {
 
 function normalizeSearchQuery(raw: string): string {
   return raw.trim().split(/\s+/).filter(Boolean).join(" ");
+}
+
+function normalizeProtocolAction(raw: string | null): { source: string; query: string } {
+  if (!raw || raw.trim() === "") {
+    return { source: "", query: "" };
+  }
+
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== "web+feedreader:") {
+      return { source: "", query: "" };
+    }
+
+    if (url.hostname === "source") {
+      return { source: decodeURIComponent(url.pathname.replace(/^\//, "")), query: "" };
+    }
+
+    if (url.hostname === "search") {
+      return {
+        source: "",
+        query: decodeURIComponent(url.pathname.replace(/^\//, "")).replace(/\+/g, " "),
+      };
+    }
+  } catch {
+    return { source: "", query: "" };
+  }
+
+  return { source: "", query: "" };
 }
 
 function buildSourceFilters(current: string) {

@@ -1,0 +1,17 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html, body { margin: 0; width: 96px; height: 96px; overflow: hidden; background: transparent; }
+body { display: grid; place-items: center; }
+.tile {
+  width: 96px; height: 96px; border-radius: 26px; overflow: hidden; position: relative;
+  background: linear-gradient(180deg, #1f3145, #111e2c);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+.tile::after {
+  content: ''; position: absolute; inset: 8px; border-radius: 20px;
+  border: 1px solid rgba(255,255,255,0.10);
+}
+.logo { position: absolute; inset: 18px; display: grid; place-items: center; }
+.logo img { width: 100%; height: 100%; object-fit: contain; }
+</style></head>
+<body><div class="tile"><div class="logo"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJyZWFkZXIiPgogIDxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjZjk3MzE2Ii8+CiAgPGNpcmNsZSBjeD0iMTgiIGN5PSI0NiIgcj0iNSIgZmlsbD0iI2ZmZmZmZiIvPgogIDxwYXRoIGQ9Ik0xNCAyOGEyMiAyMiAwIDAgMSAyMiAyMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNyIvPgogIDxwYXRoIGQ9Ik0xNCAxNmEzNCAzNCAwIDAgMSAzNCAzNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNyIvPgo8L3N2Zz4K"></div></div></body></html>

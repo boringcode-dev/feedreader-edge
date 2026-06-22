@@ -36,6 +36,7 @@ binding = "SELF"
 service = "feedreader"
 
 [vars]
+APP_VERSION = "dev"
 FEEDREADER_ITEMS_PER_SOURCE = "20"
 FEEDREADER_USER_AGENT = "feedreader/0.1"
 

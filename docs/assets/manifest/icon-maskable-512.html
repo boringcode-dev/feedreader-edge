@@ -1,0 +1,18 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><style>
+html, body { margin: 0; width: 512px; height: 512px; overflow: hidden; background: transparent; }
+body { display: grid; place-items: center; }
+.tile {
+  width: 100%; height: 100%; position: relative; overflow: hidden;
+  background: linear-gradient(180deg, #ff8a3d, #f97316);
+}
+.tile::after {
+  content: ''; position: absolute; inset: 10%; border-radius: 28%;
+  border: 2px solid rgba(255,255,255,0.12);
+}
+.logo {
+  position: absolute; inset: 18%; display: grid; place-items: center;
+}
+.logo img { width: 100%; height: 100%; object-fit: contain; }
+</style></head>
+<body><div class="tile"><div class="logo"><img src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJyZWFkZXIiPgogIDxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjZjk3MzE2Ii8+CiAgPGNpcmNsZSBjeD0iMTgiIGN5PSI0NiIgcj0iNSIgZmlsbD0iI2ZmZmZmZiIvPgogIDxwYXRoIGQ9Ik0xNCAyOGEyMiAyMiAwIDAgMSAyMiAyMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNyIvPgogIDxwYXRoIGQ9Ik0xNCAxNmEzNCAzNCAwIDAgMSAzNCAzNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNyIvPgo8L3N2Zz4K"></div></div></body></html>

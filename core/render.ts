@@ -26,6 +26,7 @@ export interface PageData {
   currentYear: number;
   canonicalUrl: string;
   socialImageUrl: string;
+  appVersion: string;
 }
 
 export function escapeHtml(value: unknown): string {
@@ -146,11 +147,11 @@ export function renderIndexPage(data: PageData): string {
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="reader" />
-    <link rel="manifest" href="/site.webmanifest?v=9" />
+    <link rel="manifest" href="/site.webmanifest?v=10" />
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=38" />
+    <link rel="stylesheet" href="/static/style.css?v=39" />
     <script src="/static/app.js?v=31" defer></script>
   </head>
   <body>
@@ -328,6 +329,7 @@ export function renderIndexPage(data: PageData): string {
           <button class="dialog-button" type="button" data-source-config-cancel>Cancel</button>
           <button class="dialog-button dialog-button-primary" type="button" data-source-config-save>Save</button>
         </div>
+        <p class="config-dialog-meta">Build ${escapeHtml(data.appVersion)}</p>
       </form>
     </dialog>
 ${errorsBlock}

@@ -6,6 +6,7 @@ export interface Env {
    * a public-internet self-fetch that would need a known hostname. */
   SELF: Fetcher;
   REFRESH_SECRET: string;
+  APP_VERSION?: string;
   FEEDREADER_ITEMS_PER_SOURCE?: string;
   FEEDREADER_USER_AGENT?: string;
 }

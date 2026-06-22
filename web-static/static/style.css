@@ -530,6 +530,14 @@ body.is-dialog-open {
   gap: 0.55rem;
 }
 
+.config-dialog-meta {
+  margin: -0.15rem 0 0;
+  color: var(--muted);
+  font-size: 0.74rem;
+  line-height: 1.35;
+  text-align: center;
+}
+
 .dialog-button {
   min-height: var(--control-height);
   padding: 0 0.95rem;
@@ -849,6 +857,10 @@ body.is-dialog-open {
 
 :root[data-ui-density="compact"] .config-dialog-actions {
   gap: 0.45rem;
+}
+
+:root[data-ui-density="compact"] .config-dialog-meta {
+  font-size: 0.7rem;
 }
 
 :root[data-ui-density="compact"] .dialog-button {

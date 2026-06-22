@@ -8,6 +8,7 @@
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#111e2c",
   "theme_color": "#111e2c",
   "categories": ["news", "productivity", "developer"],
@@ -17,13 +18,40 @@
       "src": "/icon-192.png?v=8",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
     },
     {
       "src": "/icon-512.png?v=8",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable-192.png?v=1",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icon-maskable-512.png?v=1",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/manifest-assets/screenshot-wide.png?v=1",
+      "sizes": "1440x1120",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Reader desktop feed view"
+    },
+    {
+      "src": "/manifest-assets/screenshot-mobile.png?v=1",
+      "sizes": "430x932",
+      "type": "image/png",
+      "label": "Reader mobile feed view"
     }
   ],
   "shortcuts": [
@@ -31,25 +59,35 @@
       "name": "All sources",
       "short_name": "All",
       "description": "Open the combined feed",
-      "url": "/"
+      "url": "/",
+      "icons": [{ "src": "/shortcuts/all-96.png?v=1", "sizes": "96x96", "type": "image/png" }]
     },
     {
       "name": "Hacker News",
       "short_name": "HN",
       "description": "Open the Hacker News feed",
-      "url": "/?source=hackernews"
+      "url": "/?source=hackernews",
+      "icons": [{ "src": "/shortcuts/hackernews-96.png?v=1", "sizes": "96x96", "type": "image/png" }]
     },
     {
       "name": "GitHub Trending",
       "short_name": "GitHub",
       "description": "Open the GitHub Trending feed",
-      "url": "/?source=github"
+      "url": "/?source=github",
+      "icons": [{ "src": "/shortcuts/github-96.png?v=1", "sizes": "96x96", "type": "image/png" }]
     },
     {
       "name": "Hugging Face Papers",
       "short_name": "Hugging Face",
       "description": "Open the Hugging Face Papers feed",
-      "url": "/?source=huggingface"
+      "url": "/?source=huggingface",
+      "icons": [{ "src": "/shortcuts/huggingface-96.png?v=1", "sizes": "96x96", "type": "image/png" }]
+    }
+  ],
+  "protocol_handlers": [
+    {
+      "protocol": "web+feedreader",
+      "url": "/?open=%s"
     }
   ]
 }
