@@ -151,7 +151,7 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=39" />
+    <link rel="stylesheet" href="/static/style.css?v=40" />
     <script src="/static/app.js?v=31" defer></script>
   </head>
   <body>
@@ -325,11 +325,13 @@ export function renderIndexPage(data: PageData): string {
             </label>
           </div>
         </section>
-        <div class="config-dialog-actions">
-          <button class="dialog-button" type="button" data-source-config-cancel>Cancel</button>
-          <button class="dialog-button dialog-button-primary" type="button" data-source-config-save>Save</button>
+        <div class="config-dialog-footer-row">
+          <p class="config-dialog-meta">Build ${escapeHtml(data.appVersion)}</p>
+          <div class="config-dialog-actions">
+            <button class="dialog-button" type="button" data-source-config-cancel>Cancel</button>
+            <button class="dialog-button dialog-button-primary" type="button" data-source-config-save>Save</button>
+          </div>
         </div>
-        <p class="config-dialog-meta">Build ${escapeHtml(data.appVersion)}</p>
       </form>
     </dialog>
 ${errorsBlock}

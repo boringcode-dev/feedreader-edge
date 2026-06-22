@@ -524,6 +524,13 @@ body.is-dialog-open {
   overscroll-behavior: none;
 }
 
+.config-dialog-footer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .config-dialog-actions {
   display: flex;
   justify-content: flex-end;
@@ -531,11 +538,12 @@ body.is-dialog-open {
 }
 
 .config-dialog-meta {
-  margin: -0.15rem 0 0;
+  margin: 0;
   color: var(--muted);
   font-size: 0.74rem;
   line-height: 1.35;
-  text-align: center;
+  text-align: left;
+  flex: 1 1 auto;
 }
 
 .dialog-button {
@@ -853,6 +861,10 @@ body.is-dialog-open {
 :root[data-ui-density="compact"] .choice-icon {
   width: 0.92rem;
   height: 0.92rem;
+}
+
+:root[data-ui-density="compact"] .config-dialog-footer-row {
+  gap: 0.55rem;
 }
 
 :root[data-ui-density="compact"] .config-dialog-actions {
