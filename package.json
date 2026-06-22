@@ -2,6 +2,9 @@
   "name": "feedreader",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "wrangler dev --config platforms/cloudflare/wrangler.toml",
     "deploy": "wrangler deploy --config platforms/cloudflare/wrangler.toml",
