@@ -1,0 +1,43 @@
+name = "feedreader"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[observability]
+enabled = true
+
+# Local `wrangler dev` host/port. 8787 is wrangler's own default but is
+# already taken by another local service on this machine — override here
+# (or per-run with `--ip`/`--port`, e.g. `npm run dev -- --port 8789`).
+[dev]
+ip = "127.0.0.1"
+port = 8788
+
+# Hourly, UTC. Asia/Ho_Chi_Minh (UTC+7, no DST) hourly wall-clock boundaries
+# are the same instants as UTC hourly wall-clock boundaries, so no offset
+# math is needed (see docs/RUNBOOK.md).
+[triggers]
+crons = ["0 * * * *"]
+
+[assets]
+directory = "../../web-static"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "feedreader"
+database_id = "0afd7879-f7cd-4d44-a077-3c40211dee20"
+migrations_dir = "migrations"
+
+# Self-binding used to fan out per-source refreshes as fresh Worker
+# invocations (see docs/RUNBOOK.md) rather than self-fetching over the
+# public internet, which would require hardcoding a hostname.
+[[services]]
+binding = "SELF"
+service = "feedreader"
+
+[vars]
+FEEDREADER_ITEMS_PER_SOURCE = "20"
+FEEDREADER_USER_AGENT = "feedreader/0.1"
+
+# REFRESH_SECRET is a secret, not a var — set it with:
+#   wrangler secret put REFRESH_SECRET --config platforms/cloudflare/wrangler.toml

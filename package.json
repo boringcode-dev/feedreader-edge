@@ -1,0 +1,22 @@
+{
+  "name": "feedreader",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --config platforms/cloudflare/wrangler.toml",
+    "deploy": "wrangler deploy --config platforms/cloudflare/wrangler.toml",
+    "db:migrate:local": "wrangler d1 migrations apply feedreader --local --config platforms/cloudflare/wrangler.toml",
+    "db:migrate:remote": "wrangler d1 migrations apply feedreader --remote --config platforms/cloudflare/wrangler.toml",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250121.0",
+    "typescript": "^5.7.3",
+    "vitest": "^3.0.5",
+    "wrangler": "^4.0.0"
+  },
+  "dependencies": {
+    "linkedom": "^0.18.5"
+  }
+}
