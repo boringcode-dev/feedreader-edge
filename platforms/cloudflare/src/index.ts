@@ -43,6 +43,8 @@ async function handleHome(url: URL, repo: D1Repository): Promise<Response> {
   const source = normalizeSource(url.searchParams.get("source") ?? "");
   const searchQuery = normalizeSearchQuery(url.searchParams.get("q") ?? "");
   const querySource = source === "all" ? "" : source;
+  const canonicalUrl = `${url.origin}${url.pathname}${url.search}`;
+  const socialImageUrl = `${url.origin}/og-image.png?v=1`;
 
   const { items, hasNext } = await feedItems(repo, PAGE_SIZE, 0, querySource, [], searchQuery);
   const snapshots = await dashboard(build(), repo, 1);
@@ -58,6 +60,8 @@ async function handleHome(url: URL, repo: D1Repository): Promise<Response> {
     pageSize: PAGE_SIZE,
     hasNext,
     currentYear: new Date().getUTCFullYear(),
+    canonicalUrl,
+    socialImageUrl,
   });
   return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
 }

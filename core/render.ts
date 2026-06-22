@@ -24,6 +24,8 @@ export interface PageData {
   pageSize: number;
   hasNext: boolean;
   currentYear: number;
+  canonicalUrl: string;
+  socialImageUrl: string;
 }
 
 export function escapeHtml(value: unknown): string {
@@ -120,7 +122,22 @@ export function renderIndexPage(data: PageData): string {
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>reader</title>
     <meta name="application-name" content="reader" />
-    <meta name="description" content="Tiny private feed reader for Hacker News, GitHub Trending, Hugging Face Papers, and alphaXiv." />
+    <meta name="description" content="Tiny feed reader for Hacker News, GitHub Trending, Hugging Face Papers, and alphaXiv." />
+    <link rel="canonical" href="${escapeHtml(data.canonicalUrl)}" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="reader" />
+    <meta property="og:title" content="reader — engineering and research signals" />
+    <meta property="og:description" content="Tiny feed reader for Hacker News, GitHub Trending, Hugging Face Papers, and alphaXiv." />
+    <meta property="og:url" content="${escapeHtml(data.canonicalUrl)}" />
+    <meta property="og:image" content="${escapeHtml(data.socialImageUrl)}" />
+    <meta property="og:image:alt" content="reader social preview showing branded feed cards for engineering and research sources" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="reader — engineering and research signals" />
+    <meta name="twitter:description" content="Tiny feed reader for Hacker News, GitHub Trending, Hugging Face Papers, and alphaXiv." />
+    <meta name="twitter:image" content="${escapeHtml(data.socialImageUrl)}" />
+    <meta name="twitter:image:alt" content="reader social preview showing branded feed cards for engineering and research sources" />
     <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#111e2c" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#111e2c" />
