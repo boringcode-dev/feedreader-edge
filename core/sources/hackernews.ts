@@ -2,9 +2,17 @@
 
 import type { FeedItem } from "../domain.ts";
 import type { Source } from "./index.ts";
-import { cleanString, firstNonEmpty, getWithRetry, HttpError, readLimitedText, unescapeHtmlEntities } from "./util.ts";
+import {
+  cleanString,
+  firstNonEmpty,
+  getWithRetry,
+  HttpError,
+  readLimitedText,
+  unescapeHtmlEntities,
+} from "./util.ts";
 
-const HACKER_NEWS_FRONT_PAGE_API = "https://hn.algolia.com/api/v1/search?tags=front_page";
+const HACKER_NEWS_FRONT_PAGE_API =
+  "https://hn.algolia.com/api/v1/search?tags=front_page";
 
 interface HnStory {
   objectID?: string;
@@ -32,7 +40,10 @@ export const hackerNewsSource: Source = {
   async fetch(): Promise<FeedItem[]> {
     const response = await getWithRetry(HACKER_NEWS_FRONT_PAGE_API);
     if (!response.ok) {
-      throw new HttpError(response.status, await readLimitedText(response, 1024));
+      throw new HttpError(
+        response.status,
+        await readLimitedText(response, 1024),
+      );
     }
     const payload = (await response.json()) as HnFrontPage;
     return parseHackerNews(payload);
@@ -58,9 +69,21 @@ export function parseHackerNews(payload: HnFrontPage): FeedItem[] {
     items.push({
       source: "hackernews",
       externalId,
-      title: firstNonEmpty(node.title ?? "", node.story_title ?? "", externalId).trim(),
-      url: firstNonEmpty(node.url ?? "", node.story_url ?? "", commentsUrl).trim(),
-      summary: cleanString(extractHnSummary(firstNonEmpty(node.story_text ?? "", node.comment_text ?? ""))),
+      title: firstNonEmpty(
+        node.title ?? "",
+        node.story_title ?? "",
+        externalId,
+      ).trim(),
+      url: firstNonEmpty(
+        node.url ?? "",
+        node.story_url ?? "",
+        commentsUrl,
+      ).trim(),
+      summary: cleanString(
+        extractHnSummary(
+          firstNonEmpty(node.story_text ?? "", node.comment_text ?? ""),
+        ),
+      ),
       author: cleanString((node.author ?? "").trim()),
       score: node.points ?? undefined,
       commentsUrl: cleanString(commentsUrl),

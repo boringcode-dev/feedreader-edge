@@ -2,15 +2,27 @@
 // Cloudflare Cron Triggers (and, in a later Deno adapter, Deno.cron) own
 // scheduling entirely; see platforms/cloudflare/src/index.ts.
 
-import type { CardView, ErrorView, FeedItem, RefreshOutcome, SourceSnapshot } from "./domain.ts";
+import type {
+  CardView,
+  ErrorView,
+  FeedItem,
+  RefreshOutcome,
+  SourceSnapshot,
+} from "./domain.ts";
 import type { FeedRepository } from "./ports.ts";
 import type { Source } from "./sources/index.ts";
 
-export async function refreshAll(sources: Source[], repo: FeedRepository): Promise<RefreshOutcome[]> {
+export async function refreshAll(
+  sources: Source[],
+  repo: FeedRepository,
+): Promise<RefreshOutcome[]> {
   return Promise.all(sources.map((source) => refreshOne(source, repo)));
 }
 
-export async function refreshOne(source: Source, repo: FeedRepository): Promise<RefreshOutcome> {
+export async function refreshOne(
+  source: Source,
+  repo: FeedRepository,
+): Promise<RefreshOutcome> {
   const attemptedAtIso = new Date().toISOString();
   let items: FeedItem[];
   try {
@@ -35,11 +47,18 @@ export async function refreshOne(source: Source, repo: FeedRepository): Promise<
   return { source: source.key(), ok: true, itemCount: items.length };
 }
 
-export async function dashboard(sources: Source[], repo: FeedRepository, limit: number): Promise<SourceSnapshot[]> {
+export async function dashboard(
+  sources: Source[],
+  repo: FeedRepository,
+  limit: number,
+): Promise<SourceSnapshot[]> {
   const states = await repo.listSourceStates();
   const snapshots: SourceSnapshot[] = [];
   for (const source of sources) {
-    const state = states[source.key()] ?? { source: source.key(), itemCount: 0 };
+    const state = states[source.key()] ?? {
+      source: source.key(),
+      itemCount: 0,
+    };
     const items = await repo.getCurrentItems(source.key(), limit);
     snapshots.push({
       source: source.key(),
@@ -64,7 +83,13 @@ export async function feedItems(
   searchQuery: string,
 ): Promise<{ items: FeedItem[]; hasNext: boolean }> {
   const fetchLimit = limit > 0 ? limit + 1 : limit;
-  let items = await repo.listFeedItems(fetchLimit, offset, source, sources, searchQuery);
+  let items = await repo.listFeedItems(
+    fetchLimit,
+    offset,
+    source,
+    sources,
+    searchQuery,
+  );
   let hasNext = false;
   if (limit > 0 && items.length > limit) {
     hasNext = true;
@@ -73,7 +98,10 @@ export async function feedItems(
   return { items, hasNext };
 }
 
-export async function healthPayload(sources: Source[], repo: FeedRepository): Promise<Record<string, unknown>> {
+export async function healthPayload(
+  sources: Source[],
+  repo: FeedRepository,
+): Promise<Record<string, unknown>> {
   const snapshots = await dashboard(sources, repo, 1);
   const total = await repo.countTotalItems();
   return {
@@ -99,7 +127,12 @@ export function buildCards(items: FeedItem[], offset: number): CardView[] {
       index: offset + i + 1,
       title: item.title,
       url: item.url,
-      brief: composeBrief(briefPrefix, briefDateIso, briefDateKind, briefSuffix),
+      brief: composeBrief(
+        briefPrefix,
+        briefDateIso,
+        briefDateKind,
+        briefSuffix,
+      ),
       briefPrefix,
       briefSuffix,
       briefDateIso,
@@ -112,7 +145,11 @@ export function buildCards(items: FeedItem[], offset: number): CardView[] {
 export function buildErrors(snapshots: SourceSnapshot[]): ErrorView[] {
   return snapshots
     .filter((snapshot) => (snapshot.lastError ?? "").trim() !== "")
-    .map((snapshot) => ({ source: snapshot.source, label: snapshot.label, error: snapshot.lastError as string }));
+    .map((snapshot) => ({
+      source: snapshot.source,
+      label: snapshot.label,
+      error: snapshot.lastError as string,
+    }));
 }
 
 function cardBriefPrefix(item: FeedItem): string | undefined {
@@ -128,7 +165,9 @@ function cardBriefSuffix(item: FeedItem): string | undefined {
       const summary = normalizedSummary(item.summary);
       if (summary) return summary;
       const language = metadataString(item.metadata, "language");
-      return language ? `Trending ${language} repository on GitHub` : "Trending repository on GitHub";
+      return language
+        ? `Trending ${language} repository on GitHub`
+        : "Trending repository on GitHub";
     }
     case "huggingface": {
       const summary = normalizedSummary(item.summary);
@@ -166,10 +205,12 @@ function cardStatFragments(item: FeedItem): string[] {
       break;
     }
     case "huggingface":
-      if (item.score != null) fragments.push(`${formatCount(item.score)} upvotes`);
+      if (item.score != null)
+        fragments.push(`${formatCount(item.score)} upvotes`);
       break;
     case "alphaxiv":
-      if (item.score != null) fragments.push(`${formatCount(item.score)} likes`);
+      if (item.score != null)
+        fragments.push(`${formatCount(item.score)} likes`);
       break;
   }
   return fragments;
@@ -199,7 +240,10 @@ function composeBrief(
   return joined === "" ? undefined : joined;
 }
 
-function cardDateLabelFromParts(dateIso: string | undefined, dateKind: string): string {
+function cardDateLabelFromParts(
+  dateIso: string | undefined,
+  dateKind: string,
+): string {
   if (!dateIso || dateIso.trim() === "") return "";
   const parsedMs = Date.parse(dateIso);
   if (Number.isNaN(parsedMs)) return "";
@@ -211,7 +255,20 @@ function cardDateLabelFromParts(dateIso: string | undefined, dateKind: string): 
 }
 
 function formatMonthDayYear(date: Date): string {
-  const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
   return `${months[date.getUTCMonth()]} ${date.getUTCDate()}, ${date.getUTCFullYear()}`;
 }
 
@@ -223,16 +280,24 @@ function normalizedSummary(summary: string | undefined): string | undefined {
 function hostLabel(rawUrl: string): string {
   let trimmed = rawUrl.trim();
   trimmed = trimmed.replace(/^https:\/\//, "").replace(/^http:\/\//, "");
-  const host = (trimmed.split("/", 1)[0] ?? "").toLowerCase().replace(/^www\./, "");
+  const host = (trimmed.split("/", 1)[0] ?? "")
+    .toLowerCase()
+    .replace(/^www\./, "");
   return host === "" ? rawUrl : host;
 }
 
-function metadataInt(metadata: Record<string, unknown>, key: string): number | undefined {
+function metadataInt(
+  metadata: Record<string, unknown>,
+  key: string,
+): number | undefined {
   const value = metadata[key];
   return typeof value === "number" ? value : undefined;
 }
 
-function metadataString(metadata: Record<string, unknown>, key: string): string | undefined {
+function metadataString(
+  metadata: Record<string, unknown>,
+  key: string,
+): string | undefined {
   const value = metadata[key];
   if (typeof value !== "string" || value.trim() === "") return undefined;
   return value;

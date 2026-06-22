@@ -4,14 +4,26 @@
 // — see wrangler.toml and docs/RUNBOOK.md.
 
 import type { RefreshOutcome } from "../../../core/domain.ts";
-import { buildCards, buildErrors, dashboard, feedItems, healthPayload, refreshOne } from "../../../core/service.ts";
+import {
+  buildCards,
+  buildErrors,
+  dashboard,
+  feedItems,
+  healthPayload,
+  refreshOne,
+} from "../../../core/service.ts";
 import { build, type Source } from "../../../core/sources/index.ts";
 import { renderIndexPage } from "../../../core/render.ts";
 import { D1Repository } from "./repository.ts";
 import type { Env } from "./env.d.ts";
 
 const PAGE_SIZE = 12;
-const KNOWN_SOURCES = new Set(["hackernews", "github", "huggingface", "alphaxiv"]);
+const KNOWN_SOURCES = new Set([
+  "hackernews",
+  "github",
+  "huggingface",
+  "alphaxiv",
+]);
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -24,7 +36,10 @@ export default {
     if (url.pathname === "/api/items") return handleItemsApi(url, repo);
     if (url.pathname === "/api/refresh") {
       if (request.method !== "POST") {
-        return new Response("method not allowed", { status: 405, headers: { Allow: "POST" } });
+        return new Response("method not allowed", {
+          status: 405,
+          headers: { Allow: "POST" },
+        });
       }
       return handleRefresh(env, sources);
     }
@@ -39,16 +54,31 @@ export default {
   },
 };
 
-async function handleHome(url: URL, env: Env, repo: D1Repository): Promise<Response> {
+async function handleHome(
+  url: URL,
+  env: Env,
+  repo: D1Repository,
+): Promise<Response> {
   const protocolAction = normalizeProtocolAction(url.searchParams.get("open"));
-  const source = normalizeSource(url.searchParams.get("source") ?? protocolAction.source);
-  const searchQuery = normalizeSearchQuery(url.searchParams.get("q") ?? protocolAction.query);
+  const source = normalizeSource(
+    url.searchParams.get("source") ?? protocolAction.source,
+  );
+  const searchQuery = normalizeSearchQuery(
+    url.searchParams.get("q") ?? protocolAction.query,
+  );
   const querySource = source === "all" ? "" : source;
   const canonicalUrl = `${url.origin}${url.pathname}${url.search}`;
   const socialImageUrl = `${url.origin}/og-image.png?v=1`;
   const appVersion = env.APP_VERSION?.trim() || "dev";
 
-  const { items, hasNext } = await feedItems(repo, PAGE_SIZE, 0, querySource, [], searchQuery);
+  const { items, hasNext } = await feedItems(
+    repo,
+    PAGE_SIZE,
+    0,
+    querySource,
+    [],
+    searchQuery,
+  );
   const snapshots = await dashboard(build(), repo, 1);
 
   const html = renderIndexPage({
@@ -66,10 +96,15 @@ async function handleHome(url: URL, env: Env, repo: D1Repository): Promise<Respo
     socialImageUrl,
     appVersion,
   });
-  return new Response(html, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+  return new Response(html, {
+    headers: { "Content-Type": "text/html; charset=utf-8" },
+  });
 }
 
-async function handleHealthz(sources: Source[], repo: D1Repository): Promise<Response> {
+async function handleHealthz(
+  sources: Source[],
+  repo: D1Repository,
+): Promise<Response> {
   const payload = await healthPayload(sources, repo);
   return Response.json(payload);
 }
@@ -77,13 +112,22 @@ async function handleHealthz(sources: Source[], repo: D1Repository): Promise<Res
 async function handleItemsApi(url: URL, repo: D1Repository): Promise<Response> {
   const source = normalizeSource(url.searchParams.get("source") ?? "");
   const searchQuery = normalizeSearchQuery(url.searchParams.get("q") ?? "");
-  const selectedSources = normalizeSourceList(url.searchParams.get("sources") ?? "");
+  const selectedSources = normalizeSourceList(
+    url.searchParams.get("sources") ?? "",
+  );
   let limit = parsePositiveInt(url.searchParams.get("limit"), PAGE_SIZE);
   if (limit > 100) limit = 100;
   const offset = parseNonNegativeInt(url.searchParams.get("offset"), 0);
   const querySource = source === "all" ? "" : source;
 
-  const { items, hasNext } = await feedItems(repo, limit, offset, querySource, selectedSources, searchQuery);
+  const { items, hasNext } = await feedItems(
+    repo,
+    limit,
+    offset,
+    querySource,
+    selectedSources,
+    searchQuery,
+  );
   const cards = buildCards(items, offset);
 
   return Response.json({
@@ -138,15 +182,23 @@ async function handleInternalRefresh(
  * parse — gets its own 10ms CPU budget instead of sharing one invocation's
  * budget across all 4 sources. See docs/RUNBOOK.md.
  */
-async function fanOutRefresh(env: Env, sources: Source[]): Promise<RefreshOutcome[]> {
+async function fanOutRefresh(
+  env: Env,
+  sources: Source[],
+): Promise<RefreshOutcome[]> {
   const results = await Promise.allSettled(
     sources.map(async (source) => {
-      const response = await env.SELF.fetch(`http://internal/internal/refresh/${source.key()}`, {
-        method: "POST",
-        headers: { "X-Refresh-Secret": env.REFRESH_SECRET },
-      });
+      const response = await env.SELF.fetch(
+        `http://internal/internal/refresh/${source.key()}`,
+        {
+          method: "POST",
+          headers: { "X-Refresh-Secret": env.REFRESH_SECRET },
+        },
+      );
       if (!response.ok) {
-        throw new Error(`internal refresh for ${source.key()} returned ${response.status}`);
+        throw new Error(
+          `internal refresh for ${source.key()} returned ${response.status}`,
+        );
       }
       return (await response.json()) as RefreshOutcome;
     }),
@@ -154,7 +206,12 @@ async function fanOutRefresh(env: Env, sources: Source[]): Promise<RefreshOutcom
   return results.map((result, i) =>
     result.status === "fulfilled"
       ? result.value
-      : { source: sources[i]!.key(), ok: false, itemCount: 0, error: errorMessage(result.reason) },
+      : {
+          source: sources[i]!.key(),
+          ok: false,
+          itemCount: 0,
+          error: errorMessage(result.reason),
+        },
   );
 }
 
@@ -185,7 +242,10 @@ function normalizeSearchQuery(raw: string): string {
   return raw.trim().split(/\s+/).filter(Boolean).join(" ");
 }
 
-function normalizeProtocolAction(raw: string | null): { source: string; query: string } {
+function normalizeProtocolAction(raw: string | null): {
+  source: string;
+  query: string;
+} {
   if (!raw || raw.trim() === "") {
     return { source: "", query: "" };
   }
@@ -197,13 +257,19 @@ function normalizeProtocolAction(raw: string | null): { source: string; query: s
     }
 
     if (url.hostname === "source") {
-      return { source: decodeURIComponent(url.pathname.replace(/^\//, "")), query: "" };
+      return {
+        source: decodeURIComponent(url.pathname.replace(/^\//, "")),
+        query: "",
+      };
     }
 
     if (url.hostname === "search") {
       return {
         source: "",
-        query: decodeURIComponent(url.pathname.replace(/^\//, "")).replace(/\+/g, " "),
+        query: decodeURIComponent(url.pathname.replace(/^\//, "")).replace(
+          /\+/g,
+          " ",
+        ),
       };
     }
   } catch {
@@ -215,11 +281,31 @@ function normalizeProtocolAction(raw: string | null): { source: string; query: s
 
 function buildSourceFilters(current: string) {
   const defs = [
-    { key: "all", label: "All enabled sources", iconPath: undefined as string | undefined },
-    { key: "hackernews", label: "Hacker News", iconPath: "/static/source-icons/hackernews.svg" },
-    { key: "github", label: "GitHub Trending", iconPath: "/static/source-icons/github.svg" },
-    { key: "huggingface", label: "Hugging Face Papers Trending", iconPath: "/static/source-icons/huggingface.svg" },
-    { key: "alphaxiv", label: "alphaXiv", iconPath: "/static/source-icons/alphaxiv.png" },
+    {
+      key: "all",
+      label: "All enabled sources",
+      iconPath: undefined as string | undefined,
+    },
+    {
+      key: "hackernews",
+      label: "Hacker News",
+      iconPath: "/static/source-icons/hackernews.svg",
+    },
+    {
+      key: "github",
+      label: "GitHub Trending",
+      iconPath: "/static/source-icons/github.svg",
+    },
+    {
+      key: "huggingface",
+      label: "Hugging Face Trending Papers",
+      iconPath: "/static/source-icons/huggingface.svg",
+    },
+    {
+      key: "alphaxiv",
+      label: "alphaXiv",
+      iconPath: "/static/source-icons/alphaxiv.png",
+    },
   ];
   return defs.map((item) => ({ ...item, active: item.key === current }));
 }
@@ -242,7 +328,7 @@ function sourceLabel(source: string): string {
     case "github":
       return "GitHub Trending";
     case "huggingface":
-      return "Hugging Face Papers Trending";
+      return "Hugging Face Trending Papers";
     case "alphaxiv":
       return "alphaXiv";
     default:

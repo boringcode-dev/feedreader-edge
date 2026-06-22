@@ -37,7 +37,11 @@ const ITEM_COLUMNS =
 export class D1Repository implements FeedRepository {
   constructor(private readonly db: D1Database) {}
 
-  async saveSnapshot(source: string, fetchedAtIso: string, items: FeedItem[]): Promise<void> {
+  async saveSnapshot(
+    source: string,
+    fetchedAtIso: string,
+    items: FeedItem[],
+  ): Promise<void> {
     const upsertItem = this.db.prepare(`
       INSERT INTO items (
         source, external_id, title, url, summary, author, score, comments_url,
@@ -92,7 +96,11 @@ export class D1Repository implements FeedRepository {
     await this.db.batch([...statements, upsertSyncState]);
   }
 
-  async recordFailure(source: string, attemptedAtIso: string, message: string): Promise<void> {
+  async recordFailure(
+    source: string,
+    attemptedAtIso: string,
+    message: string,
+  ): Promise<void> {
     await this.db
       .prepare(
         `
@@ -109,7 +117,9 @@ export class D1Repository implements FeedRepository {
 
   async listSourceStates(): Promise<Record<string, SyncState>> {
     const { results } = await this.db
-      .prepare(`SELECT source, last_attempt_at, last_success_at, last_error, item_count FROM sync_state`)
+      .prepare(
+        `SELECT source, last_attempt_at, last_success_at, last_error, item_count FROM sync_state`,
+      )
       .all<SyncStateRow>();
     const out: Record<string, SyncState> = {};
     for (const row of results) {
@@ -184,7 +194,9 @@ export class D1Repository implements FeedRepository {
   }
 
   async countTotalItems(): Promise<number> {
-    const row = await this.db.prepare(`SELECT COUNT(*) as count FROM items`).first<{ count: number }>();
+    const row = await this.db
+      .prepare(`SELECT COUNT(*) as count FROM items`)
+      .first<{ count: number }>();
     return row?.count ?? 0;
   }
 }
@@ -216,6 +228,9 @@ function searchTermsSql(raw: string): string[] {
 }
 
 function likePattern(term: string): string {
-  const escaped = term.replace(/\\/g, "\\\\").replace(/%/g, "\\%").replace(/_/g, "\\_");
+  const escaped = term
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_");
   return `%${escaped}%`;
 }

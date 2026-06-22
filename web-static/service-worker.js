@@ -23,22 +23,30 @@ const STATIC_ASSET_PATHS = new Set([
 ]);
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(CORE_ASSETS)));
+  event.waitUntil(
+    caches.open(SHELL_CACHE).then((cache) => cache.addAll(CORE_ASSETS)),
+  );
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil((async () => {
-    await Promise.all(
-      (await caches.keys())
-        .filter((key) => key.startsWith("reader-") && ![SHELL_CACHE, ITEMS_CACHE].includes(key))
-        .map((key) => caches.delete(key)),
-    );
-    if (self.registration.navigationPreload) {
-      await self.registration.navigationPreload.enable();
-    }
-    await self.clients.claim();
-  })());
+  event.waitUntil(
+    (async () => {
+      await Promise.all(
+        (await caches.keys())
+          .filter(
+            (key) =>
+              key.startsWith("reader-") &&
+              ![SHELL_CACHE, ITEMS_CACHE].includes(key),
+          )
+          .map((key) => caches.delete(key)),
+      );
+      if (self.registration.navigationPreload) {
+        await self.registration.navigationPreload.enable();
+      }
+      await self.clients.claim();
+    })(),
+  );
 });
 
 self.addEventListener("fetch", (event) => {
@@ -62,7 +70,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  if (url.pathname.startsWith("/static/") || STATIC_ASSET_PATHS.has(url.pathname)) {
+  if (
+    url.pathname.startsWith("/static/") ||
+    STATIC_ASSET_PATHS.has(url.pathname)
+  ) {
     event.respondWith(handleStaticAssetRequest(request));
   }
 });
@@ -84,7 +95,11 @@ async function handleNavigationRequest(event) {
     }
     return response;
   } catch {
-    return (await cache.match(request)) || (await cache.match("/")) || Response.error();
+    return (
+      (await cache.match(request)) ||
+      (await cache.match("/")) ||
+      Response.error()
+    );
   }
 }
 

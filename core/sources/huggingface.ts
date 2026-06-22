@@ -3,7 +3,14 @@
 
 import type { FeedItem } from "../domain.ts";
 import type { Source } from "./index.ts";
-import { cleanString, firstNonEmpty, getWithRetry, HttpError, readLimitedText, unescapeHtmlEntities } from "./util.ts";
+import {
+  cleanString,
+  firstNonEmpty,
+  getWithRetry,
+  HttpError,
+  readLimitedText,
+  unescapeHtmlEntities,
+} from "./util.ts";
 
 const HOMEPAGE_URL = "https://huggingface.co/papers/trending";
 const DAILY_PAPERS_PATTERN = /data-target="DailyPapers"\s+data-props="([^"]+)"/;
@@ -38,12 +45,15 @@ interface HfDailyProps {
 
 export const huggingFacePapersSource: Source = {
   key: () => "huggingface",
-  label: () => "Hugging Face Papers Trending",
+  label: () => "Hugging Face Trending Papers",
   homepageUrl: () => HOMEPAGE_URL,
   async fetch(): Promise<FeedItem[]> {
     const response = await getWithRetry(HOMEPAGE_URL);
     if (!response.ok) {
-      throw new HttpError(response.status, await readLimitedText(response, 1024));
+      throw new HttpError(
+        response.status,
+        await readLimitedText(response, 1024),
+      );
     }
     const body = await response.text();
     return parseHuggingFacePapers(body);
@@ -64,7 +74,9 @@ export function parseHuggingFacePapers(payload: string): FeedItem[] {
     const paperId = firstNonEmpty(paper.id ?? "", entry.id ?? "");
     if (paperId === "") return;
 
-    const authors = (paper.authors ?? []).map((a) => (a.name ?? "").trim()).filter((name) => name !== "");
+    const authors = (paper.authors ?? [])
+      .map((a) => (a.name ?? "").trim())
+      .filter((name) => name !== "");
 
     const metadata: Record<string, unknown> = {};
     if (paper.numComments != null) {
@@ -73,7 +85,10 @@ export function parseHuggingFacePapers(payload: string): FeedItem[] {
     if (authors.length > 0) {
       metadata.authors = authors.length > 6 ? authors.slice(0, 6) : authors;
     }
-    const submittedBy = firstNonEmpty(entry.submittedBy?.fullname ?? "", entry.submittedBy?.name ?? "").trim();
+    const submittedBy = firstNonEmpty(
+      entry.submittedBy?.fullname ?? "",
+      entry.submittedBy?.name ?? "",
+    ).trim();
     if (submittedBy !== "") {
       metadata.submitted_by = submittedBy;
     }
@@ -81,12 +96,20 @@ export function parseHuggingFacePapers(payload: string): FeedItem[] {
     items.push({
       source: "huggingface",
       externalId: paperId,
-      title: firstNonEmpty(entry.title ?? "", paper.title ?? "", paperId).trim(),
+      title: firstNonEmpty(
+        entry.title ?? "",
+        paper.title ?? "",
+        paperId,
+      ).trim(),
       url: `https://huggingface.co/papers/${paperId}`,
-      summary: cleanString(firstNonEmpty(entry.summary ?? "", paper.summary ?? "")),
+      summary: cleanString(
+        firstNonEmpty(entry.summary ?? "", paper.summary ?? ""),
+      ),
       author: cleanString(authorSummary(authors)),
       score: firstDefined(entry.upvotes, paper.upvotes),
-      publishedAt: parseIsoTime(firstNonEmpty(entry.publishedAt ?? "", paper.publishedAt ?? "")),
+      publishedAt: parseIsoTime(
+        firstNonEmpty(entry.publishedAt ?? "", paper.publishedAt ?? ""),
+      ),
       sourceRank: i + 1,
       metadata,
     });
@@ -106,7 +129,9 @@ function authorSummary(authors: string[]): string {
   return `${authors.slice(0, 3).join(", ")} +${authors.length - 3}`;
 }
 
-function firstDefined(...values: (number | null | undefined)[]): number | undefined {
+function firstDefined(
+  ...values: (number | null | undefined)[]
+): number | undefined {
   for (const value of values) {
     if (value != null) return value;
   }

@@ -4,7 +4,7 @@
 // interpolated value. All other markup (head, header SVGs, settings dialog)
 // has zero template directives in the original and is copied verbatim.
 
-import type { CardView, ErrorView } from './domain.ts';
+import type { CardView, ErrorView } from "./domain.ts";
 
 export interface SourceFilterView {
   key: string;
@@ -31,35 +31,35 @@ export interface PageData {
 
 export function escapeHtml(value: unknown): string {
   return String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
 function sourceIconPath(source: string): string {
   switch (source) {
-    case 'hackernews':
-      return '/static/source-icons/hackernews.svg';
-    case 'github':
-      return '/static/source-icons/github.svg';
-    case 'huggingface':
-      return '/static/source-icons/huggingface.svg';
-    case 'alphaxiv':
-      return '/static/source-icons/alphaxiv.png';
+    case "hackernews":
+      return "/static/source-icons/hackernews.svg";
+    case "github":
+      return "/static/source-icons/github.svg";
+    case "huggingface":
+      return "/static/source-icons/huggingface.svg";
+    case "alphaxiv":
+      return "/static/source-icons/alphaxiv.png";
     default:
-      return '';
+      return "";
   }
 }
 
 function renderFilterButton(filter: SourceFilterView): string {
-  const activeClass = filter.active ? ' is-active' : '';
-  if (filter.key === 'all') {
+  const activeClass = filter.active ? " is-active" : "";
+  if (filter.key === "all") {
     return `<button class="filter-button${activeClass}" type="button" data-filter="${escapeHtml(filter.key)}" aria-label="${escapeHtml(filter.label)}" title="${escapeHtml(filter.label)}">All</button>`;
   }
   return `<button class="filter-button${activeClass} filter-button--icon" type="button" data-filter="${escapeHtml(filter.key)}" aria-label="${escapeHtml(filter.label)}" title="${escapeHtml(filter.label)}">
-              <img class="source-icon-image source-icon-image--filter source-icon-image--${escapeHtml(filter.key)}" src="${escapeHtml(filter.iconPath ?? '')}" alt="" aria-hidden="true" />
+              <img class="source-icon-image source-icon-image--filter source-icon-image--${escapeHtml(filter.key)}" src="${escapeHtml(filter.iconPath ?? "")}" alt="" aria-hidden="true" />
             </button>`;
 }
 
@@ -71,20 +71,20 @@ function renderCard(card: CardView): string {
   const briefAttrs = [
     card.briefPrefix
       ? ` data-brief-prefix="${escapeHtml(card.briefPrefix)}"`
-      : '',
+      : "",
     card.briefSuffix
       ? ` data-brief-suffix="${escapeHtml(card.briefSuffix)}"`
-      : '',
+      : "",
     card.briefDateIso
       ? ` data-brief-date-iso="${escapeHtml(card.briefDateIso)}" data-brief-date-kind="${escapeHtml(card.briefDateKind)}"`
-      : '',
-  ].join('');
+      : "",
+  ].join("");
   const briefBlock = card.brief
     ? `
           <p class="item-brief"${briefAttrs}>
             <span class="item-brief-text">${escapeHtml(card.brief)}</span>
           </p>`
-    : '';
+    : "";
   return `
         <article class="item-card" data-source="${escapeHtml(card.source)}">
           <h2 class="item-title">
@@ -96,25 +96,25 @@ function renderCard(card: CardView): string {
 }
 
 export function renderIndexPage(data: PageData): string {
-  const searchOpenClass = data.searchOpen ? ' is-search-active' : '';
-  const searchFormOpenClass = data.searchOpen ? ' is-open' : '';
-  const searchToggleActiveClass = data.searchOpen ? ' is-active' : '';
-  const searchToggleLabel = data.searchOpen ? 'Close search' : 'Search feed';
-  const searchToggleExpanded = data.searchOpen ? 'true' : 'false';
+  const searchOpenClass = data.searchOpen ? " is-search-active" : "";
+  const searchFormOpenClass = data.searchOpen ? " is-open" : "";
+  const searchToggleActiveClass = data.searchOpen ? " is-active" : "";
+  const searchToggleLabel = data.searchOpen ? "Close search" : "Search feed";
+  const searchToggleExpanded = data.searchOpen ? "true" : "false";
   const hiddenSourceValue =
-    data.currentSource !== 'all' ? escapeHtml(data.currentSource) : '';
+    data.currentSource !== "all" ? escapeHtml(data.currentSource) : "";
   const errorsBlock =
     data.errors.length > 0
       ? `
     <section class="shell error-stack">
-      ${data.errors.map(renderErrorBanner).join('\n      ')}
+      ${data.errors.map(renderErrorBanner).join("\n      ")}
     </section>`
-      : '';
-  const cardsHiddenClass = data.cards.length === 0 ? ' is-hidden' : '';
-  const emptyHiddenClass = data.cards.length > 0 ? ' is-hidden' : '';
-  const footerHiddenClass = data.cards.length === 0 ? ' is-hidden' : '';
+      : "";
+  const cardsHiddenClass = data.cards.length === 0 ? " is-hidden" : "";
+  const emptyHiddenClass = data.cards.length > 0 ? " is-hidden" : "";
+  const footerHiddenClass = data.cards.length === 0 ? " is-hidden" : "";
   const viewMoreHidden =
-    data.cards.length === 0 || !data.hasNext ? ' hidden' : '';
+    data.cards.length === 0 || !data.hasNext ? " hidden" : "";
 
   return `<!doctype html>
 <html lang="en" data-theme="dark">
@@ -193,7 +193,7 @@ export function renderIndexPage(data: PageData): string {
       <div class="controls-row${searchOpenClass}" data-controls-row>
         <div class="filter-cluster">
           <nav class="segmented" data-filter-nav aria-label="Source filters">
-            ${data.sourceFilters.map(renderFilterButton).join('\n            ')}
+            ${data.sourceFilters.map(renderFilterButton).join("\n            ")}
           </nav>
         </div>
         <div class="search-cluster">
@@ -313,7 +313,7 @@ export function renderIndexPage(data: PageData): string {
               <input type="checkbox" value="huggingface" data-source-option checked />
               <img class="source-icon-image source-icon-image--dialog source-icon-image--huggingface" src="/static/source-icons/huggingface.svg" alt="" aria-hidden="true" />
               <span class="config-option-body">
-                <span class="config-option-title">Hugging Face Papers Trending</span>
+                <span class="config-option-title">Hugging Face Trending Papers</span>
               </span>
             </label>
             <label class="config-option">
@@ -336,8 +336,8 @@ export function renderIndexPage(data: PageData): string {
     </dialog>
 ${errorsBlock}
     <main class="shell page-body">
-      <section class="cards-grid${cardsHiddenClass}" data-card-grid data-current-source="${escapeHtml(data.currentSource)}" data-page-size="${data.pageSize}" data-has-next="${data.hasNext ? 'true' : 'false'}" aria-busy="false">
-        ${data.cards.map(renderCard).join('\n        ')}
+      <section class="cards-grid${cardsHiddenClass}" data-card-grid data-current-source="${escapeHtml(data.currentSource)}" data-page-size="${data.pageSize}" data-has-next="${data.hasNext ? "true" : "false"}" aria-busy="false">
+        ${data.cards.map(renderCard).join("\n        ")}
       </section>
 
       <div class="empty-state${emptyHiddenClass}" data-empty-state>${escapeHtml(data.emptyMessage)}</div>

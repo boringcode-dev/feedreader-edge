@@ -8,7 +8,11 @@ export class HttpError extends Error {
   readonly body: string;
 
   constructor(statusCode: number, body: string) {
-    super(body ? `unexpected status ${statusCode}: ${body}` : `unexpected status ${statusCode}`);
+    super(
+      body
+        ? `unexpected status ${statusCode}: ${body}`
+        : `unexpected status ${statusCode}`,
+    );
     this.name = "HttpError";
     this.statusCode = statusCode;
     this.body = body;
@@ -27,7 +31,10 @@ function sleep(ms: number, signal?: AbortSignal): Promise<void> {
 }
 
 /** Mirrors getWithRetry: up to 2 retries (250ms, 750ms backoff) on 408/425/429/5xx. */
-export async function getWithRetry(url: string, init: RequestInit = {}): Promise<Response> {
+export async function getWithRetry(
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
   const attempts = RETRY_DELAYS_MS.length + 1;
   let lastError: unknown;
   for (let attempt = 1; attempt <= attempts; attempt++) {
@@ -46,7 +53,10 @@ export async function getWithRetry(url: string, init: RequestInit = {}): Promise
   throw lastError ?? new Error(`upstream retry loop exhausted for ${url}`);
 }
 
-export async function readLimitedText(response: Response, limit: number): Promise<string> {
+export async function readLimitedText(
+  response: Response,
+  limit: number,
+): Promise<string> {
   const text = await response.text();
   return text.slice(0, limit);
 }
@@ -75,7 +85,9 @@ export function firstNonEmpty(...values: string[]): string {
   return "";
 }
 
-export function cleanString(value: string | undefined | null): string | undefined {
+export function cleanString(
+  value: string | undefined | null,
+): string | undefined {
   const trimmed = (value ?? "").trim();
   return trimmed === "" ? undefined : trimmed;
 }
@@ -103,12 +115,19 @@ const NAMED_ENTITIES: Record<string, string> = {
  * HTML5 named-character-reference table — covers what real-world titles and
  * summaries from these sources actually use. */
 export function unescapeHtmlEntities(value: string): string {
-  return value.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g, (match, body: string) => {
-    if (body[0] === "#") {
-      const codePoint =
-        body[1] === "x" || body[1] === "X" ? Number.parseInt(body.slice(2), 16) : Number.parseInt(body.slice(1), 10);
-      return Number.isNaN(codePoint) ? match : String.fromCodePoint(codePoint);
-    }
-    return NAMED_ENTITIES[body] ?? match;
-  });
+  return value.replace(
+    /&(#x?[0-9a-fA-F]+|[a-zA-Z]+);/g,
+    (match, body: string) => {
+      if (body[0] === "#") {
+        const codePoint =
+          body[1] === "x" || body[1] === "X"
+            ? Number.parseInt(body.slice(2), 16)
+            : Number.parseInt(body.slice(1), 10);
+        return Number.isNaN(codePoint)
+          ? match
+          : String.fromCodePoint(codePoint);
+      }
+      return NAMED_ENTITIES[body] ?? match;
+    },
+  );
 }

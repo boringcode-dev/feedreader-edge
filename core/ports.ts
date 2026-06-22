@@ -8,8 +8,16 @@
 import type { FeedItem, SyncState } from "./domain.ts";
 
 export interface FeedRepository {
-  saveSnapshot(source: string, fetchedAtIso: string, items: FeedItem[]): Promise<void>;
-  recordFailure(source: string, attemptedAtIso: string, message: string): Promise<void>;
+  saveSnapshot(
+    source: string,
+    fetchedAtIso: string,
+    items: FeedItem[],
+  ): Promise<void>;
+  recordFailure(
+    source: string,
+    attemptedAtIso: string,
+    message: string,
+  ): Promise<void>;
   listSourceStates(): Promise<Record<string, SyncState>>;
   getCurrentItems(source: string, limit: number): Promise<FeedItem[]>;
   listFeedItems(

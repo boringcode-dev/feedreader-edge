@@ -39,10 +39,14 @@ describe("parseHackerNews", () => {
     expect(first!.summary).toBe("Example & summary.");
     expect(first!.commentsUrl).toBe("https://news.ycombinator.com/item?id=123");
     expect(first!.metadata.comments_count).toBe(11);
-    expect(first!.publishedAt).toBe(new Date("2026-06-21T12:44:13Z").toISOString());
+    expect(first!.publishedAt).toBe(
+      new Date("2026-06-21T12:44:13Z").toISOString(),
+    );
     expect(first!.sourceRank).toBe(1);
 
     expect(second!.url).toBe("https://news.ycombinator.com/item?id=456");
-    expect(second!.commentsUrl).toBe("https://news.ycombinator.com/item?id=456");
+    expect(second!.commentsUrl).toBe(
+      "https://news.ycombinator.com/item?id=456",
+    );
   });
 });

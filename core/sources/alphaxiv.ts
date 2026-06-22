@@ -7,11 +7,30 @@
 import type { FeedItem } from "../domain.ts";
 import { parseHtmlDocument } from "./dom.ts";
 import type { Source } from "./index.ts";
-import { cleanString, getWithRetry, HttpError, parseDigits, readLimitedText } from "./util.ts";
+import {
+  cleanString,
+  getWithRetry,
+  HttpError,
+  parseDigits,
+  readLimitedText,
+} from "./util.ts";
 
 const HOMEPAGE_URL = "https://www.alphaxiv.org/";
 const ALPHAXIV_DATE_PATTERN = /\b\d{1,2}\s+[A-Z][a-z]{2}\s+\d{4}\b/;
-const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 export const alphaXivSource: Source = {
   key: () => "alphaxiv",
@@ -20,7 +39,10 @@ export const alphaXivSource: Source = {
   async fetch(): Promise<FeedItem[]> {
     const response = await getWithRetry(HOMEPAGE_URL);
     if (!response.ok) {
-      throw new HttpError(response.status, await readLimitedText(response, 1024));
+      throw new HttpError(
+        response.status,
+        await readLimitedText(response, 1024),
+      );
     }
     const html = await response.text();
     return parseAlphaXivExplore(html);
@@ -121,14 +143,24 @@ function alphaXivAuthors(card: Element): string[] {
   const authors: string[] = [];
   const appendAuthor = (raw: string) => {
     const name = words(raw);
-    if (name === "" || name.startsWith("#") || name.toLowerCase() === "view blog" || name.length > 80) return;
+    if (
+      name === "" ||
+      name.startsWith("#") ||
+      name.toLowerCase() === "view blog" ||
+      name.length > 80
+    )
+      return;
     if (seen.has(name)) return;
     seen.add(name);
     authors.push(name);
   };
-  card.querySelectorAll('[aria-haspopup="dialog"]').forEach((node) => appendAuthor(textOf(node)));
+  card
+    .querySelectorAll('[aria-haspopup="dialog"]')
+    .forEach((node) => appendAuthor(textOf(node)));
   if (authors.length > 0) return authors;
-  card.querySelectorAll("div.font-normal, span.font-normal").forEach((node) => appendAuthor(textOf(node)));
+  card
+    .querySelectorAll("div.font-normal, span.font-normal")
+    .forEach((node) => appendAuthor(textOf(node)));
   return authors;
 }
 
@@ -149,7 +181,9 @@ function alphaXivTags(card: Element): string[] {
     const href = link.getAttribute("href");
     if (href === null) return;
     const isTagLink =
-      href.includes("?subcategories=") || href.includes("?categories=") || href.includes("?custom-categories=");
+      href.includes("?subcategories=") ||
+      href.includes("?categories=") ||
+      href.includes("?custom-categories=");
     if (!isTagLink) return;
     const tag = words(textOf(link)).replace(/^#/, "");
     if (tag === "" || seen.has(tag)) return;

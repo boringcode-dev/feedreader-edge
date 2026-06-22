@@ -69,7 +69,9 @@ describe("parseAlphaXivExplore", () => {
     expect(item.summary).toContain("Temporal Difference in Vision");
     expect(item.author).toBe("Ninad Daithankar, Alexi Gladstone, Yann LeCun");
     expect(item.score).toBe(86);
-    expect(item.publishedAt).toBe(new Date(Date.UTC(2026, 5, 14)).toISOString());
+    expect(item.publishedAt).toBe(
+      new Date(Date.UTC(2026, 5, 14)).toISOString(),
+    );
     expect(item.sourceRank).toBe(1);
     expect(item.metadata.tags).toEqual([
       "artificial-intelligence",
@@ -97,6 +99,8 @@ describe("parseAlphaXivExplore", () => {
         </div>
       </div>`);
     expect(items).toHaveLength(1);
-    expect(items[0]!.publishedAt).toBe(new Date(Date.UTC(2026, 5, 14)).toISOString());
+    expect(items[0]!.publishedAt).toBe(
+      new Date(Date.UTC(2026, 5, 14)).toISOString(),
+    );
   });
 });

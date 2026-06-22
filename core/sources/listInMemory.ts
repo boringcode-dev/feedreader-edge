@@ -35,7 +35,8 @@ export function sortFeedItems(items: FeedItem[]): FeedItem[] {
 
     if (a.sourceRank !== b.sourceRank) return a.sourceRank - b.sourceRank;
     if (a.source !== b.source) return a.source < b.source ? -1 : 1;
-    if (a.externalId !== b.externalId) return a.externalId < b.externalId ? -1 : 1;
+    if (a.externalId !== b.externalId)
+      return a.externalId < b.externalId ? -1 : 1;
     return 0;
   });
 }
@@ -43,7 +44,8 @@ export function sortFeedItems(items: FeedItem[]): FeedItem[] {
 export function paginate<T>(items: T[], limit: number, offset: number): T[] {
   const safeOffset = Math.max(offset, 0);
   if (safeOffset >= items.length) return [];
-  const end = limit > 0 ? Math.min(items.length, safeOffset + limit) : items.length;
+  const end =
+    limit > 0 ? Math.min(items.length, safeOffset + limit) : items.length;
   return items.slice(safeOffset, end);
 }
 
@@ -90,7 +92,9 @@ export function filterFeedItems(
 
   const terms = searchTerms(searchQuery);
   if (terms.length > 0) {
-    filtered = filtered.filter((item) => terms.every((term) => matchesTerm(item, term)));
+    filtered = filtered.filter((item) =>
+      terms.every((term) => matchesTerm(item, term)),
+    );
   }
   return filtered;
 }

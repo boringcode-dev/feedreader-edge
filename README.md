@@ -38,7 +38,7 @@ The current production deployment is publicly visible at:
 - **Multi-source feed aggregation**
   - Hacker News
   - GitHub Trending
-  - Hugging Face Papers Trending
+  - Hugging Face Trending Papers
   - alphaXiv Explore
 - **Persistent edge storage** with Cloudflare D1
 - **Incremental fetch model** that keeps older items in the database
@@ -202,11 +202,11 @@ Bindings configured in `platforms/cloudflare/wrangler.toml`:
 
 Runtime configuration:
 
-| Variable | Default | Description |
-| --- | ---: | --- |
-| `FEEDREADER_ITEMS_PER_SOURCE` | `20` | Per-source item count used in source dashboard/health contexts |
-| `FEEDREADER_USER_AGENT` | `feedreader/0.1` | Outbound fetch user agent |
-| `REFRESH_SECRET` | _required secret_ | Shared secret for internal per-source refresh fan-out routes |
+| Variable                      |           Default | Description                                                    |
+| ----------------------------- | ----------------: | -------------------------------------------------------------- |
+| `FEEDREADER_ITEMS_PER_SOURCE` |              `20` | Per-source item count used in source dashboard/health contexts |
+| `FEEDREADER_USER_AGENT`       |  `feedreader/0.1` | Outbound fetch user agent                                      |
+| `REFRESH_SECRET`              | _required secret_ | Shared secret for internal per-source refresh fan-out routes   |
 
 ---
 

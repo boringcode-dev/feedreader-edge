@@ -2,17 +2,17 @@
 
 ## Layout
 
-| Path | Responsibility |
-| --- | --- |
-| [`core/domain.ts`](../core/domain.ts) | Shared domain types such as `FeedItem`, `SyncState`, `CardView`, and `RefreshOutcome`. |
-| [`core/ports.ts`](../core/ports.ts) | `FeedRepository` interface — the persistence seam platform adapters implement. |
-| [`core/service.ts`](../core/service.ts) | Refresh orchestration, feed pagination, health payloads, card-building, and error projection. |
-| [`core/render.ts`](../core/render.ts) | Server-side HTML rendering for the feed UI. |
-| [`core/sources/`](../core/sources) | Upstream source adapters plus shared HTTP/DOM helpers. |
-| [`platforms/cloudflare/src/index.ts`](../platforms/cloudflare/src/index.ts) | Worker request router and scheduled entrypoint. |
-| [`platforms/cloudflare/src/repository.ts`](../platforms/cloudflare/src/repository.ts) | D1-backed `FeedRepository` implementation. |
-| [`platforms/cloudflare/migrations/`](../platforms/cloudflare/migrations) | D1 schema migrations. |
-| [`web-static/`](../web-static) | Browser assets: CSS, JS, icons, manifest, service worker. |
+| Path                                                                                  | Responsibility                                                                                |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| [`core/domain.ts`](../core/domain.ts)                                                 | Shared domain types such as `FeedItem`, `SyncState`, `CardView`, and `RefreshOutcome`.        |
+| [`core/ports.ts`](../core/ports.ts)                                                   | `FeedRepository` interface — the persistence seam platform adapters implement.                |
+| [`core/service.ts`](../core/service.ts)                                               | Refresh orchestration, feed pagination, health payloads, card-building, and error projection. |
+| [`core/render.ts`](../core/render.ts)                                                 | Server-side HTML rendering for the feed UI.                                                   |
+| [`core/sources/`](../core/sources)                                                    | Upstream source adapters plus shared HTTP/DOM helpers.                                        |
+| [`platforms/cloudflare/src/index.ts`](../platforms/cloudflare/src/index.ts)           | Worker request router and scheduled entrypoint.                                               |
+| [`platforms/cloudflare/src/repository.ts`](../platforms/cloudflare/src/repository.ts) | D1-backed `FeedRepository` implementation.                                                    |
+| [`platforms/cloudflare/migrations/`](../platforms/cloudflare/migrations)              | D1 schema migrations.                                                                         |
+| [`web-static/`](../web-static)                                                        | Browser assets: CSS, JS, icons, manifest, service worker.                                     |
 
 ## Runtime flow
 
@@ -43,7 +43,13 @@ interface FeedRepository {
   recordFailure(source, attemptedAtIso, message): Promise<void>;
   listSourceStates(): Promise<Record<string, SyncState>>;
   getCurrentItems(source, limit): Promise<FeedItem[]>;
-  listFeedItems(limit, offset, source, sources, searchQuery): Promise<FeedItem[]>;
+  listFeedItems(
+    limit,
+    offset,
+    source,
+    sources,
+    searchQuery,
+  ): Promise<FeedItem[]>;
   countTotalItems(): Promise<number>;
 }
 ```

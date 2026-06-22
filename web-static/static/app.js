@@ -5,7 +5,7 @@
     all: "All enabled sources",
     hackernews: "Hacker News",
     github: "GitHub Trending",
-    huggingface: "Hugging Face Papers Trending",
+    huggingface: "Hugging Face Trending Papers",
     alphaxiv: "alphaXiv",
   };
   const sourceIconPaths = {
@@ -348,9 +348,7 @@
   }
 
   function currentDensitySelection() {
-    return (
-      densityOptions.find((option) => option.checked)?.value || "current"
-    );
+    return densityOptions.find((option) => option.checked)?.value || "current";
   }
 
   function ensureActiveFilterIsVisible() {
@@ -800,7 +798,9 @@
     const normalizedTheme = nextTheme === "light" ? "light" : "dark";
     const sourcesChanged =
       normalizedSources.length !== selectedSources.length ||
-      normalizedSources.some((value, index) => value !== selectedSources[index]);
+      normalizedSources.some(
+        (value, index) => value !== selectedSources[index],
+      );
     const densityChanged = normalizedDensity !== uiDensity;
     const themeChanged = normalizedTheme !== root.dataset.theme;
 

@@ -14,5 +14,10 @@ export interface Source {
 }
 
 export function build(): Source[] {
-  return [hackerNewsSource, gitHubTrendingSource, huggingFacePapersSource, alphaXivSource];
+  return [
+    hackerNewsSource,
+    gitHubTrendingSource,
+    huggingFacePapersSource,
+    alphaXivSource,
+  ];
 }

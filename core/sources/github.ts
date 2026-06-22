@@ -4,7 +4,14 @@
 import type { FeedItem } from "../domain.ts";
 import { parseHtmlDocument } from "./dom.ts";
 import type { Source } from "./index.ts";
-import { cleanString, extractInt, getWithRetry, HttpError, parseDigits, readLimitedText } from "./util.ts";
+import {
+  cleanString,
+  extractInt,
+  getWithRetry,
+  HttpError,
+  parseDigits,
+  readLimitedText,
+} from "./util.ts";
 
 const HOMEPAGE_URL = "https://github.com/trending";
 const STARS_TODAY_PATTERN = /(\d[\d,]*)\s+stars today/;
@@ -16,7 +23,10 @@ export const gitHubTrendingSource: Source = {
   async fetch(): Promise<FeedItem[]> {
     const response = await getWithRetry(HOMEPAGE_URL);
     if (!response.ok) {
-      throw new HttpError(response.status, await readLimitedText(response, 1024));
+      throw new HttpError(
+        response.status,
+        await readLimitedText(response, 1024),
+      );
     }
     const html = await response.text();
     return parseGitHubTrending(html);
@@ -35,9 +45,15 @@ export function parseGitHubTrending(html: string): FeedItem[] {
     if (repoPath === "") return;
 
     const description = cleanString(textOf(article.querySelector("p")));
-    const language = cleanString(textOf(article.querySelector('[itemprop="programmingLanguage"]')));
-    const stars = parseDigits(textOf(article.querySelector('a[href$="/stargazers"]')));
-    const forks = parseDigits(textOf(article.querySelector('a[href$="/forks"]')));
+    const language = cleanString(
+      textOf(article.querySelector('[itemprop="programmingLanguage"]')),
+    );
+    const stars = parseDigits(
+      textOf(article.querySelector('a[href$="/stargazers"]')),
+    );
+    const forks = parseDigits(
+      textOf(article.querySelector('a[href$="/forks"]')),
+    );
     const articleText = textOf(article).split(/\s+/).filter(Boolean).join(" ");
     const starsToday = extractInt(articleText, STARS_TODAY_PATTERN);
 
@@ -80,5 +96,9 @@ function normalizeGitHubRepoPath(href: string, linkText: string): string {
   } catch {
     // fall through to the link-text fallback below
   }
-  return linkText.split(/\s+/).filter(Boolean).join("").replace(/^\/+|\/+$/g, "");
+  return linkText
+    .split(/\s+/)
+    .filter(Boolean)
+    .join("")
+    .replace(/^\/+|\/+$/g, "");
 }

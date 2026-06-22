@@ -2,7 +2,7 @@
 // Workers. refreshIntervalHours/host/port/dbPath don't port: Cron Triggers
 // replace the interval, and Workers has no host/port/dbpath concept.
 
-import type { Env } from './env.d.ts';
+import type { Env } from "./env.d.ts";
 
 export interface Config {
   itemsPerSource: number;
@@ -11,7 +11,7 @@ export interface Config {
 
 export function loadConfig(env: Env): Config {
   const itemsPerSource = Number.parseInt(
-    env.FEEDREADER_ITEMS_PER_SOURCE ?? '',
+    env.FEEDREADER_ITEMS_PER_SOURCE ?? "",
     10,
   );
   return {
@@ -19,6 +19,6 @@ export function loadConfig(env: Env): Config {
       Number.isFinite(itemsPerSource) && itemsPerSource > 0
         ? itemsPerSource
         : 20,
-    userAgent: env.FEEDREADER_USER_AGENT?.trim() || 'feedreader/0.1',
+    userAgent: env.FEEDREADER_USER_AGENT?.trim() || "feedreader/0.1",
   };
 }
