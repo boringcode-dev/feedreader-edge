@@ -2,7 +2,7 @@
   "id": "/",
   "name": "reader",
   "short_name": "reader",
-  "description": "Tiny feed reader for Hacker News, GitHub Trending, Hugging Face Papers, and alphaXiv.",
+  "description": "Tiny feed reader for Hacker News, GitHub Trending, Hugging Face Trending Papers, and more.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "/",
@@ -48,7 +48,7 @@
       "label": "Reader desktop feed view"
     },
     {
-      "src": "/manifest-assets/screenshot-mobile.png?v=1",
+      "src": "/manifest-assets/screenshot-mobile.png?v=2",
       "sizes": "430x932",
       "type": "image/png",
       "label": "Reader mobile feed view"
@@ -95,9 +95,9 @@
       ]
     },
     {
-      "name": "Hugging Face Papers",
+      "name": "Hugging Face Trending Papers",
       "short_name": "Hugging Face",
-      "description": "Open the Hugging Face Papers feed",
+      "description": "Open the Hugging Face Trending Papers feed",
       "url": "/?source=huggingface",
       "icons": [
         {

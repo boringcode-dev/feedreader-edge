@@ -5,7 +5,11 @@
 </p>
 
 <p align="center">
-  Server-rendered UI · D1 storage · Scheduled refresh · Cloudflare Workers · Visible at <a href="https://reader.boringcode.dev">reader.boringcode.dev</a>
+  <img src="web-static/og-image.png" alt="feedreader social card" />
+</p>
+
+<p align="center">
+  Server-rendered UI · D1 storage · Scheduled refresh · Cloudflare Workers
 </p>
 
 <p align="center">
@@ -16,14 +20,6 @@
   <a href="https://github.com/boringcode-dev/feedreader-edge/actions/workflows/ci.yml"><img src="https://github.com/boringcode-dev/feedreader-edge/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" />
 </p>
-
----
-
-## Live site
-
-The current production deployment is publicly visible at:
-
-- https://reader.boringcode.dev
 
 ---
 

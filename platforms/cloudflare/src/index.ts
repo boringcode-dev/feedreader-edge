@@ -68,7 +68,7 @@ async function handleHome(
   );
   const querySource = source === "all" ? "" : source;
   const canonicalUrl = `${url.origin}${url.pathname}${url.search}`;
-  const socialImageUrl = `${url.origin}/og-image.png?v=1`;
+  const socialImageUrl = `${url.origin}/og-image.png?v=2`;
   const appVersion = env.APP_VERSION?.trim() || "dev";
 
   const { items, hasNext } = await feedItems(

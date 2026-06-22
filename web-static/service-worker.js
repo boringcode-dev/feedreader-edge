@@ -1,4 +1,4 @@
-const SHELL_CACHE = "reader-shell-v39";
+const SHELL_CACHE = "reader-shell-v40";
 const ITEMS_CACHE = "reader-items-v22";
 const CORE_ASSETS = [
   "/",
@@ -9,7 +9,7 @@ const CORE_ASSETS = [
   "/static/source-icons/huggingface.svg",
   "/static/source-icons/alphaxiv.png",
   "/favicon.svg?v=8",
-  "/site.webmanifest?v=10",
+  "/site.webmanifest?v=11",
   "/apple-touch-icon.png?v=8",
   "/icon-192.png?v=8",
   "/icon-512.png?v=8",
