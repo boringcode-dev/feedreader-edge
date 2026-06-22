@@ -1,6 +1,16 @@
 {
   "name": "feedreader",
   "private": true,
+  "description": "A tiny, Cloudflare-native feed reader for engineering and research signals.",
+  "license": "MIT",
+  "homepage": "https://reader.boringcode.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/boringcode-dev/feedreader-edge.git"
+  },
+  "bugs": {
+    "url": "https://github.com/boringcode-dev/feedreader-edge/issues"
+  },
   "type": "module",
   "engines": {
     "node": ">=22.0.0"

@@ -9,8 +9,12 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  typecheck-and-test:
+  typecheck-test-and-migrations:
     runs-on: ubuntu-latest
 
     steps:
@@ -31,3 +35,6 @@ jobs:
 
       - name: Run tests
         run: npm test
+
+      - name: Validate local D1 migrations
+        run: npm run db:migrate:local

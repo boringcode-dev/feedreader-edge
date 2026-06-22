@@ -2,44 +2,38 @@
 
 ## Layout
 
-```
-core/                  platform-agnostic: domain types, source adapters,
-                       refresh/card-building logic, SSR rendering
-  ports.ts             FeedRepository interface — the only seam a platform
-                       adapter has to implement
-  sources/             one file per upstream source, plus shared helpers
-platforms/cloudflare/  the only adapter that ships today: Worker entry,
-                       D1-backed FeedRepository, wrangler config
-web-static/            verbatim copy of the original Go implementation's
-                       web/static/* — pure browser assets, no porting needed
-```
-
-`core/` never imports `cloudflare:*`, `Deno.*`, or `node:*`. This is what
-makes a second platform adapter (e.g. Deno Deploy on Deno KV) additive
-later rather than a rewrite, even though only the Cloudflare adapter is
-built right now.
-
-## Mapping back to the Go app
-
-| This repo | Go implementation |
+| Path | Responsibility |
 | --- | --- |
-| `core/domain.ts` | `internal/domain/models.go` |
-| `core/ports.ts` | `SQLiteRepository`'s public method set in `internal/repository/sqlite.go` |
-| `core/service.ts` | `internal/service/service.go` (minus the in-process scheduler — Cron Triggers replace it) |
-| `core/render.ts` | `web/templates/index.html` |
-| `core/sources/*.ts` | `internal/sources/*.go` |
-| `platforms/cloudflare/src/repository.ts` | the D1 SQL portion of `internal/repository/sqlite.go` |
-| `platforms/cloudflare/migrations/0001_init.sql` | the `Schema` constant in `internal/db/sqlite.go` |
+| [`core/domain.ts`](../core/domain.ts) | Shared domain types such as `FeedItem`, `SyncState`, `CardView`, and `RefreshOutcome`. |
+| [`core/ports.ts`](../core/ports.ts) | `FeedRepository` interface — the persistence seam platform adapters implement. |
+| [`core/service.ts`](../core/service.ts) | Refresh orchestration, feed pagination, health payloads, card-building, and error projection. |
+| [`core/render.ts`](../core/render.ts) | Server-side HTML rendering for the feed UI. |
+| [`core/sources/`](../core/sources) | Upstream source adapters plus shared HTTP/DOM helpers. |
+| [`platforms/cloudflare/src/index.ts`](../platforms/cloudflare/src/index.ts) | Worker request router and scheduled entrypoint. |
+| [`platforms/cloudflare/src/repository.ts`](../platforms/cloudflare/src/repository.ts) | D1-backed `FeedRepository` implementation. |
+| [`platforms/cloudflare/migrations/`](../platforms/cloudflare/migrations) | D1 schema migrations. |
+| [`web-static/`](../web-static) | Browser assets: CSS, JS, icons, manifest, service worker. |
 
-## Why sort/search stay in application memory
+## Runtime flow
 
-`internal/repository/sqlite.go`'s `ListFeedItems` filters via SQL but sorts
-and paginates in Go application memory, because total item count across
-all 4 sources is small (a few hundred rows). `core/sources/listInMemory.ts`
-replicates that same sort comparator (effective date desc, then first-seen
-desc, then source rank, then source, then external id) so the Cloudflare
-adapter's `D1Repository` — and any future KV-backed adapter — produce
-identical ordering without duplicating that logic per adapter.
+1. The Worker handles `/`, `/api/items`, `/api/refresh`, and `/healthz`.
+2. Source adapters fetch upstream content and normalize it into `FeedItem` values.
+3. Snapshots are upserted into D1 by `(source, external_id)`.
+4. The service layer turns stored items into card summaries and HTML/JSON responses.
+5. The cron trigger fans out one refresh invocation per source through the `SELF` binding.
+
+## Platform boundaries
+
+- `core/` never imports `cloudflare:*`, `Deno.*`, or `node:*`.
+- Platform-specific persistence and request wiring live under `platforms/*`.
+- A second deployment target should implement `FeedRepository` once and provide its own entrypoint rather than forking `core/service.ts` or `core/render.ts`.
+
+## Data model and refresh behavior
+
+- Items are upserted by `(source, external_id)`.
+- A refresh never deletes existing rows — a failed fetch records the failure in `sync_state` and leaves prior data in place.
+- The original `published_at` is preserved across re-fetches via `coalesce(items.published_at, excluded.published_at)` so an upstream source cannot reorder an existing item by later emitting a different date.
+- Sorting and pagination intentionally happen in application memory after SQL filtering. Total item count across the four sources is small enough that keeping one shared comparator is simpler and less error-prone than encoding the full fallback ordering logic separately per adapter.
 
 ## `FeedRepository`
 
@@ -54,6 +48,17 @@ interface FeedRepository {
 }
 ```
 
-Adding a second platform means implementing this interface once and
-wiring a new entrypoint under `platforms/<name>/` — `core/service.ts` and
-`core/render.ts` don't change.
+This keeps refresh logic, rendering, and feed shaping independent of D1-specific APIs.
+
+## Refresh fan-out design
+
+Cloudflare Workers Free has a tight per-invocation CPU budget. Fetching and parsing all four sources in one handler would create unnecessary coupling between unrelated source failures and CPU spikes.
+
+Instead:
+
+- `scheduled()` and `POST /api/refresh` fan out through the `SELF` binding
+- each source refresh runs as a fresh invocation at `POST /internal/refresh/:source`
+- `REFRESH_SECRET` gates those internal routes
+- a failure in one source updates only that source's `sync_state` row
+
+See [RUNBOOK.md](RUNBOOK.md) for the operational details.
