@@ -426,6 +426,14 @@
       searchForm.classList.toggle("is-open", isVisible);
       searchForm.setAttribute("aria-hidden", String(!isVisible));
     }
+    if (searchInput) {
+      searchInput.disabled = !isVisible;
+      if (isVisible) {
+        searchInput.removeAttribute("tabindex");
+      } else {
+        searchInput.setAttribute("tabindex", "-1");
+      }
+    }
     if (searchToggle) {
       searchToggle.classList.toggle("is-active", isVisible);
       searchToggle.setAttribute("aria-expanded", String(isVisible));

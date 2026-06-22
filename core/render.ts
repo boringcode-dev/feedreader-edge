@@ -134,7 +134,7 @@ export function renderIndexPage(data: PageData): string {
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
     <link rel="stylesheet" href="/static/style.css?v=38" />
-    <script src="/static/app.js?v=30" defer></script>
+    <script src="/static/app.js?v=31" defer></script>
   </head>
   <body>
     <header class="shell page-header">
