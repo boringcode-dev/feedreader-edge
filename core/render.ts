@@ -119,7 +119,9 @@ export function renderIndexPage(data: PageData): string {
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>reader</title>
+    <meta name="application-name" content="reader" />
     <meta name="description" content="Tiny private feed reader for Hacker News, GitHub Trending, Hugging Face Papers, and alphaXiv." />
+    <meta name="color-scheme" content="dark light" />
     <meta name="theme-color" content="#111e2c" />
     <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#111e2c" />
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e1ebf7" />
@@ -127,7 +129,7 @@ export function renderIndexPage(data: PageData): string {
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="reader" />
-    <link rel="manifest" href="/site.webmanifest?v=8" />
+    <link rel="manifest" href="/site.webmanifest?v=9" />
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />

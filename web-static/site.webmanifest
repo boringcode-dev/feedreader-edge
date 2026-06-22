@@ -1,12 +1,17 @@
 {
+  "id": "/",
   "name": "reader",
   "short_name": "reader",
-  "description": "Tiny private feed reader for Hacker News, GitHub Trending, and Hugging Face Papers.",
+  "description": "Tiny feed reader for Hacker News, GitHub Trending, Hugging Face Papers, and alphaXiv.",
+  "lang": "en",
+  "dir": "ltr",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#111e2c",
   "theme_color": "#111e2c",
+  "categories": ["news", "productivity", "developer"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/icon-192.png?v=8",
@@ -19,6 +24,32 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "All sources",
+      "short_name": "All",
+      "description": "Open the combined feed",
+      "url": "/"
+    },
+    {
+      "name": "Hacker News",
+      "short_name": "HN",
+      "description": "Open the Hacker News feed",
+      "url": "/?source=hackernews"
+    },
+    {
+      "name": "GitHub Trending",
+      "short_name": "GitHub",
+      "description": "Open the GitHub Trending feed",
+      "url": "/?source=github"
+    },
+    {
+      "name": "Hugging Face Papers",
+      "short_name": "Hugging Face",
+      "description": "Open the Hugging Face Papers feed",
+      "url": "/?source=huggingface"
     }
   ]
 }
