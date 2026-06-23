@@ -151,8 +151,8 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=46" />
-    <script src="/static/app.js?v=37" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=47" />
+    <script src="/static/app.js?v=38" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -316,6 +316,11 @@ export function renderIndexPage(data: PageData): string {
           <div class="config-options">
             <label class="config-option">
               <input type="checkbox" data-ai-personalization-toggle />
+              <span class="config-option-icon" aria-hidden="true">
+                <svg class="choice-icon" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.937A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L13.5 8.5a2 2 0 0 0 1.437 1.437l6.135 1.582a.5.5 0 0 1 0 .962L14.937 14.063A2 2 0 0 0 13.5 15.5l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+                </svg>
+              </span>
               <span class="config-option-body">
                 <span class="config-option-title">Enable personalized ranking</span>
               </span>
@@ -415,7 +420,12 @@ export function renderIndexPage(data: PageData): string {
     </dialog>
 ${errorsBlock}
     <main class="shell page-body">
-      <p class="personalized-indicator is-hidden" data-personalized-indicator>✦ Personalized by AI</p>
+      <p class="personalized-indicator is-hidden" data-personalized-indicator>
+        <svg class="personalized-indicator-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.937A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L13.5 8.5a2 2 0 0 0 1.437 1.437l6.135 1.582a.5.5 0 0 1 0 .962L14.937 14.063A2 2 0 0 0 13.5 15.5l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
+        </svg>
+        Personalized by AI
+      </p>
       <section class="cards-grid${cardsHiddenClass}" data-card-grid data-current-source="${escapeHtml(data.currentSource)}" data-page-size="${data.pageSize}" data-has-next="${data.hasNext ? "true" : "false"}" aria-busy="false">
         ${data.cards.map(renderCard).join("\n        ")}
       </section>

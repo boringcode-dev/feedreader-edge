@@ -85,7 +85,8 @@
   const interestsStorageKey = "feedreader.interests";
   const aiPersonalizationStorageKey = "feedreader.aiPersonalizationEnabled";
   const interestsMaxLength = 300;
-  const defaultInterests = "engineering, AI/ML, startups";
+  const defaultInterests =
+    "startups, engineering, open-source, Artificial Intelligence (AI), Machine Learning (ML)";
   const installPromptHiddenStorageKey = "feedreader.installPromptHidden";
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
   const loadedAppVersion = document.body.dataset.appVersion || "";

@@ -825,6 +825,13 @@ body.is-dialog-open {
   font-size: 0.8rem;
 }
 
+.personalized-indicator-icon {
+  width: 0.95rem;
+  height: 0.95rem;
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
 .error-banner,
 .empty-state {
   padding: 0.8rem 0.9rem;
