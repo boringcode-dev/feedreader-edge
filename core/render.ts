@@ -145,7 +145,7 @@ export function renderIndexPage(data: PageData): string {
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e1ebf7" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="reader" />
     <link rel="manifest" href="/site.webmanifest?v=11" />
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />

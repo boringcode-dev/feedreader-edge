@@ -1,4 +1,4 @@
-const SHELL_CACHE = "reader-shell-v40";
+const SHELL_CACHE = "reader-shell-v41";
 const ITEMS_CACHE = "reader-items-v22";
 const CORE_ASSETS = [
   "/",
