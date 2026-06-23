@@ -426,6 +426,12 @@ button {
   gap: 0.65rem;
 }
 
+.config-section-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
 .config-section-header {
   display: flex;
   flex-direction: column;
@@ -892,6 +898,10 @@ body.is-dialog-open {
 
 :root[data-ui-density="compact"] .config-section {
   gap: 0.5rem;
+}
+
+:root[data-ui-density="compact"] .config-section-row {
+  gap: 0.65rem;
 }
 
 :root[data-ui-density="compact"] .config-section-header {
