@@ -12,5 +12,9 @@ export interface Env {
   APP_VERSION?: string;
   FEEDREADER_ITEMS_PER_SOURCE?: string;
   FEEDREADER_USER_AGENT?: string;
-  FEEDREADER_PERSONALIZE_POOL_SIZE?: string;
+  /** Size of the top-similarity slice the LLM polishes per /api/personalize
+   * call — 0 disables the LLM polish pass entirely, serving the
+   * embedding-similarity order on its own. See src/index.ts's
+   * handlePersonalize. */
+  FEEDREADER_PERSONALIZE_POLISH_POOL_SIZE?: string;
 }

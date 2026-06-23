@@ -63,8 +63,13 @@ export function parseRankedIndices(raw: string, itemCount: number): number[] {
 
 /**
  * Places ranked items first (in model order), then appends any remaining
- * items in their original order — guarantees a full, valid list even when
- * the ranker returns a partial or empty result.
+ * items in whatever order `items` arrived in — guarantees a full, valid
+ * list even when the ranker returns a partial or empty result. Callers may
+ * pass any base order, not just chronological — e.g. handlePersonalize
+ * feeds this similarity-ranked input (core/personalize/similarity.ts) when
+ * running the LLM as a polish pass over a pre-filtered candidate pool, and
+ * the "remainder" preserves that similarity order rather than reverting to
+ * chronological.
  */
 export function mergeRankedOrder(
   items: FeedItem[],
@@ -96,9 +101,11 @@ export function itemKey(item: FeedItem): string {
  * possibly over a different/smaller pool) onto a freshly-fetched item
  * list: ranked items appear first, in cached order; anything not in
  * rankedKeys — new items, or items the cache doesn't cover — keeps its
- * original relative order at the end. Unlike mergeRankedOrder, this
- * tolerates the two lists having different lengths or contents, since
- * `items` is re-fetched live while rankedKeys may be stale or partial.
+ * relative order from `items` at the end (which, like mergeRankedOrder,
+ * need not be chronological — see that function's comment). Unlike
+ * mergeRankedOrder, this tolerates the two lists having different lengths
+ * or contents, since `items` is re-fetched live while rankedKeys may be
+ * stale or partial.
  */
 export function mergeRankedKeysOrder(
   items: FeedItem[],

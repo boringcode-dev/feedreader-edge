@@ -2,7 +2,11 @@
 // (cardBriefPrefix/cardBriefSuffix/cardStatFragments) for each source.
 import { describe, expect, it } from "vitest";
 import type { FeedItem, SourceSnapshot } from "../domain.ts";
-import { buildCards, buildErrors } from "../service.ts";
+import { FakeEmbedder } from "../personalize/test/fakeEmbedder.ts";
+import { itemKey } from "../personalize/rank.ts";
+import { buildCards, buildErrors, refreshOne } from "../service.ts";
+import { FakeFeedRepository } from "./fakeFeedRepository.ts";
+import type { Source } from "../sources/index.ts";
 
 function item(overrides: Partial<FeedItem>): FeedItem {
   return {
@@ -116,5 +120,72 @@ describe("buildErrors", () => {
     expect(buildErrors(snapshots)).toEqual([
       { source: "github", label: "GitHub Trending", error: "boom" },
     ]);
+  });
+});
+
+function fakeSource(fetch: () => Promise<FeedItem[]>): Source {
+  return {
+    key: () => "hackernews",
+    label: () => "Hacker News",
+    homepageUrl: () => "https://news.ycombinator.com",
+    fetch,
+  };
+}
+
+describe("refreshOne with embeddings", () => {
+  it("embeds only items that don't already have a stored embedding", async () => {
+    const fresh = item({ externalId: "fresh", title: "fresh item" });
+    const stale = item({ externalId: "stale", title: "stale item" });
+    const repo = new FakeFeedRepository([
+      { source: "hackernews", externalId: "stale" },
+    ]);
+    const embedder = new FakeEmbedder((texts) => texts.map(() => [1, 0]));
+
+    const outcome = await refreshOne(
+      fakeSource(async () => [fresh, stale]),
+      repo,
+      embedder,
+    );
+
+    expect(outcome.ok).toBe(true);
+    expect(embedder.calls).toEqual([["fresh item"]]);
+    expect(repo.saveSnapshotCalls).toHaveLength(1);
+    const embeddings = repo.saveSnapshotCalls[0]!.embeddings;
+    expect(embeddings.has(itemKey(fresh))).toBe(true);
+    expect(embeddings.has(itemKey(stale))).toBe(false);
+  });
+
+  it("still saves the snapshot when the embedder throws, with an empty embeddings map", async () => {
+    const repo = new FakeFeedRepository();
+    const embedder = new FakeEmbedder(() => {
+      throw new Error("model unavailable");
+    });
+
+    const outcome = await refreshOne(
+      fakeSource(async () => [item({ externalId: "a" })]),
+      repo,
+      embedder,
+    );
+
+    expect(outcome.ok).toBe(true);
+    expect(repo.saveSnapshotCalls).toHaveLength(1);
+    expect(repo.saveSnapshotCalls[0]!.embeddings.size).toBe(0);
+  });
+
+  it("short-circuits before any embed call when the source fetch fails", async () => {
+    const repo = new FakeFeedRepository();
+    const embedder = new FakeEmbedder(() => [[1, 0]]);
+
+    const outcome = await refreshOne(
+      fakeSource(async () => {
+        throw new Error("network down");
+      }),
+      repo,
+      embedder,
+    );
+
+    expect(outcome.ok).toBe(false);
+    expect(embedder.calls).toHaveLength(0);
+    expect(repo.saveSnapshotCalls).toHaveLength(0);
   });
 });

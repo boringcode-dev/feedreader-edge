@@ -81,6 +81,16 @@ describe("mergeRankedOrder", () => {
     const merged = mergeRankedOrder(items, [99, 1]);
     expect(merged.map((i) => i.externalId)).toEqual(["b", "a", "c"]);
   });
+
+  it("preserves a non-chronological base order for the remainder, e.g. a similarity-ranked pool", () => {
+    const shuffled = [
+      item({ externalId: "c" }),
+      item({ externalId: "a" }),
+      item({ externalId: "b" }),
+    ];
+    const merged = mergeRankedOrder(shuffled, [2]);
+    expect(merged.map((i) => i.externalId)).toEqual(["b", "c", "a"]);
+  });
 });
 
 describe("mergeRankedKeysOrder", () => {
@@ -118,6 +128,18 @@ describe("mergeRankedKeysOrder", () => {
       "b",
       "c",
     ]);
+  });
+
+  it("preserves a non-chronological base order for the remainder, e.g. a similarity-ranked pool", () => {
+    const shuffled = [
+      item({ source: "hackernews", externalId: "c" }),
+      item({ source: "hackernews", externalId: "a" }),
+      item({ source: "github", externalId: "b" }),
+    ];
+    const merged = mergeRankedKeysOrder(shuffled, [
+      itemKey(shuffled[2]!),
+    ]);
+    expect(merged.map((i) => i.externalId)).toEqual(["b", "c", "a"]);
   });
 });
 

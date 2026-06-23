@@ -771,8 +771,8 @@
       applyVisitedLinkState();
 
       if (personalize) {
-        personalizedActive = !payload.degraded;
-        if (!append && payload.degraded) {
+        personalizedActive = payload.personalization !== "none";
+        if (!append && payload.personalization === "none") {
           showToast("Personalization unavailable, showing latest", "error");
         }
       } else {

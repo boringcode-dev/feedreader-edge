@@ -20,9 +20,11 @@ import {
   mergeRankedKeysOrder,
   mergeRankedOrder,
 } from "../../../core/personalize/rank.ts";
+import { rankBySimilarity } from "../../../core/personalize/similarity.ts";
 import { paginate } from "../../../core/sources/listInMemory.ts";
 import { D1Repository } from "./repository.ts";
 import { CloudflareLlmRanker } from "./llmRanker.ts";
+import { CloudflareEmbedder } from "./embedder.ts";
 import type { Env } from "./env.d.ts";
 
 const PAGE_SIZE = 12;
@@ -305,8 +307,17 @@ function cardsToJson(cards: CardView[]) {
  * normal limit/offset paging); the candidate pool and final ordering are
  * entirely server-decided — the client never supplies item ids.
  *
- * The LLM is only ever consulted for the *first* page request for a given
- * (interests, source filter, source-data freshness) combination — the
+ * Retrieve-then-rerank: items are embedded once at ingestion time (see
+ * core/service.ts's refreshOne), so the request-time path only embeds the
+ * interests string and sorts the pool by cosine similarity
+ * (core/personalize/similarity.ts) — no LLM call needed for this step, and
+ * it's robust to paraphrased interests in a way a literal cache-key string
+ * match isn't. The LLM ranker then runs only as an optional "polish" pass
+ * on the top FEEDREADER_PERSONALIZE_POLISH_POOL_SIZE similarity hits
+ * (default 30, 0 disables it) instead of the whole candidate pool.
+ *
+ * The polish step is only ever consulted for the *first* page request for a
+ * given (interests, source filter, source-data freshness) combination — the
  * resulting ranked order is cached via the platform Cache API, keyed so it
  * naturally invalidates whenever the underlying sources next refresh (see
  * latestSuccessAt). Every page request — including the first — re-fetches
@@ -314,11 +325,14 @@ function cardsToJson(cards: CardView[]) {
  * pagination never re-invokes the model and item content (title/score/etc.)
  * is never served stale from the cache, only the ordering is.
  *
- * On any ranking failure (bad model output, or every model in the fallback
- * chain throwing) it serves the pool's chronological order and sets
- * `degraded: true` rather than erroring the request — and deliberately does
- * not cache that outcome, so the next request tries ranking again instead of
- * being stuck degraded for the cache's lifetime.
+ * `personalization` in the response tells the client which tier was
+ * actually served: "llm" (similarity + LLM polish both succeeded),
+ * "similarity" (similarity ranking served on its own — polish disabled, or
+ * it failed but similarity is still a real personalized order, unlike
+ * yesterday's flat chronological fallback), or "none" (interests embedding
+ * itself failed, or the pool was empty — chronological order, same as
+ * before). Only "none" is cached as a non-result (not cached at all), so
+ * the next request retries rather than being stuck there.
  */
 async function handlePersonalize(
   request: Request,
@@ -338,17 +352,15 @@ async function handlePersonalize(
     return Response.json({ error: "interests is required" }, { status: 400 });
   }
 
-  const fullPool = await repo.listFeedItems(
+  const { items: fullPool, embeddings } = await repo.listFeedItemsForRanking(
     PERSONALIZE_FULL_POOL_LIMIT,
-    0,
     source,
     sources,
-    "",
   );
   if (fullPool.length === 0) {
     return Response.json({
       generated_at: new Date().toISOString(),
-      degraded: false,
+      personalization: "none",
       has_next: false,
       items: [],
     });
@@ -363,28 +375,58 @@ async function handlePersonalize(
     freshness,
   );
 
-  let rankedKeys = await readRankedKeysCache(cacheRequest);
-  let degraded = false;
-  if (rankedKeys === null) {
-    let poolSize = parsePositiveInt(
-      env.FEEDREADER_PERSONALIZE_POOL_SIZE ?? null,
-      60,
-    );
-    if (poolSize > 100) poolSize = 100;
-    const candidates = fullPool.slice(0, poolSize);
+  const cached = await readRankedKeysCache(cacheRequest);
+  let rankedKeys: string[];
+  let personalization: "llm" | "similarity" | "none";
+  if (cached) {
+    rankedKeys = cached.rankedKeys;
+    personalization = cached.personalization;
+  } else {
+    let interestsVector: number[] | null = null;
     try {
-      const ranker = new CloudflareLlmRanker(env.AI);
-      const ranked = await ranker.rank(candidates, interests);
-      if (ranked.length > 0) {
-        rankedKeys = mergeRankedOrder(candidates, ranked).map(itemKey);
-        await writeRankedKeysCache(cacheRequest, rankedKeys);
-      } else {
-        rankedKeys = [];
-        degraded = true;
-      }
+      const embedder = new CloudflareEmbedder(env.AI);
+      const [vector] = await embedder.embed([interests]);
+      interestsVector = vector ?? null;
     } catch {
+      interestsVector = null;
+    }
+
+    if (interestsVector) {
+      const bySimilarity = rankBySimilarity(
+        fullPool,
+        embeddings,
+        interestsVector,
+      );
+      let polishPoolSize = parseNonNegativeInt(
+        env.FEEDREADER_PERSONALIZE_POLISH_POOL_SIZE ?? null,
+        30,
+      );
+      if (polishPoolSize > 100) polishPoolSize = 100;
+
+      if (polishPoolSize > 0) {
+        const candidates = bySimilarity.slice(0, polishPoolSize);
+        try {
+          const ranker = new CloudflareLlmRanker(env.AI);
+          const ranked = await ranker.rank(candidates, interests);
+          if (ranked.length > 0) {
+            rankedKeys = mergeRankedOrder(candidates, ranked).map(itemKey);
+            personalization = "llm";
+          } else {
+            rankedKeys = bySimilarity.map(itemKey);
+            personalization = "similarity";
+          }
+        } catch {
+          rankedKeys = bySimilarity.map(itemKey);
+          personalization = "similarity";
+        }
+      } else {
+        rankedKeys = bySimilarity.map(itemKey);
+        personalization = "similarity";
+      }
+      await writeRankedKeysCache(cacheRequest, { personalization, rankedKeys });
+    } else {
       rankedKeys = [];
-      degraded = true;
+      personalization = "none";
     }
   }
 
@@ -395,7 +437,7 @@ async function handlePersonalize(
 
   return Response.json({
     generated_at: new Date().toISOString(),
-    degraded,
+    personalization,
     has_next: hasNext,
     items: cardsToJson(cards),
   });
@@ -461,16 +503,31 @@ function defaultPersonalizeCache(): Cache {
   return (caches as unknown as { default: Cache }).default;
 }
 
+interface CachedRanking {
+  personalization: "llm" | "similarity";
+  rankedKeys: string[];
+}
+
 async function readRankedKeysCache(
   cacheRequest: Request,
-): Promise<string[] | null> {
+): Promise<CachedRanking | null> {
   try {
     const hit = await defaultPersonalizeCache().match(cacheRequest);
     if (!hit) return null;
-    const data = (await hit.json()) as unknown;
-    return Array.isArray(data)
-      ? data.filter((value): value is string => typeof value === "string")
-      : null;
+    const data = (await hit.json()) as Partial<CachedRanking> | null;
+    if (
+      !data ||
+      (data.personalization !== "llm" && data.personalization !== "similarity") ||
+      !Array.isArray(data.rankedKeys)
+    ) {
+      return null;
+    }
+    return {
+      personalization: data.personalization,
+      rankedKeys: data.rankedKeys.filter(
+        (value): value is string => typeof value === "string",
+      ),
+    };
   } catch {
     // Cache API is best-effort (and a documented no-op in local `wrangler
     // dev`) — any failure here is just a cache miss, never an error.
@@ -480,12 +537,12 @@ async function readRankedKeysCache(
 
 async function writeRankedKeysCache(
   cacheRequest: Request,
-  rankedKeys: string[],
+  cached: CachedRanking,
 ): Promise<void> {
   try {
     await defaultPersonalizeCache().put(
       cacheRequest,
-      new Response(JSON.stringify(rankedKeys), {
+      new Response(JSON.stringify(cached), {
         headers: {
           "content-type": "application/json",
           "cache-control": `max-age=${PERSONALIZE_CACHE_TTL_SECONDS}`,
@@ -516,7 +573,7 @@ async function handleInternalRefresh(
   const sourceKey = url.pathname.slice("/internal/refresh/".length);
   const source = sources.find((s) => s.key() === sourceKey);
   if (!source) return new Response("unknown source", { status: 404 });
-  const outcome = await refreshOne(source, repo);
+  const outcome = await refreshOne(source, repo, new CloudflareEmbedder(env.AI));
   return Response.json(outcome);
 }
 
