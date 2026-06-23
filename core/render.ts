@@ -151,8 +151,8 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=44" />
-    <script src="/static/app.js?v=35" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=45" />
+    <script src="/static/app.js?v=36" defer></script>
   </head>
   <body>
     <header class="shell page-header">
@@ -358,10 +358,20 @@ export function renderIndexPage(data: PageData): string {
         <img class="install-dialog-screenshot install-dialog-screenshot-desktop is-hidden" data-install-screenshot-desktop src="/manifest-assets/screenshot-wide.png?v=1" alt="reader running as an installed app on desktop" width="1440" height="1120" loading="lazy" />
         <p class="config-dialog-copy">Add reader to your home screen for a faster, full-screen experience with offline access to your last feed.</p>
         <ol class="install-steps is-hidden" data-install-steps>
-          <li>Tap <strong>Share</strong> below.</li>
-          <li>Choose <strong>Add to Home Screen</strong> from the share sheet.</li>
+          <li>
+            Tap the Share icon
+            <span class="install-steps-icon" aria-hidden="true">
+              <svg class="theme-icon" viewBox="0 0 24 24">
+                <path d="M12 14V4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
+                <path d="M8.5 7.5L12 4l3.5 3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                <path d="M6 10v8.5a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+              </svg>
+            </span>
+            in Safari's toolbar.
+          </li>
+          <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
         </ol>
-        <div class="config-dialog-footer-row">
+        <div class="config-dialog-footer-row" data-install-dialog-footer>
           <div class="config-dialog-actions">
             <button class="dialog-button dialog-button-primary" type="button" data-install-dialog-confirm>
               <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -370,14 +380,6 @@ export function renderIndexPage(data: PageData): string {
                 <path d="M4.5 18.2h15" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
               </svg>
               Install app
-            </button>
-            <button class="dialog-button dialog-button-primary is-hidden" type="button" data-install-dialog-share>
-              <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M12 14V4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
-                <path d="M8.5 7.5L12 4l3.5 3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
-                <path d="M6 10v8.5a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
-              </svg>
-              Share
             </button>
           </div>
         </div>
