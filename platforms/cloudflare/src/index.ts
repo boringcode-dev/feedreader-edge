@@ -283,7 +283,7 @@ function buildSourceFilters(current: string) {
   const defs = [
     {
       key: "all",
-      label: "All enabled sources",
+      label: "For You",
       iconPath: undefined as string | undefined,
     },
     {

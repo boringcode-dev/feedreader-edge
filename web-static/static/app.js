@@ -2,7 +2,6 @@
   const root = document.documentElement;
   const availableSources = ["hackernews", "github", "huggingface", "alphaxiv"];
   const sourceLabels = {
-    all: "All enabled sources",
     hackernews: "Hacker News",
     github: "GitHub Trending",
     huggingface: "Hugging Face Trending Papers",
@@ -344,7 +343,7 @@
       .map((key) => {
         const isActive = key === activeFilter;
         if (key === "all") {
-          return `<button class="filter-button${isActive ? " is-active" : ""}" type="button" data-filter="${key}" aria-pressed="${String(isActive)}" aria-label="${escapeAttr(sourceLabels[key] || key)}" title="${escapeAttr(sourceLabels[key] || key)}">All</button>`;
+          return `<button class="filter-button${isActive ? " is-active" : ""}" type="button" data-filter="${key}" aria-pressed="${String(isActive)}" aria-label="For You" title="For You">For You</button>`;
         }
         return `<button class="filter-button filter-button--icon${isActive ? " is-active" : ""}" type="button" data-filter="${key}" aria-pressed="${String(isActive)}" aria-label="${escapeAttr(sourceLabels[key] || key)}" title="${escapeAttr(sourceLabels[key] || key)}"><img class="source-icon-image source-icon-image--filter source-icon-image--${escapeAttr(key)}" src="${escapeAttr(sourceIconPaths[key] || "")}" alt="" aria-hidden="true" /></button>`;
       })
