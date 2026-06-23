@@ -29,3 +29,17 @@ export interface FeedRepository {
   ): Promise<FeedItem[]>;
   countTotalItems(): Promise<number>;
 }
+
+/**
+ * Ranks `items` by relevance to a free-text `interests` description.
+ * Returns a best-effort ordering of 0-based indices into `items`, most
+ * relevant first — FeedItem has no stable numeric id, so position in the
+ * input array is the only identifier the ranker needs. The result may be a
+ * subset (the caller appends any indices the ranker omitted, in their
+ * original order) and may be empty if ranking failed entirely; it must
+ * never throw for a malformed model response, only for genuine
+ * transport/availability failures.
+ */
+export interface LlmRanker {
+  rank(items: FeedItem[], interests: string): Promise<number[]>;
+}

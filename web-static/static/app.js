@@ -32,6 +32,13 @@
   const themeOptions = Array.from(
     document.querySelectorAll("[data-theme-option]"),
   );
+  const aiPersonalizationToggle = document.querySelector(
+    "[data-ai-personalization-toggle]",
+  );
+  const interestsInput = document.querySelector("[data-interests-input]");
+  const personalizedIndicator = document.querySelector(
+    "[data-personalized-indicator]",
+  );
   const connectionIndicator = document.querySelector(
     "[data-connection-indicator]",
   );
@@ -74,12 +81,19 @@
   const visitedLinksStorageKey = "feedreader.visited";
   const visitedLinksLimit = 500;
   const themeStorageKey = "feedreader.theme";
+  const interestsStorageKey = "feedreader.interests";
+  const aiPersonalizationStorageKey = "feedreader.aiPersonalizationEnabled";
+  const interestsMaxLength = 300;
+  const defaultInterests = "engineering, AI/ML, startups";
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
 
   let activeFilter = cardsGrid?.dataset.currentSource || "all";
   let selectedSources = loadSelectedSources();
   let uiDensity = loadUIDensity();
   let visitedLinks = loadVisitedLinks();
+  let interests = loadInterests();
+  let aiPersonalizationEnabled = interests !== "" && loadAiPersonalizationEnabled();
+  let personalizedActive = false;
   let activeQuery = (searchInput?.value || "").trim();
   let searchOpen = Boolean(activeQuery);
   let loadedCount = cardsGrid
@@ -295,6 +309,31 @@
     localStorage.setItem(densityConfigStorageKey, uiDensity);
   }
 
+  function loadInterests() {
+    try {
+      const stored = localStorage.getItem(interestsStorageKey);
+      return stored === null ? defaultInterests : stored.trim();
+    } catch {
+      return defaultInterests;
+    }
+  }
+
+  function persistInterests(next) {
+    localStorage.setItem(interestsStorageKey, next);
+  }
+
+  function loadAiPersonalizationEnabled() {
+    try {
+      return localStorage.getItem(aiPersonalizationStorageKey) === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  function persistAiPersonalizationEnabled(next) {
+    localStorage.setItem(aiPersonalizationStorageKey, next ? "true" : "false");
+  }
+
   function syncThemeOptions() {
     themeOptions.forEach((option) => {
       option.checked = option.value === root.dataset.theme;
@@ -336,6 +375,16 @@
     return [...selectedSources];
   }
 
+  function personalizationConfigured() {
+    return aiPersonalizationEnabled && interests !== "";
+  }
+
+  function shouldShowPersonalized() {
+    return (
+      activeFilter === "all" && personalizationConfigured() && !activeQuery
+    );
+  }
+
   function renderFilters() {
     if (!filterNav) return;
     const keys = visibleFilterKeys();
@@ -350,10 +399,24 @@
       .join(""); // Fixed local source definitions only; all interpolated values are escaped above.
   }
 
+  function renderPersonalizedIndicator() {
+    if (!personalizedIndicator) return;
+    personalizedIndicator.classList.toggle("is-hidden", !personalizedActive);
+  }
+
   function syncConfigOptions() {
     configOptions.forEach((option) => {
       option.checked = selectedSources.includes(option.value);
     });
+  }
+
+  function syncPersonalizationOptions() {
+    if (aiPersonalizationToggle) {
+      aiPersonalizationToggle.checked = aiPersonalizationEnabled;
+    }
+    if (interestsInput) {
+      interestsInput.value = interests;
+    }
   }
 
   function syncDensityOptions() {
@@ -585,30 +648,51 @@
     showLoadingToast = true,
   }) => {
     syncConnectivityState();
+    const personalize = shouldShowPersonalized();
     const requestId = ++requestSequence;
     setFeedLoading(true, {
       mode: append ? "append" : "replace",
       message:
-        loadingMessage || (append ? "Loading more items…" : "Loading feed…"),
+        loadingMessage ||
+        (append
+          ? "Loading more items…"
+          : personalize
+            ? "Personalizing feed…"
+            : "Loading feed…"),
       showLoadingToast,
     });
 
-    const url = new URL("/api/items", window.location.origin);
-    url.searchParams.set("limit", String(pageSize));
-    url.searchParams.set("offset", String(offset));
-    if (source && source !== "all") {
-      url.searchParams.set("source", source);
-    } else if (shouldRestrictAllSources()) {
-      url.searchParams.set("sources", selectedSources.join(","));
-    }
-    if (query) {
-      url.searchParams.set("q", query);
-    }
-
     try {
-      const response = await fetch(url.toString(), {
-        headers: { Accept: "application/json" },
-      });
+      let response;
+      if (personalize) {
+        const body = { interests, limit: pageSize, offset };
+        if (shouldRestrictAllSources()) {
+          body.sources = selectedSources;
+        }
+        response = await fetch("/api/personalize", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+      } else {
+        const url = new URL("/api/items", window.location.origin);
+        url.searchParams.set("limit", String(pageSize));
+        url.searchParams.set("offset", String(offset));
+        if (source && source !== "all") {
+          url.searchParams.set("source", source);
+        } else if (shouldRestrictAllSources()) {
+          url.searchParams.set("sources", selectedSources.join(","));
+        }
+        if (query) {
+          url.searchParams.set("q", query);
+        }
+        response = await fetch(url.toString(), {
+          headers: { Accept: "application/json" },
+        });
+      }
       if (!response.ok) {
         throw new Error(`fetch failed: ${response.status}`);
       }
@@ -645,6 +729,16 @@
       }
       loadedCount = append ? loadedCount + items.length : items.length;
       applyVisitedLinkState();
+
+      if (personalize) {
+        personalizedActive = !payload.degraded;
+        if (!append && payload.degraded) {
+          showToast("Personalization unavailable, showing latest", "error");
+        }
+      } else {
+        personalizedActive = false;
+      }
+      renderPersonalizedIndicator();
       renderFeedBody();
     } finally {
       if (requestId === requestSequence) {
@@ -788,6 +882,7 @@
     syncConfigOptions();
     syncDensityOptions();
     syncThemeOptions();
+    syncPersonalizationOptions();
     if (typeof configDialog?.showModal === "function" && !configDialog.open) {
       configDialog.showModal();
       syncDialogOpenState(true);
@@ -869,10 +964,23 @@
     syncDialogOpenState(false);
   }
 
-  async function applyDialogSettings(nextSources, nextDensity, nextTheme) {
+  async function applyDialogSettings(
+    nextSources,
+    nextDensity,
+    nextTheme,
+    nextPersonalizationEnabled,
+    nextInterests,
+  ) {
     const normalizedSources = normalizeSelectedSources(nextSources);
     if (normalizedSources.length === 0) {
       showToast("Select at least one source", "error");
+      return;
+    }
+    const normalizedInterests = (nextInterests || "")
+      .trim()
+      .slice(0, interestsMaxLength);
+    if (nextPersonalizationEnabled && !normalizedInterests) {
+      showToast("Add a few interests to enable For You", "error");
       return;
     }
     const normalizedDensity = normalizeUIDensity(nextDensity);
@@ -884,6 +992,9 @@
       );
     const densityChanged = normalizedDensity !== uiDensity;
     const themeChanged = normalizedTheme !== root.dataset.theme;
+    const interestsChanged = normalizedInterests !== interests;
+    const personalizationEnabledChanged =
+      nextPersonalizationEnabled !== aiPersonalizationEnabled;
 
     if (themeChanged) {
       applyTheme(normalizedTheme);
@@ -893,7 +1004,17 @@
       applyUIDensity(normalizedDensity);
     }
 
-    if (!sourcesChanged) {
+    if (interestsChanged) {
+      interests = normalizedInterests;
+      persistInterests(interests);
+    }
+
+    if (personalizationEnabledChanged) {
+      aiPersonalizationEnabled = nextPersonalizationEnabled;
+      persistAiPersonalizationEnabled(aiPersonalizationEnabled);
+    }
+
+    if (!sourcesChanged && !interestsChanged && !personalizationEnabledChanged) {
       syncDensityOptions();
       closeConfigDialog();
       return;
@@ -904,7 +1025,7 @@
     syncConfigOptions();
     syncDensityOptions();
     closeConfigDialog();
-    await refetchCurrentView({ loadingMessage: "Loading selected sources…" });
+    await refetchCurrentView({ loadingMessage: "Loading feed…" });
   }
 
   if (filterNav) {
@@ -953,6 +1074,8 @@
           currentSourceSelection(),
           currentDensitySelection(),
           currentThemeSelection(),
+          aiPersonalizationToggle?.checked ?? false,
+          interestsInput?.value ?? "",
         );
       } catch (error) {
         showToast("Failed to apply reader settings", "error");
@@ -1190,9 +1313,10 @@
   applyVisitedLinkState();
   localizeBriefDates();
   const shouldBootstrapRefetch =
-    activeFilter === "all"
+    shouldShowPersonalized() ||
+    (activeFilter === "all"
       ? selectedSources.length !== availableSources.length
-      : !selectedSources.includes(activeFilter);
+      : !selectedSources.includes(activeFilter));
   ensureActiveFilterIsVisible();
   renderFilters();
   renderSearch();

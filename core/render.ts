@@ -298,6 +298,21 @@ export function renderIndexPage(data: PageData): string {
           </div>
         </section>
         </div>
+        <section class="config-section" aria-labelledby="config-personalization-title">
+          <div class="config-section-header">
+            <h3 id="config-personalization-title" class="config-section-title">AI personalization</h3>
+            <p class="config-section-copy">Rerank your feed by your interests using AI. Stored only in this browser.</p>
+          </div>
+          <div class="config-options">
+            <label class="config-option">
+              <input type="checkbox" data-ai-personalization-toggle />
+              <span class="config-option-body">
+                <span class="config-option-title">Enable personalized ranking</span>
+              </span>
+            </label>
+          </div>
+          <textarea class="interests-input" data-interests-input rows="3" maxlength="300" placeholder="fullstack development, software engineering, computer science, AI, machine learning, LLMs"></textarea>
+        </section>
         <section class="config-section" aria-labelledby="config-sources-title">
           <div class="config-section-header">
             <h3 id="config-sources-title" class="config-section-title">Sources</h3>
@@ -389,6 +404,7 @@ export function renderIndexPage(data: PageData): string {
     </dialog>
 ${errorsBlock}
     <main class="shell page-body">
+      <p class="personalized-indicator is-hidden" data-personalized-indicator>✦ Personalized by AI</p>
       <section class="cards-grid${cardsHiddenClass}" data-card-grid data-current-source="${escapeHtml(data.currentSource)}" data-page-size="${data.pageSize}" data-has-next="${data.hasNext ? "true" : "false"}" aria-busy="false">
         ${data.cards.map(renderCard).join("\n        ")}
       </section>

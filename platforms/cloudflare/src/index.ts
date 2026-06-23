@@ -3,7 +3,7 @@
 // served by the [assets] binding before any request reaches fetch() below
 // — see wrangler.toml and docs/RUNBOOK.md.
 
-import type { RefreshOutcome } from "../../../core/domain.ts";
+import type { CardView, RefreshOutcome, SyncState } from "../../../core/domain.ts";
 import {
   buildCards,
   buildErrors,
@@ -14,7 +14,15 @@ import {
 } from "../../../core/service.ts";
 import { build, type Source } from "../../../core/sources/index.ts";
 import { renderIndexPage } from "../../../core/render.ts";
+import {
+  MAX_INTERESTS_LENGTH,
+  itemKey,
+  mergeRankedKeysOrder,
+  mergeRankedOrder,
+} from "../../../core/personalize/rank.ts";
+import { paginate } from "../../../core/sources/listInMemory.ts";
 import { D1Repository } from "./repository.ts";
+import { CloudflareLlmRanker } from "./llmRanker.ts";
 import type { Env } from "./env.d.ts";
 
 const PAGE_SIZE = 12;
@@ -25,6 +33,15 @@ const KNOWN_SOURCES = new Set([
   "alphaxiv",
 ]);
 
+// Ranking the LLM sees is capped (cheap prompt, see env var below); pagination
+// is served from a larger in-memory pool. 500 mirrors the "dataset is small"
+// assumption already baked into D1Repository.listFeedItems/countTotalItems.
+const PERSONALIZE_FULL_POOL_LIMIT = 500;
+// Backstop only — the cache key already changes whenever the underlying
+// source data refreshes (see latestSuccessAt below), so this just bounds
+// staleness if a source somehow stops refreshing.
+const PERSONALIZE_CACHE_TTL_SECONDS = 21600;
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
@@ -34,6 +51,15 @@ export default {
     if (url.pathname === "/") return handleHome(url, env, repo);
     if (url.pathname === "/healthz") return handleHealthz(sources, repo);
     if (url.pathname === "/api/items") return handleItemsApi(url, repo);
+    if (url.pathname === "/api/personalize") {
+      if (request.method !== "POST") {
+        return new Response("method not allowed", {
+          status: 405,
+          headers: { Allow: "POST" },
+        });
+      }
+      return handlePersonalize(request, env, repo);
+    }
     if (url.pathname === "/api/refresh") {
       if (request.method !== "POST") {
         return new Response("method not allowed", {
@@ -138,19 +164,242 @@ async function handleItemsApi(url: URL, repo: D1Repository): Promise<Response> {
     offset,
     limit,
     has_next: hasNext,
-    items: cards.map((card) => ({
-      source: card.source,
-      index: card.index,
-      title: card.title,
-      url: card.url,
-      brief: card.brief ?? null,
-      brief_prefix: card.briefPrefix ?? null,
-      brief_suffix: card.briefSuffix ?? null,
-      brief_date_iso: card.briefDateIso ?? null,
-      brief_date_kind: card.briefDateKind,
-      host: card.host,
-    })),
+    items: cardsToJson(cards),
   });
+}
+
+function cardsToJson(cards: CardView[]) {
+  return cards.map((card) => ({
+    source: card.source,
+    index: card.index,
+    title: card.title,
+    url: card.url,
+    brief: card.brief ?? null,
+    brief_prefix: card.briefPrefix ?? null,
+    brief_suffix: card.briefSuffix ?? null,
+    brief_date_iso: card.briefDateIso ?? null,
+    brief_date_kind: card.briefDateKind,
+    host: card.host,
+  }));
+}
+
+/**
+ * Client sends only interests (plus the currently-active source filter and
+ * normal limit/offset paging); the candidate pool and final ordering are
+ * entirely server-decided — the client never supplies item ids.
+ *
+ * The LLM is only ever consulted for the *first* page request for a given
+ * (interests, source filter, source-data freshness) combination — the
+ * resulting ranked order is cached via the platform Cache API, keyed so it
+ * naturally invalidates whenever the underlying sources next refresh (see
+ * latestSuccessAt). Every page request — including the first — re-fetches
+ * fresh item rows from D1 and reorders them according to that ranking, so
+ * pagination never re-invokes the model and item content (title/score/etc.)
+ * is never served stale from the cache, only the ordering is.
+ *
+ * On any ranking failure (bad model output, or every model in the fallback
+ * chain throwing) it serves the pool's chronological order and sets
+ * `degraded: true` rather than erroring the request — and deliberately does
+ * not cache that outcome, so the next request tries ranking again instead of
+ * being stuck degraded for the cache's lifetime.
+ */
+async function handlePersonalize(
+  request: Request,
+  env: Env,
+  repo: D1Repository,
+): Promise<Response> {
+  let body: unknown;
+  try {
+    body = await request.json();
+  } catch {
+    return Response.json({ error: "invalid JSON body" }, { status: 400 });
+  }
+
+  const { interests, source, sources, limit, offset } =
+    parsePersonalizeBody(body);
+  if (interests === "") {
+    return Response.json({ error: "interests is required" }, { status: 400 });
+  }
+
+  const fullPool = await repo.listFeedItems(
+    PERSONALIZE_FULL_POOL_LIMIT,
+    0,
+    source,
+    sources,
+    "",
+  );
+  if (fullPool.length === 0) {
+    return Response.json({
+      generated_at: new Date().toISOString(),
+      degraded: false,
+      has_next: false,
+      items: [],
+    });
+  }
+
+  const states = await repo.listSourceStates();
+  const freshness = latestSuccessAt(states, source, sources);
+  const cacheRequest = personalizeCacheRequest(
+    interests,
+    source,
+    sources,
+    freshness,
+  );
+
+  let rankedKeys = await readRankedKeysCache(cacheRequest);
+  let degraded = false;
+  if (rankedKeys === null) {
+    let poolSize = parsePositiveInt(
+      env.FEEDREADER_PERSONALIZE_POOL_SIZE ?? null,
+      60,
+    );
+    if (poolSize > 100) poolSize = 100;
+    const candidates = fullPool.slice(0, poolSize);
+    try {
+      const ranker = new CloudflareLlmRanker(env.AI);
+      const ranked = await ranker.rank(candidates, interests);
+      if (ranked.length > 0) {
+        rankedKeys = mergeRankedOrder(candidates, ranked).map(itemKey);
+        await writeRankedKeysCache(cacheRequest, rankedKeys);
+      } else {
+        rankedKeys = [];
+        degraded = true;
+      }
+    } catch {
+      rankedKeys = [];
+      degraded = true;
+    }
+  }
+
+  const ordered = mergeRankedKeysOrder(fullPool, rankedKeys);
+  const page = paginate(ordered, limit, offset);
+  const hasNext = offset + page.length < ordered.length;
+  const cards = buildCards(page, offset);
+
+  return Response.json({
+    generated_at: new Date().toISOString(),
+    degraded,
+    has_next: hasNext,
+    items: cardsToJson(cards),
+  });
+}
+
+function parsePersonalizeBody(body: unknown): {
+  interests: string;
+  source: string;
+  sources: string[];
+  limit: number;
+  offset: number;
+} {
+  const record =
+    typeof body === "object" && body !== null
+      ? (body as Record<string, unknown>)
+      : {};
+  const interests = normalizeInterests(record.interests);
+  const source = normalizeSource(
+    typeof record.source === "string" ? record.source : "",
+  );
+  const querySource = source === "all" ? "" : source;
+  const rawSources = Array.isArray(record.sources)
+    ? record.sources
+        .filter((value): value is string => typeof value === "string")
+        .join(",")
+    : "";
+  const sources = querySource === "" ? normalizeSourceList(rawSources) : [];
+  let limit = parsePositiveInt(bodyNumberAsString(record.limit), PAGE_SIZE);
+  if (limit > 100) limit = 100;
+  const offset = parseNonNegativeInt(bodyNumberAsString(record.offset), 0);
+  return { interests, source: querySource, sources, limit, offset };
+}
+
+function bodyNumberAsString(value: unknown): string | null {
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "string") return value;
+  return null;
+}
+
+function normalizeInterests(raw: unknown): string {
+  if (typeof raw !== "string") return "";
+  return raw.trim().slice(0, MAX_INTERESTS_LENGTH);
+}
+
+/** Latest successful refresh among the sources in scope — used so the
+ * personalize ranking cache invalidates itself whenever new items arrive,
+ * without needing an explicit purge. */
+function latestSuccessAt(
+  states: Record<string, SyncState>,
+  source: string,
+  sources: string[],
+): string {
+  const relevant =
+    source !== ""
+      ? [source]
+      : sources.length > 0
+        ? sources
+        : Array.from(KNOWN_SOURCES);
+  let latest = "";
+  for (const key of relevant) {
+    const at = states[key]?.lastSuccessAt ?? "";
+    if (at > latest) latest = at;
+  }
+  return latest;
+}
+
+/** Synthetic GET request used purely as a Cache API key — never fetched.
+ * `.invalid` is reserved by RFC 2606 for exactly this kind of placeholder
+ * use, so it's guaranteed not to collide with a real host. */
+function personalizeCacheRequest(
+  interests: string,
+  source: string,
+  sources: string[],
+  freshness: string,
+): Request {
+  const raw = `rank:v1:${interests} ${source} ${sources.join(",")} ${freshness}`;
+  const url = `https://feedreader-internal.invalid/personalize-rank?k=${encodeURIComponent(raw)}`;
+  return new Request(url, { method: "GET" });
+}
+
+// tsconfig includes the DOM lib (needed for linkedom-based source parsing
+// elsewhere), whose own `CacheStorage` type shadows the Workers one and
+// lacks `.default` — cast through `unknown` once to recover it.
+function defaultPersonalizeCache(): Cache {
+  return (caches as unknown as { default: Cache }).default;
+}
+
+async function readRankedKeysCache(
+  cacheRequest: Request,
+): Promise<string[] | null> {
+  try {
+    const hit = await defaultPersonalizeCache().match(cacheRequest);
+    if (!hit) return null;
+    const data = (await hit.json()) as unknown;
+    return Array.isArray(data)
+      ? data.filter((value): value is string => typeof value === "string")
+      : null;
+  } catch {
+    // Cache API is best-effort (and a documented no-op in local `wrangler
+    // dev`) — any failure here is just a cache miss, never an error.
+    return null;
+  }
+}
+
+async function writeRankedKeysCache(
+  cacheRequest: Request,
+  rankedKeys: string[],
+): Promise<void> {
+  try {
+    await defaultPersonalizeCache().put(
+      cacheRequest,
+      new Response(JSON.stringify(rankedKeys), {
+        headers: {
+          "content-type": "application/json",
+          "cache-control": `max-age=${PERSONALIZE_CACHE_TTL_SECONDS}`,
+        },
+      }),
+    );
+  } catch {
+    // Same as above — a failed write just means the next request re-ranks.
+  }
 }
 
 async function handleRefresh(env: Env, sources: Source[]): Promise<Response> {
