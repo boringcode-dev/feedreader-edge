@@ -26,10 +26,19 @@ const KNOWN_SOURCES = new Set([
   "alphaxiv",
 ]);
 
-// Second [triggers] cron in wrangler.toml — Sunday 23:00 ICT (Asia/Ho_Chi_Minh,
-// UTC+7, no DST) = Sunday 16:00 UTC. Fires alongside (not instead of) the
-// hourly refresh cron; event.cron tells scheduled() which one triggered.
-const WEEKLY_PRUNE_CRON = "0 16 * * 0";
+// A second [triggers] cron entry for the weekly prune was tried and reverted:
+// Cloudflare's schedules API rejected the multi-cron deploy ("Some triggers
+// failed to deploy ... a request to the Cloudflare API
+// (/accounts/.../workers/scripts/feedreader/schedules) failed", no further
+// detail surfaced — Wrangler doesn't expose the underlying error, see
+// cloudflare/workers-sdk#14288). Instead, the existing hourly trigger does
+// double duty: every invocation checks whether it landed in the weekly prune
+// window before doing its normal refresh. Sunday 23:00 ICT (Asia/Ho_Chi_Minh,
+// UTC+7, no DST) = Sunday 16:00 UTC.
+function isWeeklyPruneWindow(scheduledTime: number): boolean {
+  const date = new Date(scheduledTime);
+  return date.getUTCDay() === 0 && date.getUTCHours() === 16;
+}
 
 // Backstop only — the cache key already changes whenever the underlying
 // source data refreshes (see latestSuccessAt), so this just bounds
@@ -62,7 +71,7 @@ export default {
   },
 
   async scheduled(event: ScheduledController, env: Env): Promise<void> {
-    if (event.cron === WEEKLY_PRUNE_CRON) {
+    if (isWeeklyPruneWindow(event.scheduledTime)) {
       const { maxItemsPerSource } = loadConfig(env);
       const deleted = await new D1Repository(env.DB).pruneOldItems(
         maxItemsPerSource,
@@ -70,7 +79,6 @@ export default {
       console.log(
         `pruneOldItems: deleted ${deleted} item(s) beyond ${maxItemsPerSource} per source`,
       );
-      return;
     }
     await fanOutRefresh(env, build());
   },
