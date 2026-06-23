@@ -3,7 +3,7 @@
 // served by the [assets] binding before any request reaches fetch() below
 // — see wrangler.toml and docs/RUNBOOK.md.
 
-import type { RefreshOutcome } from "../../../core/domain.ts";
+import type { RefreshOutcome, SyncState } from "../../../core/domain.ts";
 import {
   buildCards,
   buildErrors,
@@ -24,6 +24,11 @@ const KNOWN_SOURCES = new Set([
   "huggingface",
   "alphaxiv",
 ]);
+
+// Backstop only — the cache key already changes whenever the underlying
+// source data refreshes (see latestSuccessAt), so this just bounds
+// staleness if a source somehow stops refreshing.
+const ITEMS_CACHE_TTL_SECONDS = 21600;
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -126,6 +131,17 @@ function currentAppVersion(env: Env): string {
   return env.APP_VERSION?.trim() || "dev";
 }
 
+/**
+ * The data backing a given (source filter, search query, page) is fixed
+ * until the next source refresh, so the full JSON response can be cached
+ * as-is — unlike /api/personalize there's no per-request LLM step to avoid,
+ * caching here is just sparing D1 the same paginated read on every poll.
+ *
+ * The cache key includes latestSuccessAt so it naturally invalidates
+ * whenever the underlying sources next refresh (see personalize's same
+ * pattern) — no manual purge needed, and `generated_at` in the cached body
+ * reflects when that snapshot was actually produced.
+ */
 async function handleItemsApi(url: URL, repo: D1Repository): Promise<Response> {
   const source = normalizeSource(url.searchParams.get("source") ?? "");
   const searchQuery = normalizeSearchQuery(url.searchParams.get("q") ?? "");
@@ -137,6 +153,20 @@ async function handleItemsApi(url: URL, repo: D1Repository): Promise<Response> {
   const offset = parseNonNegativeInt(url.searchParams.get("offset"), 0);
   const querySource = source === "all" ? "" : source;
 
+  const states = await repo.listSourceStates();
+  const freshness = latestSuccessAt(states, querySource, selectedSources);
+  const cacheRequest = itemsCacheRequest(
+    querySource,
+    selectedSources,
+    searchQuery,
+    limit,
+    offset,
+    freshness,
+  );
+
+  const cached = await readEdgeCache(cacheRequest);
+  if (cached) return cached;
+
   const { items, hasNext } = await feedItems(
     repo,
     limit,
@@ -147,27 +177,98 @@ async function handleItemsApi(url: URL, repo: D1Repository): Promise<Response> {
   );
   const cards = buildCards(items, offset);
 
-  return Response.json({
-    generated_at: new Date().toISOString(),
-    source,
-    sources: selectedSources,
-    query: searchQuery,
-    offset,
-    limit,
-    has_next: hasNext,
-    items: cards.map((card) => ({
-      source: card.source,
-      index: card.index,
-      title: card.title,
-      url: card.url,
-      brief: card.brief ?? null,
-      brief_prefix: card.briefPrefix ?? null,
-      brief_suffix: card.briefSuffix ?? null,
-      brief_date_iso: card.briefDateIso ?? null,
-      brief_date_kind: card.briefDateKind,
-      host: card.host,
-    })),
-  });
+  const response = Response.json(
+    {
+      generated_at: new Date().toISOString(),
+      source,
+      sources: selectedSources,
+      query: searchQuery,
+      offset,
+      limit,
+      has_next: hasNext,
+      items: cards.map((card) => ({
+        source: card.source,
+        index: card.index,
+        title: card.title,
+        url: card.url,
+        brief: card.brief ?? null,
+        brief_prefix: card.briefPrefix ?? null,
+        brief_suffix: card.briefSuffix ?? null,
+        brief_date_iso: card.briefDateIso ?? null,
+        brief_date_kind: card.briefDateKind,
+        host: card.host,
+      })),
+    },
+    { headers: { "Cache-Control": `max-age=${ITEMS_CACHE_TTL_SECONDS}` } },
+  );
+  await writeEdgeCache(cacheRequest, response.clone());
+  return response;
+}
+
+/** Latest successful refresh among the sources in scope — used so an edge
+ * cache entry invalidates itself whenever new items arrive, without
+ * needing an explicit purge. */
+function latestSuccessAt(
+  states: Record<string, SyncState>,
+  source: string,
+  sources: string[],
+): string {
+  const relevant =
+    source !== ""
+      ? [source]
+      : sources.length > 0
+        ? sources
+        : Array.from(KNOWN_SOURCES);
+  let latest = "";
+  for (const key of relevant) {
+    const at = states[key]?.lastSuccessAt ?? "";
+    if (at > latest) latest = at;
+  }
+  return latest;
+}
+
+/** Synthetic GET request used purely as a Cache API key — never fetched.
+ * `.invalid` is reserved by RFC 2606 for exactly this kind of placeholder
+ * use, so it's guaranteed not to collide with a real host. */
+function itemsCacheRequest(
+  source: string,
+  sources: string[],
+  query: string,
+  limit: number,
+  offset: number,
+  freshness: string,
+): Request {
+  const raw = `items:v1:${source} ${sources.join(",")} ${query} ${limit} ${offset} ${freshness}`;
+  const url = `https://feedreader-internal.invalid/items-cache?k=${encodeURIComponent(raw)}`;
+  return new Request(url, { method: "GET" });
+}
+
+// tsconfig includes the DOM lib (needed for linkedom-based source parsing
+// elsewhere), whose own `CacheStorage` type shadows the Workers one and
+// lacks `.default` — cast through `unknown` once to recover it.
+function defaultEdgeCache(): Cache {
+  return (caches as unknown as { default: Cache }).default;
+}
+
+async function readEdgeCache(cacheRequest: Request): Promise<Response | null> {
+  try {
+    return (await defaultEdgeCache().match(cacheRequest)) ?? null;
+  } catch {
+    // Cache API is best-effort — any failure here is just a cache miss,
+    // never an error.
+    return null;
+  }
+}
+
+async function writeEdgeCache(
+  cacheRequest: Request,
+  response: Response,
+): Promise<void> {
+  try {
+    await defaultEdgeCache().put(cacheRequest, response);
+  } catch {
+    // Same as above — a failed write just means the next request re-queries D1.
+  }
 }
 
 async function handleRefresh(env: Env, sources: Source[]): Promise<Response> {
