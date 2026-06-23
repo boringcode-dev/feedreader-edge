@@ -38,6 +38,12 @@ export interface FeedRepository {
   ): Promise<FeedItem[]>;
   countTotalItems(): Promise<number>;
   /**
+   * Deletes all but the `maxPerSource` most recent items per source (same
+   * effective ordering as the feed itself), so the table can't grow
+   * unbounded. Returns the number of rows deleted.
+   */
+  pruneOldItems(maxPerSource: number): Promise<number>;
+  /**
    * Of the given `externalIds` for `source`, returns the subset that
    * already have a stored embedding — used at ingestion time to embed only
    * items that don't have one yet, instead of re-embedding the whole batch

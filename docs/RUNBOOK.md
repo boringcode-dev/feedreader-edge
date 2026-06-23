@@ -59,6 +59,14 @@ wrangler d1 execute feedreader --local --config platforms/cloudflare/wrangler.to
 
 With real Workers AI credentials, exercise `/api/personalize` with two paraphrased interests strings (e.g. "rust and distributed systems" vs "distributed systems, rust") and confirm comparable rankings despite the literal string difference — that's the concrete capability this pipeline is meant to deliver over the old cache-key-by-literal-string approach.
 
+## Weekly item-retention prune
+
+`scheduled()`'s single hourly trigger does double duty: every firing, `isWeeklyPruneWindow` checks whether `event.scheduledTime` landed on Sunday 16:00 UTC (23:00 ICT) and, if so, runs `D1Repository.pruneOldItems` before the normal refresh fan-out. It deletes all but the `FEEDREADER_MAX_ITEMS_PER_SOURCE` (default 1000) most recent items per source, ordered the same way the feed itself sorts (`coalesce(published_at, first_seen_at) DESC, ...`).
+
+**Why not a second Cron Trigger:** that was the original design, but deploying a second `[triggers]` cron entry alongside the hourly one made `wrangler deploy` fail outright — `[ERROR] Some triggers failed to deploy for feedreader: - A request to the Cloudflare API (/accounts/.../workers/scripts/feedreader/schedules) failed.`, with no further detail (Wrangler doesn't currently surface the underlying API error for trigger-deploy failures — see [cloudflare/workers-sdk#14288](https://github.com/cloudflare/workers-sdk/issues/14288)). The script, bindings, and vars deployed fine each time; only the schedules update failed, leaving only the original single cron registered. Root cause against the live Cloudflare API was never confirmed (no token available outside CI to reproduce with verbose logging). If you want to retry the two-cron-trigger approach, capture `wrangler deploy --log-level debug` output to get the actual API error body before assuming it'll work differently this time.
+
+1000/source was sized against rows-read cost, not disk: `listFeedItems` reads every row matching its WHERE clause with no SQL `LIMIT` (sorting/pagination happens in memory — see `core/sources/listInMemory.ts`), so an unfiltered home-page hit reads `sources × cap` rows from D1 every time. At 4 sources × 1000 that's 4,000 rows/request — cheap in isolation, but worth keeping in mind against D1 Free's 5M-rows-read/day budget if traffic grows or source count grows well past 4. Raising the cap or adding more sources should come with either moving sort/pagination into SQL (the existing `idx_items_feed_order` index already matches the sort order but is unused by the current query shape) or checking D1 Free's rows-read budget isn't at risk.
+
 ## Reading cron execution history
 
 Use Cloudflare dashboard → Workers & Pages → `feedreader` → Triggers → Cron Triggers, or `wrangler tail` while a scheduled run is expected, to confirm `sync_state.last_attempt_at` is updating without user-triggered traffic.

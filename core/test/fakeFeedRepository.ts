@@ -56,6 +56,10 @@ export class FakeFeedRepository implements FeedRepository {
     return 0;
   }
 
+  async pruneOldItems(): Promise<number> {
+    return 0;
+  }
+
   async listEmbeddedKeys(
     source: string,
     externalIds: string[],

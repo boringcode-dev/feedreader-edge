@@ -25,6 +25,7 @@ import { paginate } from "../../../core/sources/listInMemory.ts";
 import { D1Repository } from "./repository.ts";
 import { CloudflareLlmRanker } from "./llmRanker.ts";
 import { CloudflareEmbedder } from "./embedder.ts";
+import { loadConfig } from "./config.ts";
 import type { Env } from "./env.d.ts";
 
 const PAGE_SIZE = 12;
@@ -34,6 +35,20 @@ const KNOWN_SOURCES = new Set([
   "huggingface",
   "alphaxiv",
 ]);
+
+// A second [triggers] cron entry for the weekly prune was tried and reverted:
+// Cloudflare's schedules API rejected the multi-cron deploy ("Some triggers
+// failed to deploy ... a request to the Cloudflare API
+// (/accounts/.../workers/scripts/feedreader/schedules) failed", no further
+// detail surfaced — Wrangler doesn't expose the underlying error, see
+// cloudflare/workers-sdk#14288). Instead, the existing hourly trigger does
+// double duty: every invocation checks whether it landed in the weekly prune
+// window before doing its normal refresh. Sunday 23:00 ICT (Asia/Ho_Chi_Minh,
+// UTC+7, no DST) = Sunday 16:00 UTC.
+function isWeeklyPruneWindow(scheduledTime: number): boolean {
+  const date = new Date(scheduledTime);
+  return date.getUTCDay() === 0 && date.getUTCHours() === 16;
+}
 
 // Ranking the LLM sees is capped (cheap prompt, see env var below); pagination
 // is served from a larger in-memory pool. 500 mirrors the "dataset is small"
@@ -82,7 +97,16 @@ export default {
     return new Response("not found", { status: 404 });
   },
 
-  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+  async scheduled(event: ScheduledController, env: Env): Promise<void> {
+    if (isWeeklyPruneWindow(event.scheduledTime)) {
+      const { maxItemsPerSource } = loadConfig(env);
+      const deleted = await new D1Repository(env.DB).pruneOldItems(
+        maxItemsPerSource,
+      );
+      console.log(
+        `pruneOldItems: deleted ${deleted} item(s) beyond ${maxItemsPerSource} per source`,
+      );
+    }
     await fanOutRefresh(env, build());
   },
 };

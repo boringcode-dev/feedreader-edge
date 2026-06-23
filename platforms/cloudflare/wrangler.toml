@@ -20,6 +20,11 @@ port = 8788
 # Hourly, UTC. Asia/Ho_Chi_Minh (UTC+7, no DST) hourly wall-clock boundaries
 # are the same instants as UTC hourly wall-clock boundaries, so no offset
 # math is needed (see docs/RUNBOOK.md).
+#
+# A second cron entry for the weekly prune was tried and reverted — Cloudflare's
+# schedules API rejected the multi-cron deploy (see src/index.ts's
+# isWeeklyPruneWindow and docs/RUNBOOK.md). The hourly trigger does double
+# duty instead: scheduled() checks the wall-clock on every firing.
 [triggers]
 crons = ["0 * * * *"]
 
@@ -50,6 +55,11 @@ binding = "AI"
 APP_VERSION = "dev"
 FEEDREADER_ITEMS_PER_SOURCE = "20"
 FEEDREADER_USER_AGENT = "feedreader/0.1"
+# Per-source row cap enforced by the weekly prune window inside the hourly
+# cron handler (see src/index.ts's isWeeklyPruneWindow and docs/RUNBOOK.md)
+# — keeps the items table, and every full-table-scan query against it,
+# bounded as more sources are added.
+FEEDREADER_MAX_ITEMS_PER_SOURCE = "1000"
 # Size of the top-similarity slice the LLM polishes per /api/personalize
 # call (0 disables the LLM polish pass, serving similarity order on its
 # own) — bounds prompt size and Workers AI cost. See src/index.ts's
