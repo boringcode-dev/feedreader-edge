@@ -16,17 +16,9 @@
   <img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers" />
   <img src="https://img.shields.io/badge/Cloudflare-D1-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare D1" />
   <img src="https://img.shields.io/badge/Cron-Triggers-F38020?logo=cloudflare&logoColor=white" alt="Cron Triggers" />
-  <img src="https://img.shields.io/badge/Node-22-339933?logo=node.js&logoColor=white" alt="Node 22" />
+  <img src="https://img.shields.io/badge/Node-24-339933?logo=node.js&logoColor=white" alt="Node 24" />
   <a href="https://github.com/boringcode-dev/feedreader-edge/actions/workflows/ci.yml"><img src="https://github.com/boringcode-dev/feedreader-edge/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" />
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Lighthouse_Performance-100-brightgreen" alt="Lighthouse Performance: 100" />
-  <img src="https://img.shields.io/badge/Lighthouse_Accessibility-100-brightgreen" alt="Lighthouse Accessibility: 100" />
-  <img src="https://img.shields.io/badge/Lighthouse_Best_Practices-100-brightgreen" alt="Lighthouse Best Practices: 100" />
-  <img src="https://img.shields.io/badge/Lighthouse_SEO-100-brightgreen" alt="Lighthouse SEO: 100" />
-  <img src="https://img.shields.io/badge/Page_weight-~42_KB-blue" alt="Page weight: ~42 KB" />
 </p>
 
 ---
@@ -41,23 +33,9 @@
 
 `feedreader` is server-rendered HTML with vanilla JS/CSS — no framework runtime, no client hydration, no bundler payload. That keeps it genuinely tiny and fast, not just "fast for a SPA."
 
-Lighthouse against the production deployment (mobile, simulated throttling), measured 2026-06-23:
+Lighthouse against the production deployment (mobile, simulated throttling):
 
-| Category       | Score |
-| --------------- | ----: |
-| Performance     |   100 |
-| Accessibility   |   100 |
-| Best Practices  |   100 |
-| SEO             |   100 |
-
-| Metric                   |  Value |
-| ------------------------ | -----: |
-| First Contentful Paint   |  0.9 s |
-| Largest Contentful Paint |  1.1 s |
-| Time to Interactive      |  1.1 s |
-| Total Blocking Time      |  20 ms |
-| Cumulative Layout Shift  |  0.002 |
-| Total page weight        | ~42 KB |
+![Lighthouse report](docs/assets/lighthouse-report.png)
 
 Reproduce locally:
 
@@ -182,7 +160,7 @@ docs/assets/            README screenshots and supporting images
 
 ### Prerequisites
 
-- Node.js 22+
+- Node.js 24+
 - npm
 - a Cloudflare account for remote deployment
 
