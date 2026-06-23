@@ -93,6 +93,8 @@ button {
 
 .header-actions {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 0.45rem;
 }
@@ -192,10 +194,27 @@ button {
 .filter-button:hover,
 .icon-button:hover,
 .view-more:hover,
-.search-clear:hover,
+.search-clear:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+
 .item-title a:hover {
   color: var(--text);
   border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+}
+
+.filter-button.is-active:hover {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
+.filter-button:focus-visible,
+.icon-button:focus-visible,
+.view-more:focus-visible,
+.search-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .filter-button.is-active {
@@ -218,6 +237,37 @@ button {
 .icon-button[disabled] {
   opacity: 0.6;
   cursor: wait;
+}
+
+.pill-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: var(--control-height);
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 44%, var(--border));
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: 140ms ease;
+}
+
+.pill-button:hover {
+  background: color-mix(in srgb, var(--accent) 22%, var(--accent-soft));
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
+.pill-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.pill-button .theme-icon {
+  color: var(--accent);
 }
 
 .search-toggle.is-active,
@@ -500,6 +550,13 @@ button {
   border: 1px solid var(--border);
   border-radius: 0.95rem;
   background: var(--surface);
+  cursor: pointer;
+  transition: 140ms ease;
+}
+
+.config-option:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
 }
 
 .config-option input {
@@ -591,6 +648,10 @@ button {
   background: color-mix(in srgb, var(--accent-soft) 52%, var(--surface));
 }
 
+.config-option--choice:has(input:checked):hover {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
 .config-option--choice:has(input:checked) .config-option-icon {
   color: var(--accent);
 }
@@ -611,6 +672,11 @@ body.is-dialog-open {
 .config-dialog-actions {
   display: flex;
   justify-content: flex-end;
+  /* Pushes this flex item fully right within .config-dialog-footer-row even
+   * when it's the row's only child — without this, justify-content:
+   * space-between on the row has nothing to space against and the actions
+   * end up sitting at the start (left) instead, as in the install dialog. */
+  margin-left: auto;
   gap: 0.55rem;
 }
 
@@ -635,11 +701,22 @@ body.is-dialog-open {
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
+  transition: 140ms ease;
+}
+
+.dialog-button:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
 }
 
 .dialog-button-primary {
   background: var(--accent-soft);
   border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+}
+
+.dialog-button-primary:hover {
+  background: color-mix(in srgb, var(--accent) 22%, var(--accent-soft));
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
 }
 
 .toast {

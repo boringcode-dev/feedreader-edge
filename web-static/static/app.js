@@ -60,8 +60,8 @@
   const installConfirmButton = document.querySelector(
     "[data-install-dialog-confirm]",
   );
-  const installDialogFooter = document.querySelector(
-    "[data-install-dialog-footer]",
+  const installDialogHideButton = document.querySelector(
+    "[data-install-dialog-hide]",
   );
   const installSteps = document.querySelector("[data-install-steps]");
   const installScreenshotMobile = document.querySelector(
@@ -74,6 +74,7 @@
     "[data-install-screenshot-desktop]",
   );
   const toast = document.querySelector("[data-toast]");
+  const updateButton = document.querySelector("[data-update-button]");
   const pageSize = Number(cardsGrid?.dataset.pageSize || 12);
   const searchDebounceMs = 1100;
   const sourceConfigStorageKey = "feedreader.sources";
@@ -85,7 +86,10 @@
   const aiPersonalizationStorageKey = "feedreader.aiPersonalizationEnabled";
   const interestsMaxLength = 300;
   const defaultInterests = "engineering, AI/ML, startups";
+  const installPromptHiddenStorageKey = "feedreader.installPromptHidden";
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+  const loadedAppVersion = document.body.dataset.appVersion || "";
+  const updateCheckIntervalMs = 15 * 60 * 1000;
 
   let activeFilter = cardsGrid?.dataset.currentSource || "all";
   let selectedSources = loadSelectedSources();
@@ -94,6 +98,7 @@
   let interests = loadInterests();
   let aiPersonalizationEnabled = interests !== "" && loadAiPersonalizationEnabled();
   let personalizedActive = false;
+  let installPromptHidden = loadInstallPromptHidden();
   let activeQuery = (searchInput?.value || "").trim();
   let searchOpen = Boolean(activeQuery);
   let loadedCount = cardsGrid
@@ -334,6 +339,18 @@
     localStorage.setItem(aiPersonalizationStorageKey, next ? "true" : "false");
   }
 
+  function loadInstallPromptHidden() {
+    try {
+      return localStorage.getItem(installPromptHiddenStorageKey) === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  function persistInstallPromptHidden() {
+    localStorage.setItem(installPromptHiddenStorageKey, "true");
+  }
+
   function syncThemeOptions() {
     themeOptions.forEach((option) => {
       option.checked = option.value === root.dataset.theme;
@@ -451,6 +468,29 @@
   const syncConnectivityState = () => {
     browserOnline = navigator.onLine;
     renderConnectionIndicator();
+  };
+
+  const showUpdateButton = () => {
+    updateButton?.classList.remove("is-hidden");
+  };
+
+  let checkingForUpdate = false;
+  const checkForUpdate = async () => {
+    if (!loadedAppVersion || checkingForUpdate) return;
+    checkingForUpdate = true;
+    try {
+      const response = await fetch("/api/version", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (payload.version && payload.version !== loadedAppVersion) {
+        showUpdateButton();
+      }
+    } catch {
+      // Offline or request failed — try again on the next visibility/focus
+      // event rather than erroring the page.
+    } finally {
+      checkingForUpdate = false;
+    }
   };
 
   const renderViewMore = () => {
@@ -935,6 +975,7 @@
   }
 
   function showInstallButton() {
+    if (installPromptHidden) return;
     installButton?.classList.remove("is-hidden");
   }
 
@@ -1126,6 +1167,15 @@
     });
   }
 
+  if (installDialogHideButton) {
+    installDialogHideButton.addEventListener("click", () => {
+      installPromptHidden = true;
+      persistInstallPromptHidden();
+      hideInstallButton();
+      closeInstallDialog();
+    });
+  }
+
   if (installDialog) {
     installDialog.addEventListener("cancel", (event) => {
       event.preventDefault();
@@ -1269,7 +1319,9 @@
   if (!isStandaloneDisplay()) {
     if (isIOSDevice()) {
       installSteps?.classList.remove("is-hidden");
-      installDialogFooter?.classList.add("is-hidden");
+      // No native install prompt on iOS, so there's nothing for the primary
+      // button to confirm — keep "Don't show again" as the only footer action.
+      installConfirmButton?.classList.add("is-hidden");
       showInstallButton();
     }
 
@@ -1300,9 +1352,30 @@
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+      navigator.serviceWorker
+        .register("/service-worker.js")
+        .then((registration) => registration.update().catch(() => {}))
+        .catch(() => {});
     });
   }
+
+  updateButton?.addEventListener("click", () => {
+    window.location.reload();
+  });
+
+  // An installed PWA reopened from the home screen on iOS/iPadOS resumes a
+  // frozen page rather than re-running this script, so neither a periodic
+  // timer nor "load" alone can see a deploy that happened while it was
+  // backgrounded. visibilitychange/pageshow catch the resume itself; the
+  // interval is a fallback for long foreground sessions that never trigger
+  // either.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkForUpdate();
+  });
+  window.addEventListener("pageshow", () => checkForUpdate());
+  window.setInterval(() => {
+    if (document.visibilityState === "visible") checkForUpdate();
+  }, updateCheckIntervalMs);
 
   const savedTheme = localStorage.getItem(themeStorageKey);
   applyTheme(savedTheme === "light" ? "light" : "dark");
