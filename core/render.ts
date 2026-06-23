@@ -154,9 +154,13 @@ export function renderIndexPage(data: PageData): string {
     <link rel="stylesheet" href="/static/style.css?v=45" />
     <script src="/static/app.js?v=36" defer></script>
   </head>
-  <body>
+  <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
       <div class="toast" data-toast role="status" aria-live="polite"></div>
+      <div class="update-banner is-hidden" data-update-banner role="status" aria-live="polite">
+        <span>A new version is available.</span>
+        <button class="update-banner-button" type="button" data-update-refresh>Refresh</button>
+      </div>
       <div class="header-top">
         <h1 class="brand"><img class="brand-mark" src="/favicon.svg?v=7" alt="" aria-hidden="true" /><span>reader</span></h1>
         <div class="header-actions">

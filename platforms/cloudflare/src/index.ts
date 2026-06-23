@@ -34,6 +34,7 @@ export default {
     if (url.pathname === "/") return handleHome(url, env, repo);
     if (url.pathname === "/healthz") return handleHealthz(sources, repo);
     if (url.pathname === "/api/items") return handleItemsApi(url, repo);
+    if (url.pathname === "/api/version") return handleVersion(env);
     if (url.pathname === "/api/refresh") {
       if (request.method !== "POST") {
         return new Response("method not allowed", {
@@ -69,7 +70,7 @@ async function handleHome(
   const querySource = source === "all" ? "" : source;
   const canonicalUrl = `${url.origin}${url.pathname}${url.search}`;
   const socialImageUrl = `${url.origin}/og-image.png?v=2`;
-  const appVersion = env.APP_VERSION?.trim() || "dev";
+  const appVersion = currentAppVersion(env);
 
   const { items, hasNext } = await feedItems(
     repo,
@@ -107,6 +108,22 @@ async function handleHealthz(
 ): Promise<Response> {
   const payload = await healthPayload(sources, repo);
   return Response.json(payload);
+}
+
+/** Lets the client (notably an installed PWA resuming from the background,
+ * which never re-runs index.html's inline bootstrap) detect that a new
+ * version has been deployed and prompt for a refresh — see
+ * web-static/static/app.js's checkForUpdate(). Deliberately uncached: it
+ * must always reflect the currently-deployed APP_VERSION. */
+function handleVersion(env: Env): Response {
+  return Response.json(
+    { version: currentAppVersion(env) },
+    { headers: { "Cache-Control": "no-store" } },
+  );
+}
+
+function currentAppVersion(env: Env): string {
+  return env.APP_VERSION?.trim() || "dev";
 }
 
 async function handleItemsApi(url: URL, repo: D1Repository): Promise<Response> {
