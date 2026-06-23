@@ -399,19 +399,6 @@ button {
   line-height: 1.45;
 }
 
-.install-steps-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  vertical-align: -0.35em;
-  color: var(--accent);
-}
-
-.install-steps-icon .theme-icon {
-  width: 1.05rem;
-  height: 1.05rem;
-}
-
 .config-section {
   display: flex;
   flex-direction: column;
@@ -587,6 +574,10 @@ body.is-dialog-open {
 }
 
 .dialog-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
   min-height: var(--control-height);
   padding: 0 0.95rem;
   border-radius: 999px;

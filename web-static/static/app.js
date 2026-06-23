@@ -54,6 +54,9 @@
   const installConfirmButton = document.querySelector(
     "[data-install-dialog-confirm]",
   );
+  const installShareButton = document.querySelector(
+    "[data-install-dialog-share]",
+  );
   const installSteps = document.querySelector("[data-install-steps]");
   const toast = document.querySelector("[data-toast]");
   const pageSize = Number(cardsGrid?.dataset.pageSize || 12);
@@ -975,6 +978,23 @@
     });
   }
 
+  if (installShareButton) {
+    installShareButton.addEventListener("click", async () => {
+      closeInstallDialog();
+      if (!navigator.share) {
+        return;
+      }
+      try {
+        await navigator.share({
+          title: document.title,
+          url: window.location.href,
+        });
+      } catch {
+        // user dismissed the share sheet
+      }
+    });
+  }
+
   if (installDialog) {
     installDialog.addEventListener("cancel", (event) => {
       event.preventDefault();
@@ -1101,6 +1121,7 @@
     if (isIOSDevice()) {
       installSteps?.classList.remove("is-hidden");
       installConfirmButton?.classList.add("is-hidden");
+      installShareButton?.classList.remove("is-hidden");
       showInstallButton();
     }
 
