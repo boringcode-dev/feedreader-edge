@@ -235,11 +235,12 @@ export function renderIndexPage(data: PageData): string {
           </button>
         </div>
         <p class="config-dialog-copy">Adjust the reader appearance and choose which sources appear in the feed.</p>
+        <div class="config-section-row">
         <section class="config-section" aria-labelledby="config-theme-title">
           <div class="config-section-header">
             <h3 id="config-theme-title" class="config-section-title">Theme</h3>
           </div>
-          <div class="config-options config-options--two-column config-options--choice-grid">
+          <div class="config-options config-options--choice-grid">
             <label class="config-option config-option--choice">
               <input type="radio" name="ui-theme" value="dark" data-theme-option checked />
               <span class="config-option-body config-option-body--choice">
@@ -269,7 +270,7 @@ export function renderIndexPage(data: PageData): string {
           <div class="config-section-header">
             <h3 id="config-density-title" class="config-section-title">UI density</h3>
           </div>
-          <div class="config-options config-options--two-column config-options--choice-grid">
+          <div class="config-options config-options--choice-grid">
             <label class="config-option config-option--choice">
               <input type="radio" name="ui-density" value="current" data-density-option checked />
               <span class="config-option-body config-option-body--choice">
@@ -296,6 +297,7 @@ export function renderIndexPage(data: PageData): string {
             </label>
           </div>
         </section>
+        </div>
         <section class="config-section" aria-labelledby="config-sources-title">
           <div class="config-section-header">
             <h3 id="config-sources-title" class="config-section-title">Sources</h3>
