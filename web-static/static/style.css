@@ -194,10 +194,27 @@ button {
 .filter-button:hover,
 .icon-button:hover,
 .view-more:hover,
-.search-clear:hover,
+.search-clear:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
+}
+
 .item-title a:hover {
   color: var(--text);
   border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+}
+
+.filter-button.is-active:hover {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
+.filter-button:focus-visible,
+.icon-button:focus-visible,
+.view-more:focus-visible,
+.search-clear:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .filter-button.is-active {
@@ -240,7 +257,13 @@ button {
 }
 
 .pill-button:hover {
+  background: color-mix(in srgb, var(--accent) 22%, var(--accent-soft));
   border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
+.pill-button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .pill-button .theme-icon {
@@ -504,6 +527,13 @@ button {
   border: 1px solid var(--border);
   border-radius: 0.95rem;
   background: var(--surface);
+  cursor: pointer;
+  transition: 140ms ease;
+}
+
+.config-option:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
 }
 
 .config-option input {
@@ -595,6 +625,10 @@ button {
   background: color-mix(in srgb, var(--accent-soft) 52%, var(--surface));
 }
 
+.config-option--choice:has(input:checked):hover {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
 .config-option--choice:has(input:checked) .config-option-icon {
   color: var(--accent);
 }
@@ -644,11 +678,22 @@ body.is-dialog-open {
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
+  transition: 140ms ease;
+}
+
+.dialog-button:hover {
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border));
 }
 
 .dialog-button-primary {
   background: var(--accent-soft);
   border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+}
+
+.dialog-button-primary:hover {
+  background: color-mix(in srgb, var(--accent) 22%, var(--accent-soft));
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
 }
 
 .toast {
