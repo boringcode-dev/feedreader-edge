@@ -53,8 +53,8 @@
   const installConfirmButton = document.querySelector(
     "[data-install-dialog-confirm]",
   );
-  const installDialogFooter = document.querySelector(
-    "[data-install-dialog-footer]",
+  const installDialogHideButton = document.querySelector(
+    "[data-install-dialog-hide]",
   );
   const installSteps = document.querySelector("[data-install-steps]");
   const installScreenshotMobile = document.querySelector(
@@ -67,8 +67,7 @@
     "[data-install-screenshot-desktop]",
   );
   const toast = document.querySelector("[data-toast]");
-  const updateBanner = document.querySelector("[data-update-banner]");
-  const updateRefreshButton = document.querySelector("[data-update-refresh]");
+  const updateButton = document.querySelector("[data-update-button]");
   const pageSize = Number(cardsGrid?.dataset.pageSize || 12);
   const searchDebounceMs = 1100;
   const sourceConfigStorageKey = "feedreader.sources";
@@ -76,6 +75,7 @@
   const visitedLinksStorageKey = "feedreader.visited";
   const visitedLinksLimit = 500;
   const themeStorageKey = "feedreader.theme";
+  const installPromptHiddenStorageKey = "feedreader.installPromptHidden";
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
   const loadedAppVersion = document.body.dataset.appVersion || "";
   const updateCheckIntervalMs = 15 * 60 * 1000;
@@ -84,6 +84,7 @@
   let selectedSources = loadSelectedSources();
   let uiDensity = loadUIDensity();
   let visitedLinks = loadVisitedLinks();
+  let installPromptHidden = loadInstallPromptHidden();
   let activeQuery = (searchInput?.value || "").trim();
   let searchOpen = Boolean(activeQuery);
   let loadedCount = cardsGrid
@@ -299,6 +300,18 @@
     localStorage.setItem(densityConfigStorageKey, uiDensity);
   }
 
+  function loadInstallPromptHidden() {
+    try {
+      return localStorage.getItem(installPromptHiddenStorageKey) === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  function persistInstallPromptHidden() {
+    localStorage.setItem(installPromptHiddenStorageKey, "true");
+  }
+
   function syncThemeOptions() {
     themeOptions.forEach((option) => {
       option.checked = option.value === root.dataset.theme;
@@ -394,8 +407,8 @@
     renderConnectionIndicator();
   };
 
-  const showUpdateBanner = () => {
-    updateBanner?.classList.remove("is-hidden");
+  const showUpdateButton = () => {
+    updateButton?.classList.remove("is-hidden");
   };
 
   let checkingForUpdate = false;
@@ -407,7 +420,7 @@
       if (!response.ok) return;
       const payload = await response.json();
       if (payload.version && payload.version !== loadedAppVersion) {
-        showUpdateBanner();
+        showUpdateButton();
       }
     } catch {
       // Offline or request failed — try again on the next visibility/focus
@@ -867,6 +880,7 @@
   }
 
   function showInstallButton() {
+    if (installPromptHidden) return;
     installButton?.classList.remove("is-hidden");
   }
 
@@ -1030,6 +1044,15 @@
     });
   }
 
+  if (installDialogHideButton) {
+    installDialogHideButton.addEventListener("click", () => {
+      installPromptHidden = true;
+      persistInstallPromptHidden();
+      hideInstallButton();
+      closeInstallDialog();
+    });
+  }
+
   if (installDialog) {
     installDialog.addEventListener("cancel", (event) => {
       event.preventDefault();
@@ -1173,7 +1196,9 @@
   if (!isStandaloneDisplay()) {
     if (isIOSDevice()) {
       installSteps?.classList.remove("is-hidden");
-      installDialogFooter?.classList.add("is-hidden");
+      // No native install prompt on iOS, so there's nothing for the primary
+      // button to confirm — keep "Don't show again" as the only footer action.
+      installConfirmButton?.classList.add("is-hidden");
       showInstallButton();
     }
 
@@ -1211,7 +1236,7 @@
     });
   }
 
-  updateRefreshButton?.addEventListener("click", () => {
+  updateButton?.addEventListener("click", () => {
     window.location.reload();
   });
 

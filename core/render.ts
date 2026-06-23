@@ -157,10 +157,6 @@ export function renderIndexPage(data: PageData): string {
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
       <div class="toast" data-toast role="status" aria-live="polite"></div>
-      <div class="update-banner is-hidden" data-update-banner role="status" aria-live="polite">
-        <span>A new version is available.</span>
-        <button class="update-banner-button" type="button" data-update-refresh>Refresh</button>
-      </div>
       <div class="header-top">
         <h1 class="brand"><img class="brand-mark" src="/favicon.svg?v=7" alt="" aria-hidden="true" /><span>reader</span></h1>
         <div class="header-actions">
@@ -173,12 +169,22 @@ export function renderIndexPage(data: PageData): string {
               <path d="M4 4l16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.9"/>
             </svg>
           </span>
-          <button class="icon-button install-button is-hidden" type="button" data-install-button aria-label="Install reader" title="Install reader">
+          <button class="pill-button update-button is-hidden" type="button" data-update-button aria-label="A new version is available — tap to refresh" title="A new version is available — tap to refresh">
+            <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 2.5c2.6 2 4 5.3 4 9.3 0 2.4-.5 4.4-1.3 6l-2.7 3-2.7-3c-.8-1.6-1.3-3.6-1.3-6 0-4 1.4-7.3 4-9.3Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+              <circle cx="12" cy="10.5" r="1.5" fill="none" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M8.7 14.5l-2.6 1.3.4-3.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+              <path d="M15.3 14.5l2.6 1.3-.4-3.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+            </svg>
+            <span>New version</span>
+          </button>
+          <button class="pill-button install-button is-hidden" type="button" data-install-button aria-label="Install reader" title="Install reader">
             <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M12 3.5v10.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
               <path d="M7.8 10.7l4.2 4.2 4.2-4.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
               <path d="M4.5 18.2h15" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
             </svg>
+            <span>Install</span>
           </button>
           <button class="icon-button refresh-button" type="button" data-refresh-button aria-label="Refresh feed" title="Refresh feed">
             <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -379,6 +385,7 @@ export function renderIndexPage(data: PageData): string {
         </ol>
         <div class="config-dialog-footer-row" data-install-dialog-footer>
           <div class="config-dialog-actions">
+            <button class="dialog-button" type="button" data-install-dialog-hide>Don't show again</button>
             <button class="dialog-button dialog-button-primary" type="button" data-install-dialog-confirm>
               <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M12 3.5v10.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
