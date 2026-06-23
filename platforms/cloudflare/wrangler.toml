@@ -2,6 +2,11 @@ name = "feedreader"
 main = "src/index.ts"
 compatibility_date = "2025-01-01"
 
+# Explicit (not relying on the workers.dev-matching default) so PR preview
+# deploys (.github/workflows/preview-cloudflare.yml, `wrangler versions
+# upload --preview-alias`) always get a reachable *.workers.dev URL.
+preview_urls = true
+
 [observability]
 enabled = true
 
