@@ -9,4 +9,5 @@ export interface Env {
   APP_VERSION?: string;
   FEEDREADER_ITEMS_PER_SOURCE?: string;
   FEEDREADER_USER_AGENT?: string;
+  FEEDREADER_MAX_ITEMS_PER_SOURCE?: string;
 }

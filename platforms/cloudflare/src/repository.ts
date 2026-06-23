@@ -199,6 +199,29 @@ export class D1Repository implements FeedRepository {
       .first<{ count: number }>();
     return row?.count ?? 0;
   }
+
+  async pruneOldItems(maxPerSource: number): Promise<number> {
+    const { meta } = await this.db
+      .prepare(
+        `
+      DELETE FROM items
+      WHERE id IN (
+        SELECT id FROM (
+          SELECT id, ROW_NUMBER() OVER (
+            PARTITION BY source
+            ORDER BY coalesce(published_at, first_seen_at) DESC, first_seen_at DESC,
+              source_rank ASC, source ASC, external_id ASC
+          ) AS rn
+          FROM items
+        )
+        WHERE rn > ?
+      )
+    `,
+      )
+      .bind(maxPerSource)
+      .run();
+    return meta.changes ?? 0;
+  }
 }
 
 function rowToFeedItem(row: ItemRow): FeedItem {

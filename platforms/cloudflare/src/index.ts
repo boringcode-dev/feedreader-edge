@@ -15,6 +15,7 @@ import {
 import { build, type Source } from "../../../core/sources/index.ts";
 import { renderIndexPage } from "../../../core/render.ts";
 import { D1Repository } from "./repository.ts";
+import { loadConfig } from "./config.ts";
 import type { Env } from "./env.d.ts";
 
 const PAGE_SIZE = 12;
@@ -24,6 +25,11 @@ const KNOWN_SOURCES = new Set([
   "huggingface",
   "alphaxiv",
 ]);
+
+// Second [triggers] cron in wrangler.toml — Sunday 23:00 ICT (Asia/Ho_Chi_Minh,
+// UTC+7, no DST) = Sunday 16:00 UTC. Fires alongside (not instead of) the
+// hourly refresh cron; event.cron tells scheduled() which one triggered.
+const WEEKLY_PRUNE_CRON = "0 16 * * 0";
 
 // Backstop only — the cache key already changes whenever the underlying
 // source data refreshes (see latestSuccessAt), so this just bounds
@@ -55,7 +61,17 @@ export default {
     return new Response("not found", { status: 404 });
   },
 
-  async scheduled(_event: ScheduledController, env: Env): Promise<void> {
+  async scheduled(event: ScheduledController, env: Env): Promise<void> {
+    if (event.cron === WEEKLY_PRUNE_CRON) {
+      const { maxItemsPerSource } = loadConfig(env);
+      const deleted = await new D1Repository(env.DB).pruneOldItems(
+        maxItemsPerSource,
+      );
+      console.log(
+        `pruneOldItems: deleted ${deleted} item(s) beyond ${maxItemsPerSource} per source`,
+      );
+      return;
+    }
     await fanOutRefresh(env, build());
   },
 };
