@@ -58,6 +58,12 @@
     "[data-install-dialog-share]",
   );
   const installSteps = document.querySelector("[data-install-steps]");
+  const installScreenshotMobile = document.querySelector(
+    "[data-install-screenshot-mobile]",
+  );
+  const installScreenshotDesktop = document.querySelector(
+    "[data-install-screenshot-desktop]",
+  );
   const toast = document.querySelector("[data-toast]");
   const pageSize = Number(cardsGrid?.dataset.pageSize || 12);
   const searchDebounceMs = 1100;
@@ -814,6 +820,17 @@
     return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
   }
 
+  function isMobileDevice() {
+    if (
+      navigator.userAgentData &&
+      typeof navigator.userAgentData.mobile === "boolean"
+    ) {
+      return navigator.userAgentData.mobile;
+    }
+    if (isIOSDevice()) return true;
+    return window.matchMedia?.("(pointer: coarse)")?.matches === true;
+  }
+
   function showInstallButton() {
     installButton?.classList.remove("is-hidden");
   }
@@ -1115,6 +1132,14 @@
     themeToggle.addEventListener("click", () => {
       applyTheme(root.dataset.theme === "dark" ? "light" : "dark");
     });
+  }
+
+  if (isMobileDevice()) {
+    installScreenshotDesktop?.classList.add("is-hidden");
+    installScreenshotMobile?.classList.remove("is-hidden");
+  } else {
+    installScreenshotMobile?.classList.add("is-hidden");
+    installScreenshotDesktop?.classList.remove("is-hidden");
   }
 
   if (!isStandaloneDisplay()) {

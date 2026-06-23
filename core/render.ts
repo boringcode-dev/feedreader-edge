@@ -151,8 +151,8 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=42" />
-    <script src="/static/app.js?v=33" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=43" />
+    <script src="/static/app.js?v=34" defer></script>
   </head>
   <body>
     <header class="shell page-header">
@@ -353,7 +353,8 @@ export function renderIndexPage(data: PageData): string {
             </svg>
           </button>
         </div>
-        <img class="install-dialog-screenshot" src="/manifest-assets/screenshot-mobile.png?v=2" alt="reader running as an installed app" width="430" height="932" loading="lazy" />
+        <img class="install-dialog-screenshot" data-install-screenshot-mobile src="/manifest-assets/screenshot-mobile.png?v=2" alt="reader running as an installed app on mobile" width="430" height="932" loading="lazy" />
+        <img class="install-dialog-screenshot install-dialog-screenshot-desktop is-hidden" data-install-screenshot-desktop src="/manifest-assets/screenshot-wide.png?v=1" alt="reader running as an installed app on desktop" width="1440" height="1120" loading="lazy" />
         <p class="config-dialog-copy">Add reader to your home screen for a faster, full-screen experience with offline access to your last feed.</p>
         <ol class="install-steps is-hidden" data-install-steps>
           <li>Tap <strong>Share</strong> below.</li>

@@ -383,6 +383,10 @@ button {
   box-shadow: var(--shadow);
 }
 
+.install-dialog-screenshot-desktop {
+  max-width: 20rem;
+}
+
 .install-dialog .config-dialog-form {
   max-height: calc(100vh - 4rem);
   overflow-y: auto;
