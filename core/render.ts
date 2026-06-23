@@ -56,7 +56,7 @@ function sourceIconPath(source: string): string {
 function renderFilterButton(filter: SourceFilterView): string {
   const activeClass = filter.active ? " is-active" : "";
   if (filter.key === "all") {
-    return `<button class="filter-button${activeClass}" type="button" data-filter="${escapeHtml(filter.key)}" aria-label="${escapeHtml(filter.label)}" title="${escapeHtml(filter.label)}">All</button>`;
+    return `<button class="filter-button${activeClass}" type="button" data-filter="${escapeHtml(filter.key)}" aria-label="${escapeHtml(filter.label)}" title="${escapeHtml(filter.label)}">${escapeHtml(filter.label)}</button>`;
   }
   return `<button class="filter-button${activeClass} filter-button--icon" type="button" data-filter="${escapeHtml(filter.key)}" aria-label="${escapeHtml(filter.label)}" title="${escapeHtml(filter.label)}">
               <img class="source-icon-image source-icon-image--filter source-icon-image--${escapeHtml(filter.key)}" src="${escapeHtml(filter.iconPath ?? "")}" alt="" aria-hidden="true" />
