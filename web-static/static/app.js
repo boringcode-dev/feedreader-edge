@@ -46,6 +46,17 @@
   const searchSourceInput = document.querySelector("[data-search-source]");
   const refreshButton = document.querySelector("[data-refresh-button]");
   const themeToggle = document.querySelector("[data-theme-toggle]");
+  const installButton = document.querySelector("[data-install-button]");
+  const installDialog = document.querySelector("[data-install-dialog]");
+  const installDialogCloseButtons = Array.from(
+    document.querySelectorAll(
+      "[data-install-dialog-close], [data-install-dialog-dismiss]",
+    ),
+  );
+  const installConfirmButton = document.querySelector(
+    "[data-install-dialog-confirm]",
+  );
+  const installSteps = document.querySelector("[data-install-steps]");
   const toast = document.querySelector("[data-toast]");
   const pageSize = Number(cardsGrid?.dataset.pageSize || 12);
   const searchDebounceMs = 1100;
@@ -76,6 +87,7 @@
   let browserOnline = navigator.onLine;
   let offlineViewUnavailable = false;
   let reconnectRefetchInFlight = false;
+  let deferredInstallPrompt = null;
 
   function emptyMessageForState({ source, query }) {
     if (offlineViewUnavailable) {
@@ -788,6 +800,49 @@
     syncDialogOpenState(false);
   }
 
+  function isStandaloneDisplay() {
+    return (
+      window.matchMedia?.("(display-mode: standalone)")?.matches === true ||
+      window.navigator.standalone === true
+    );
+  }
+
+  function isIOSDevice() {
+    const ua = navigator.userAgent || "";
+    if (/iphone|ipad|ipod/i.test(ua)) return true;
+    return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  }
+
+  function showInstallButton() {
+    installButton?.classList.remove("is-hidden");
+  }
+
+  function hideInstallButton() {
+    installButton?.classList.add("is-hidden");
+  }
+
+  function openInstallDialog() {
+    if (typeof installDialog?.showModal === "function" && !installDialog.open) {
+      installDialog.showModal();
+      syncDialogOpenState(true);
+      return;
+    }
+    if (installDialog) {
+      installDialog.setAttribute("open", "open");
+    }
+    syncDialogOpenState(true);
+  }
+
+  function closeInstallDialog() {
+    if (installDialog?.open && typeof installDialog.close === "function") {
+      installDialog.close();
+      syncDialogOpenState(false);
+      return;
+    }
+    installDialog?.removeAttribute("open");
+    syncDialogOpenState(false);
+  }
+
   async function applyDialogSettings(nextSources, nextDensity, nextTheme) {
     const normalizedSources = normalizeSelectedSources(nextSources);
     if (normalizedSources.length === 0) {
@@ -892,6 +947,49 @@
     });
   }
 
+  if (installButton) {
+    installButton.addEventListener("click", () => {
+      openInstallDialog();
+    });
+  }
+
+  installDialogCloseButtons.forEach((button) => {
+    button.addEventListener("click", () => {
+      closeInstallDialog();
+    });
+  });
+
+  if (installConfirmButton) {
+    installConfirmButton.addEventListener("click", async () => {
+      if (!deferredInstallPrompt) {
+        closeInstallDialog();
+        return;
+      }
+      const promptEvent = deferredInstallPrompt;
+      deferredInstallPrompt = null;
+      closeInstallDialog();
+      promptEvent.prompt();
+      try {
+        await promptEvent.userChoice;
+      } finally {
+        hideInstallButton();
+      }
+    });
+  }
+
+  if (installDialog) {
+    installDialog.addEventListener("cancel", (event) => {
+      event.preventDefault();
+      closeInstallDialog();
+    });
+
+    installDialog.addEventListener("click", (event) => {
+      if (event.target === installDialog) {
+        closeInstallDialog();
+      }
+    });
+  }
+
   if (filterNav) {
     filterNav.addEventListener("keydown", (event) => {
       if (event.key === "Enter" && document.activeElement?.dataset?.filter) {
@@ -979,6 +1077,14 @@
       if (!link) return;
       rememberVisitedLink(link.href);
     });
+
+    cardsGrid.addEventListener("click", (event) => {
+      if (event.target.closest("a")) return;
+      if (window.getSelection().toString() !== "") return;
+      const card = event.target.closest(".item-card");
+      const link = card?.querySelector(".item-title a");
+      link?.click();
+    });
   }
 
   if (refreshButton) {
@@ -990,6 +1096,26 @@
   if (themeToggle) {
     themeToggle.addEventListener("click", () => {
       applyTheme(root.dataset.theme === "dark" ? "light" : "dark");
+    });
+  }
+
+  if (!isStandaloneDisplay()) {
+    if (isIOSDevice()) {
+      installSteps?.classList.remove("is-hidden");
+      installConfirmButton?.classList.add("is-hidden");
+      showInstallButton();
+    }
+
+    window.addEventListener("beforeinstallprompt", (event) => {
+      event.preventDefault();
+      deferredInstallPrompt = event;
+      showInstallButton();
+    });
+
+    window.addEventListener("appinstalled", () => {
+      deferredInstallPrompt = null;
+      hideInstallButton();
+      closeInstallDialog();
     });
   }
 

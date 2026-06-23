@@ -372,6 +372,46 @@ button {
   line-height: 1.45;
 }
 
+.install-dialog-screenshot {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 11rem;
+  margin: 0 auto;
+  border-radius: 0.9rem;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+
+.install-dialog .config-dialog-form {
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+}
+
+.install-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin: 0;
+  padding-left: 1.3rem;
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.install-steps-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: -0.35em;
+  color: var(--accent);
+}
+
+.install-steps-icon .theme-icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
 .config-section {
   display: flex;
   flex-direction: column;
@@ -692,6 +732,27 @@ body.is-dialog-open {
     var(--surface)
   );
   box-shadow: var(--shadow);
+  cursor: pointer;
+  transition:
+    border-color 140ms ease,
+    transform 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.item-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 36%, var(--border));
+}
+
+.item-card:active {
+  transform: scale(0.992);
+}
+
+.item-card:focus-within {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+  box-shadow:
+    var(--shadow),
+    0 0 0 2px var(--accent-soft);
 }
 
 .item-card.is-hidden {

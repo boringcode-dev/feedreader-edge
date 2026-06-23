@@ -151,8 +151,8 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=40" />
-    <script src="/static/app.js?v=31" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=41" />
+    <script src="/static/app.js?v=32" defer></script>
   </head>
   <body>
     <header class="shell page-header">
@@ -169,6 +169,13 @@ export function renderIndexPage(data: PageData): string {
               <path d="M4 4l16 16" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.9"/>
             </svg>
           </span>
+          <button class="icon-button install-button is-hidden" type="button" data-install-button aria-label="Install reader" title="Install reader">
+            <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M12 3.5v10.6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
+              <path d="M7.8 10.7l4.2 4.2 4.2-4.2" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+              <path d="M4.5 18.2h15" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
+            </svg>
+          </button>
           <button class="icon-button refresh-button" type="button" data-refresh-button aria-label="Refresh feed" title="Refresh feed">
             <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
               <path d="M20 12a8 8 0 1 1-2.34-5.66" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
@@ -330,6 +337,42 @@ export function renderIndexPage(data: PageData): string {
           <div class="config-dialog-actions">
             <button class="dialog-button" type="button" data-source-config-cancel>Cancel</button>
             <button class="dialog-button dialog-button-primary" type="button" data-source-config-save>Save</button>
+          </div>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="config-dialog install-dialog" data-install-dialog>
+      <form class="config-dialog-form" method="dialog">
+        <div class="config-dialog-header">
+          <h2>Install reader</h2>
+          <button class="icon-button config-close" type="button" data-install-dialog-close aria-label="Close install prompt" title="Close install prompt">
+            <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M6 6l12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+              <path d="M18 6L6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+            </svg>
+          </button>
+        </div>
+        <img class="install-dialog-screenshot" src="/manifest-assets/screenshot-mobile.png?v=2" alt="reader running as an installed app" width="430" height="932" loading="lazy" />
+        <p class="config-dialog-copy">Add reader to your home screen for a faster, full-screen experience with offline access to your last feed.</p>
+        <ol class="install-steps is-hidden" data-install-steps>
+          <li>
+            Tap the Share icon
+            <span class="install-steps-icon" aria-hidden="true">
+              <svg class="theme-icon" viewBox="0 0 24 24">
+                <path d="M12 14V4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
+                <path d="M8.5 7.5L12 4l3.5 3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                <path d="M6 10v8.5a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+              </svg>
+            </span>
+            in Safari's toolbar.
+          </li>
+          <li>Scroll down and tap <strong>Add to Home Screen</strong>.</li>
+        </ol>
+        <div class="config-dialog-footer-row">
+          <div class="config-dialog-actions">
+            <button class="dialog-button" type="button" data-install-dialog-dismiss>Maybe later</button>
+            <button class="dialog-button dialog-button-primary" type="button" data-install-dialog-confirm>Install app</button>
           </div>
         </div>
       </form>
