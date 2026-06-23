@@ -322,6 +322,29 @@ button {
   border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
 }
 
+.interests-input {
+  width: 100%;
+  min-height: 4.5rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow);
+  padding: 0.65rem 0.86rem;
+  font-size: 16px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.interests-input::placeholder {
+  color: var(--muted);
+}
+
+.interests-input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+}
+
 .search-icon-close {
   display: none;
 }
@@ -787,6 +810,19 @@ body.is-dialog-open {
   flex-direction: column;
   gap: 0.5rem;
   margin-bottom: 0.8rem;
+}
+
+.personalized-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  margin: 0 0 0.7rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.8rem;
 }
 
 .error-banner,

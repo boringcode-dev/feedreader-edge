@@ -9,19 +9,26 @@ import type {
   RefreshOutcome,
   SourceSnapshot,
 } from "./domain.ts";
-import type { FeedRepository } from "./ports.ts";
+import type { Embedder, FeedRepository } from "./ports.ts";
+import { itemKey } from "./personalize/rank.ts";
 import type { Source } from "./sources/index.ts";
+
+const MAX_EMBEDDING_TEXT_LENGTH = 1000;
 
 export async function refreshAll(
   sources: Source[],
   repo: FeedRepository,
+  embedder: Embedder,
 ): Promise<RefreshOutcome[]> {
-  return Promise.all(sources.map((source) => refreshOne(source, repo)));
+  return Promise.all(
+    sources.map((source) => refreshOne(source, repo, embedder)),
+  );
 }
 
 export async function refreshOne(
   source: Source,
   repo: FeedRepository,
+  embedder: Embedder,
 ): Promise<RefreshOutcome> {
   const attemptedAtIso = new Date().toISOString();
   let items: FeedItem[];
@@ -37,14 +44,58 @@ export async function refreshOne(
     await repo.recordFailure(source.key(), attemptedAtIso, message);
     return { source: source.key(), ok: false, itemCount: 0, error: message };
   }
+  const embeddings = await embedNewItems(source.key(), items, repo, embedder);
   try {
-    await repo.saveSnapshot(source.key(), attemptedAtIso, items);
+    await repo.saveSnapshot(source.key(), attemptedAtIso, items, embeddings);
   } catch (error) {
     const message = errorMessage(error);
     await repo.recordFailure(source.key(), attemptedAtIso, message);
     return { source: source.key(), ok: false, itemCount: 0, error: message };
   }
   return { source: source.key(), ok: true, itemCount: items.length };
+}
+
+/**
+ * Embeds only the items in this batch that don't already have a stored
+ * embedding (per repo.listEmbeddedKeys), in one batched call — so a
+ * source's ~20 mostly-unchanged trending items don't get re-embedded every
+ * hourly refresh. Embedding is best-effort: any failure here (transport,
+ * or the embedder returning fewer vectors than requested) yields an empty
+ * map rather than throwing, so it never blocks saveSnapshot — unembedded
+ * items simply sink to the end of similarity-ranked results until a later
+ * refresh succeeds.
+ */
+async function embedNewItems(
+  sourceKey: string,
+  items: FeedItem[],
+  repo: FeedRepository,
+  embedder: Embedder,
+): Promise<Map<string, number[]>> {
+  const alreadyEmbedded = await repo.listEmbeddedKeys(
+    sourceKey,
+    items.map((item) => item.externalId),
+  );
+  const unembedded = items.filter(
+    (item) => !alreadyEmbedded.has(item.externalId),
+  );
+  if (unembedded.length === 0) return new Map();
+  try {
+    const vectors = await embedder.embed(unembedded.map(textForEmbedding));
+    const out = new Map<string, number[]>();
+    unembedded.forEach((item, i) => {
+      const vector = vectors[i];
+      if (vector) out.set(itemKey(item), vector);
+    });
+    return out;
+  } catch {
+    return new Map();
+  }
+}
+
+function textForEmbedding(item: FeedItem): string {
+  const summary = item.summary?.trim();
+  const text = summary ? `${item.title}. ${summary}` : item.title;
+  return text.slice(0, MAX_EMBEDDING_TEXT_LENGTH);
 }
 
 export async function dashboard(

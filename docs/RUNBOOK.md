@@ -35,6 +35,30 @@ npm run db:migrate:remote   # deployed D1 database
 
 New migrations go in `platforms/cloudflare/migrations/` as `NNNN_description.sql`, following on from `0001_init.sql`.
 
+## "For You" embedding pipeline
+
+`/api/personalize` is retrieve-then-rerank, not a single LLM call: each item gets a `@cf/baai/bge-base-en-v1.5` embedding once at ingestion time (`core/service.ts`'s `refreshOne`, stored in `items.embedding_json`/`embedding_model`), and at request time only the interests string gets embedded — ranking the ~500-item pool by cosine similarity (`core/personalize/similarity.ts`) needs no LLM call. The existing `CloudflareLlmRanker` then runs only as an optional "polish" pass over the top `FEEDREADER_PERSONALIZE_POLISH_POOL_SIZE` similarity hits (default 30; set to `0` to disable the LLM step entirely and serve similarity order on its own — no redeploy needed, just a var change).
+
+**Re-embedding trigger is presence-only, not staleness.** `D1Repository.listEmbeddedKeys` skips any item that already has a non-null `embedding_json`, so a source's mostly-unchanged trending items don't get re-embedded every hourly refresh — but if an item's title/summary is edited in place after first ingestion (rare for these sources), its embedding silently goes stale with no automatic re-embed. Existing rows from before this column existed self-backfill within ~1 hour of deploy, since the hourly refresh re-upserts every currently-live item regardless.
+
+**Neuron budget**: the LLM polish step (one chat-model call over up to ~30 item titles/summaries) dominates Workers AI spend, not the embedder (one batched embed call per source per refresh cycle, only for items missing a vector, plus one tiny embed call per personalize cache-miss request). Under budget pressure, the first lever to pull is `FEEDREADER_PERSONALIZE_POLISH_POOL_SIZE`, not the embedding model.
+
+**Manual verification** (no D1/Miniflare integration tests exist for this — same convention as the rest of `D1Repository`):
+
+```bash
+npm run db:migrate:local
+npm run dev
+# trigger one source's refresh, then inspect:
+wrangler d1 execute feedreader --local --config platforms/cloudflare/wrangler.toml \
+  --command "SELECT external_id, embedding_json IS NOT NULL AS has_embedding FROM items WHERE source='hackernews' LIMIT 5"
+# trigger that source's refresh again and re-run the query — embedding_json
+# should be unchanged (not re-computed) for the same rows, confirming the
+# ON CONFLICT ... coalesce(excluded.embedding_json, items.embedding_json)
+# preserve behavior in repository.ts.
+```
+
+With real Workers AI credentials, exercise `/api/personalize` with two paraphrased interests strings (e.g. "rust and distributed systems" vs "distributed systems, rust") and confirm comparable rankings despite the literal string difference — that's the concrete capability this pipeline is meant to deliver over the old cache-key-by-literal-string approach.
+
 ## Weekly item-retention prune
 
 `scheduled()`'s single hourly trigger does double duty: every firing, `isWeeklyPruneWindow` checks whether `event.scheduledTime` landed on Sunday 16:00 UTC (23:00 ICT) and, if so, runs `D1Repository.pruneOldItems` before the normal refresh fan-out. It deletes all but the `FEEDREADER_MAX_ITEMS_PER_SOURCE` (default 1000) most recent items per source, ordered the same way the feed itself sorts (`coalesce(published_at, first_seen_at) DESC, ...`).

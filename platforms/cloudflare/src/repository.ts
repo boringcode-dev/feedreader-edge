@@ -6,7 +6,9 @@
 
 import type { FeedItem, SyncState } from "../../../core/domain.ts";
 import type { FeedRepository } from "../../../core/ports.ts";
+import { itemKey } from "../../../core/personalize/rank.ts";
 import { paginate, sortFeedItems } from "../../../core/sources/listInMemory.ts";
+import { MODEL_ID as EMBEDDING_MODEL_ID } from "./embedder.ts";
 
 interface ItemRow {
   source: string;
@@ -23,6 +25,10 @@ interface ItemRow {
   first_seen_at: string;
 }
 
+interface RankingItemRow extends ItemRow {
+  embedding_json: string | null;
+}
+
 interface SyncStateRow {
   source: string;
   last_attempt_at: string | null;
@@ -33,6 +39,10 @@ interface SyncStateRow {
 
 const ITEM_COLUMNS =
   "source, external_id, title, url, summary, author, score, comments_url, published_at, source_rank, metadata_json, first_seen_at";
+// Only listFeedItemsForRanking needs embedding_json — keeping it off the
+// base ITEM_COLUMNS list means the home page and /api/items don't pay for
+// reading every item's (multi-KB) vector on every request.
+const RANKING_ITEM_COLUMNS = `${ITEM_COLUMNS}, embedding_json`;
 
 export class D1Repository implements FeedRepository {
   constructor(private readonly db: D1Database) {}
@@ -41,12 +51,14 @@ export class D1Repository implements FeedRepository {
     source: string,
     fetchedAtIso: string,
     items: FeedItem[],
+    embeddings: Map<string, number[]>,
   ): Promise<void> {
     const upsertItem = this.db.prepare(`
       INSERT INTO items (
         source, external_id, title, url, summary, author, score, comments_url,
-        published_at, source_rank, metadata_json, first_seen_at, last_seen_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        published_at, source_rank, metadata_json, embedding_json, embedding_model,
+        first_seen_at, last_seen_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       ON CONFLICT(source, external_id) DO UPDATE SET
         title = excluded.title,
         url = excluded.url,
@@ -57,11 +69,14 @@ export class D1Repository implements FeedRepository {
         published_at = coalesce(items.published_at, excluded.published_at),
         source_rank = excluded.source_rank,
         metadata_json = excluded.metadata_json,
+        embedding_json = coalesce(excluded.embedding_json, items.embedding_json),
+        embedding_model = coalesce(excluded.embedding_model, items.embedding_model),
         last_seen_at = excluded.last_seen_at,
         updated_at = items.updated_at
     `);
-    const statements = items.map((item) =>
-      upsertItem.bind(
+    const statements = items.map((item) => {
+      const vector = embeddings.get(itemKey(item));
+      return upsertItem.bind(
         item.source,
         item.externalId,
         item.title,
@@ -73,11 +88,13 @@ export class D1Repository implements FeedRepository {
         item.publishedAt ?? null,
         item.sourceRank,
         JSON.stringify(item.metadata ?? {}),
+        vector ? JSON.stringify(vector) : null,
+        vector ? EMBEDDING_MODEL_ID : null,
         fetchedAtIso,
         fetchedAtIso,
         fetchedAtIso,
-      ),
-    );
+      );
+    });
 
     const upsertSyncState = this.db
       .prepare(
@@ -159,17 +176,7 @@ export class D1Repository implements FeedRepository {
     searchQuery: string,
   ): Promise<FeedItem[]> {
     let query = `SELECT ${ITEM_COLUMNS} FROM items`;
-    const conditions: string[] = [];
-    const args: unknown[] = [];
-
-    const trimmedSource = source.trim();
-    if (trimmedSource !== "") {
-      conditions.push("source = ?");
-      args.push(trimmedSource);
-    } else if (sources.length > 0) {
-      conditions.push(`source IN (${sources.map(() => "?").join(",")})`);
-      args.push(...sources);
-    }
+    const { conditions, args } = sourceFilterClause(source, sources);
 
     for (const term of searchTermsSql(searchQuery)) {
       conditions.push(
@@ -222,6 +229,73 @@ export class D1Repository implements FeedRepository {
       .run();
     return meta.changes ?? 0;
   }
+
+  async listEmbeddedKeys(
+    source: string,
+    externalIds: string[],
+  ): Promise<Set<string>> {
+    if (externalIds.length === 0) return new Set();
+    const { results } = await this.db
+      .prepare(
+        `
+      SELECT external_id FROM items
+      WHERE source = ? AND embedding_json IS NOT NULL
+        AND external_id IN (${externalIds.map(() => "?").join(",")})
+    `,
+      )
+      .bind(source, ...externalIds)
+      .all<{ external_id: string }>();
+    return new Set(results.map((row) => row.external_id));
+  }
+
+  async listFeedItemsForRanking(
+    limit: number,
+    source: string,
+    sources: string[],
+  ): Promise<{ items: FeedItem[]; embeddings: Map<string, number[]> }> {
+    let query = `SELECT ${RANKING_ITEM_COLUMNS} FROM items`;
+    const { conditions, args } = sourceFilterClause(source, sources);
+    if (conditions.length > 0) {
+      query += ` WHERE ${conditions.join(" AND ")}`;
+    }
+
+    const { results } = await this.db
+      .prepare(query)
+      .bind(...args)
+      .all<RankingItemRow>();
+
+    const embeddings = new Map<string, number[]>();
+    const items: FeedItem[] = [];
+    for (const row of results) {
+      const item = rowToFeedItem(row);
+      items.push(item);
+      if (row.embedding_json) {
+        try {
+          embeddings.set(itemKey(item), JSON.parse(row.embedding_json));
+        } catch {
+          // Corrupt/legacy row — treat as unembedded rather than throwing.
+        }
+      }
+    }
+    return { items: paginate(sortFeedItems(items), limit, 0), embeddings };
+  }
+}
+
+function sourceFilterClause(
+  source: string,
+  sources: string[],
+): { conditions: string[]; args: unknown[] } {
+  const trimmedSource = source.trim();
+  if (trimmedSource !== "") {
+    return { conditions: ["source = ?"], args: [trimmedSource] };
+  }
+  if (sources.length > 0) {
+    return {
+      conditions: [`source IN (${sources.map(() => "?").join(",")})`],
+      args: [...sources],
+    };
+  }
+  return { conditions: [], args: [] };
 }
 
 function rowToFeedItem(row: ItemRow): FeedItem {

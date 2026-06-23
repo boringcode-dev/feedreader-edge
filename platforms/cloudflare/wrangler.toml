@@ -45,6 +45,12 @@ migrations_dir = "migrations"
 binding = "SELF"
 service = "feedreader"
 
+# Workers AI binding for the "For You" personalization ranker (see
+# platforms/cloudflare/src/llmRanker.ts). First-party binding — no secret to
+# provision; 10,000 Neurons/day free allocation.
+[ai]
+binding = "AI"
+
 [vars]
 APP_VERSION = "dev"
 FEEDREADER_ITEMS_PER_SOURCE = "20"
@@ -54,6 +60,11 @@ FEEDREADER_USER_AGENT = "feedreader/0.1"
 # — keeps the items table, and every full-table-scan query against it,
 # bounded as more sources are added.
 FEEDREADER_MAX_ITEMS_PER_SOURCE = "1000"
+# Size of the top-similarity slice the LLM polishes per /api/personalize
+# call (0 disables the LLM polish pass, serving similarity order on its
+# own) — bounds prompt size and Workers AI cost. See src/index.ts's
+# handlePersonalize and src/embedder.ts.
+FEEDREADER_PERSONALIZE_POLISH_POOL_SIZE = "30"
 
 # REFRESH_SECRET is a secret, not a var — set it with:
 #   wrangler secret put REFRESH_SECRET --config platforms/cloudflare/wrangler.toml
