@@ -61,6 +61,9 @@
   const installScreenshotMobile = document.querySelector(
     "[data-install-screenshot-mobile]",
   );
+  const installScreenshotTablet = document.querySelector(
+    "[data-install-screenshot-tablet]",
+  );
   const installScreenshotDesktop = document.querySelector(
     "[data-install-screenshot-desktop]",
   );
@@ -820,6 +823,12 @@
     return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
   }
 
+  function isIPadDevice() {
+    const ua = navigator.userAgent || "";
+    if (/ipad/i.test(ua)) return true;
+    return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  }
+
   function isMobileDevice() {
     if (
       navigator.userAgentData &&
@@ -1134,13 +1143,23 @@
     });
   }
 
-  if (isMobileDevice()) {
-    installScreenshotDesktop?.classList.add("is-hidden");
-    installScreenshotMobile?.classList.remove("is-hidden");
-  } else {
-    installScreenshotMobile?.classList.add("is-hidden");
-    installScreenshotDesktop?.classList.remove("is-hidden");
-  }
+  const installScreenshotVariant = isIPadDevice()
+    ? "tablet"
+    : isMobileDevice()
+      ? "mobile"
+      : "desktop";
+  installScreenshotMobile?.classList.toggle(
+    "is-hidden",
+    installScreenshotVariant !== "mobile",
+  );
+  installScreenshotTablet?.classList.toggle(
+    "is-hidden",
+    installScreenshotVariant !== "tablet",
+  );
+  installScreenshotDesktop?.classList.toggle(
+    "is-hidden",
+    installScreenshotVariant !== "desktop",
+  );
 
   if (!isStandaloneDisplay()) {
     if (isIOSDevice()) {

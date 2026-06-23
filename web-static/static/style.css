@@ -383,6 +383,10 @@ button {
   box-shadow: var(--shadow);
 }
 
+.install-dialog-screenshot-tablet {
+  max-width: 14rem;
+}
+
 .install-dialog-screenshot-desktop {
   max-width: 20rem;
 }
