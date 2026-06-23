@@ -49,9 +49,7 @@
   const installButton = document.querySelector("[data-install-button]");
   const installDialog = document.querySelector("[data-install-dialog]");
   const installDialogCloseButtons = Array.from(
-    document.querySelectorAll(
-      "[data-install-dialog-close], [data-install-dialog-dismiss]",
-    ),
+    document.querySelectorAll("[data-install-dialog-close]"),
   );
   const installConfirmButton = document.querySelector(
     "[data-install-dialog-confirm]",

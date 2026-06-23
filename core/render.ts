@@ -371,7 +371,6 @@ export function renderIndexPage(data: PageData): string {
         </ol>
         <div class="config-dialog-footer-row">
           <div class="config-dialog-actions">
-            <button class="dialog-button" type="button" data-install-dialog-dismiss>Maybe later</button>
             <button class="dialog-button dialog-button-primary" type="button" data-install-dialog-confirm>Install app</button>
           </div>
         </div>
