@@ -93,6 +93,8 @@ button {
 
 .header-actions {
   display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 0.45rem;
 }
@@ -218,6 +220,31 @@ button {
 .icon-button[disabled] {
   opacity: 0.6;
   cursor: wait;
+}
+
+.pill-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: var(--control-height);
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--accent) 44%, var(--border));
+  background: var(--accent-soft);
+  color: var(--text);
+  font-size: 0.86rem;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: 140ms ease;
+}
+
+.pill-button:hover {
+  border-color: color-mix(in srgb, var(--accent) 60%, var(--border));
+}
+
+.pill-button .theme-icon {
+  color: var(--accent);
 }
 
 .search-toggle.is-active,
@@ -588,6 +615,11 @@ body.is-dialog-open {
 .config-dialog-actions {
   display: flex;
   justify-content: flex-end;
+  /* Pushes this flex item fully right within .config-dialog-footer-row even
+   * when it's the row's only child — without this, justify-content:
+   * space-between on the row has nothing to space against and the actions
+   * end up sitting at the start (left) instead, as in the install dialog. */
+  margin-left: auto;
   gap: 0.55rem;
 }
 
@@ -699,36 +731,6 @@ body.is-dialog-open {
 
 :root[data-theme="light"] .theme-icon-moon {
   display: none;
-}
-
-.update-banner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  padding: 0.55rem 0.7rem 0.55rem 0.9rem;
-  border-radius: 0.9rem;
-  border: 1px solid color-mix(in srgb, var(--accent) 36%, var(--border));
-  background: var(--accent-soft);
-  color: var(--text);
-  font-size: 0.88rem;
-}
-
-.update-banner-button {
-  flex: 0 0 auto;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
-  cursor: pointer;
-  border-radius: 999px;
-  padding: 0.4rem 0.9rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  transition: 140ms ease;
-}
-
-.update-banner-button:hover {
-  border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
 }
 
 .page-body {
