@@ -67,6 +67,8 @@
     "[data-install-screenshot-desktop]",
   );
   const toast = document.querySelector("[data-toast]");
+  const updateBanner = document.querySelector("[data-update-banner]");
+  const updateRefreshButton = document.querySelector("[data-update-refresh]");
   const pageSize = Number(cardsGrid?.dataset.pageSize || 12);
   const searchDebounceMs = 1100;
   const sourceConfigStorageKey = "feedreader.sources";
@@ -75,6 +77,8 @@
   const visitedLinksLimit = 500;
   const themeStorageKey = "feedreader.theme";
   const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+  const loadedAppVersion = document.body.dataset.appVersion || "";
+  const updateCheckIntervalMs = 15 * 60 * 1000;
 
   let activeFilter = cardsGrid?.dataset.currentSource || "all";
   let selectedSources = loadSelectedSources();
@@ -388,6 +392,29 @@
   const syncConnectivityState = () => {
     browserOnline = navigator.onLine;
     renderConnectionIndicator();
+  };
+
+  const showUpdateBanner = () => {
+    updateBanner?.classList.remove("is-hidden");
+  };
+
+  let checkingForUpdate = false;
+  const checkForUpdate = async () => {
+    if (!loadedAppVersion || checkingForUpdate) return;
+    checkingForUpdate = true;
+    try {
+      const response = await fetch("/api/version", { cache: "no-store" });
+      if (!response.ok) return;
+      const payload = await response.json();
+      if (payload.version && payload.version !== loadedAppVersion) {
+        showUpdateBanner();
+      }
+    } catch {
+      // Offline or request failed — try again on the next visibility/focus
+      // event rather than erroring the page.
+    } finally {
+      checkingForUpdate = false;
+    }
   };
 
   const renderViewMore = () => {
@@ -1177,9 +1204,30 @@
 
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
-      navigator.serviceWorker.register("/service-worker.js").catch(() => {});
+      navigator.serviceWorker
+        .register("/service-worker.js")
+        .then((registration) => registration.update().catch(() => {}))
+        .catch(() => {});
     });
   }
+
+  updateRefreshButton?.addEventListener("click", () => {
+    window.location.reload();
+  });
+
+  // An installed PWA reopened from the home screen on iOS/iPadOS resumes a
+  // frozen page rather than re-running this script, so neither a periodic
+  // timer nor "load" alone can see a deploy that happened while it was
+  // backgrounded. visibilitychange/pageshow catch the resume itself; the
+  // interval is a fallback for long foreground sessions that never trigger
+  // either.
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") checkForUpdate();
+  });
+  window.addEventListener("pageshow", () => checkForUpdate());
+  window.setInterval(() => {
+    if (document.visibilityState === "visible") checkForUpdate();
+  }, updateCheckIntervalMs);
 
   const savedTheme = localStorage.getItem(themeStorageKey);
   applyTheme(savedTheme === "light" ? "light" : "dark");
