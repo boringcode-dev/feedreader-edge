@@ -1,18 +1,13 @@
-# feedreader
+<h1>
+  <img alt="feedreader logo" src="web-static/favicon.svg" width="70" valign="middle">
+  &nbsp;reader
+</h1>
 
-<p align="center">
+<p>
   <strong>A tiny, fast, Cloudflare-native feed reader for engineering and research signals.</strong>
 </p>
 
-<p align="center">
-  <img src="web-static/og-image.png" alt="feedreader social card" />
-</p>
-
-<p align="center">
-  Server-rendered UI · D1 storage · Scheduled refresh · Cloudflare Workers
-</p>
-
-<p align="center">
+<p>
   <img src="https://img.shields.io/badge/Cloudflare-Workers-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare Workers" />
   <img src="https://img.shields.io/badge/Cloudflare-D1-F38020?logo=cloudflare&logoColor=white" alt="Cloudflare D1" />
   <img src="https://img.shields.io/badge/Cron-Triggers-F38020?logo=cloudflare&logoColor=white" alt="Cron Triggers" />
@@ -20,6 +15,8 @@
   <a href="https://github.com/boringcode-dev/feedreader-edge/actions/workflows/ci.yml"><img src="https://github.com/boringcode-dev/feedreader-edge/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI" /></a>
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" />
 </p>
+
+![feedreader social card](web-static/og-image.png)
 
 ---
 
