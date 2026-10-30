@@ -20,7 +20,10 @@ import {
   mergeRankedKeysOrder,
   mergeRankedOrder,
 } from "../../../core/personalize/rank.ts";
-import { rankBySimilarity } from "../../../core/personalize/similarity.ts";
+import {
+  rankBySimilarity,
+  selectCandidates,
+} from "../../../core/personalize/similarity.ts";
 import { paginate } from "../../../core/sources/listInMemory.ts";
 import { D1Repository } from "./repository.ts";
 import { CloudflareLlmRanker } from "./llmRanker.ts";
@@ -54,6 +57,13 @@ function isWeeklyPruneWindow(scheduledTime: number): boolean {
 // is served from a larger in-memory pool. 500 mirrors the "dataset is small"
 // assumption already baked into D1Repository.listFeedItems/countTotalItems.
 const PERSONALIZE_FULL_POOL_LIMIT = 500;
+// The LLM candidate pool always reserves one page's worth of slots for the
+// newest items: similarity retrieval alone effectively never selects an item
+// ingested minutes ago (older pool entries dominate the top of the ranking),
+// which used to leave every fresh story below the polished block — i.e.
+// never on the first page of "For You". See selectCandidates in
+// core/personalize/similarity.ts.
+const PERSONALIZE_FRESH_CANDIDATES = PAGE_SIZE;
 // Backstop only — the cache key already changes whenever the underlying
 // source data refreshes (see latestSuccessAt below), so this just bounds
 // staleness if a source somehow stops refreshing.
@@ -337,8 +347,11 @@ function cardsToJson(cards: CardView[]) {
  * (core/personalize/similarity.ts) — no LLM call needed for this step, and
  * it's robust to paraphrased interests in a way a literal cache-key string
  * match isn't. The LLM ranker then runs only as an optional "polish" pass
- * on the top FEEDREADER_PERSONALIZE_POLISH_POOL_SIZE similarity hits
- * (default 30, 0 disables it) instead of the whole candidate pool.
+ * over the FEEDREADER_PERSONALIZE_POLISH_POOL_SIZE candidates (default 30,
+ * 0 disables it) instead of the whole candidate pool. Candidate selection
+ * reserves PAGE_SIZE slots for the newest items (selectCandidates), so a
+ * freshly ingested story is actually considered by the ranker rather than
+ * always being appended after the polished block.
  *
  * The polish step is only ever consulted for the *first* page request for a
  * given (interests, source filter, source-data freshness) combination — the
@@ -428,7 +441,12 @@ async function handlePersonalize(
       if (polishPoolSize > 100) polishPoolSize = 100;
 
       if (polishPoolSize > 0) {
-        const candidates = bySimilarity.slice(0, polishPoolSize);
+        const candidates = selectCandidates(
+          bySimilarity,
+          fullPool,
+          polishPoolSize,
+          PERSONALIZE_FRESH_CANDIDATES,
+        );
         try {
           const ranker = new CloudflareLlmRanker(env.AI);
           const ranked = await ranker.rank(candidates, interests);

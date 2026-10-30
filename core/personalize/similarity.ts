@@ -55,3 +55,36 @@ export function rankBySimilarity(
   });
   return [...scored.map((entry) => entry.item), ...unscored];
 }
+
+/**
+ * Selects the candidate list the LLM polish pass sees: the top `limit`
+ * items by similarity, except that the newest `freshCount` items are
+ * guaranteed a slot. Similarity alone effectively never surfaces a
+ * just-ingested item — the pool's older entries dominate the top of the
+ * ranking — so without this reserve, fresh stories could only ever appear
+ * after the polished block, i.e. never on the first page of "For You".
+ * The result stays in similarity order (fresh items replace the
+ * lowest-ranked picks), so the prompt the ranker sees keeps its existing
+ * shape and the candidate count stays bounded by `limit`.
+ *
+ * `byRecency` and `bySimilarity` are the same pool in different orders;
+ * `byRecency` is expected to start with the newest items.
+ */
+export function selectCandidates(
+  bySimilarity: FeedItem[],
+  byRecency: FeedItem[],
+  limit: number,
+  freshCount: number,
+): FeedItem[] {
+  if (limit <= 0) return [];
+  const freshTarget = Math.max(0, Math.min(freshCount, limit));
+  const selected = new Set<string>();
+  for (const item of byRecency.slice(0, freshTarget)) {
+    selected.add(itemKey(item));
+  }
+  for (const item of bySimilarity) {
+    if (selected.size >= limit) break;
+    selected.add(itemKey(item));
+  }
+  return bySimilarity.filter((item) => selected.has(itemKey(item)));
+}
