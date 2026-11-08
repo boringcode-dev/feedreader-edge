@@ -178,6 +178,7 @@ export function buildCards(items: FeedItem[], offset: number): CardView[] {
       index: offset + i + 1,
       title: item.title,
       url: item.url,
+      commentsUrl: item.commentsUrl,
       brief: composeBrief(
         briefPrefix,
         briefDateIso,

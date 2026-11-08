@@ -31,6 +31,20 @@ describe("buildCards", () => {
     expect(card!.index).toBe(1);
   });
 
+  it("carries hackernews comments URLs into cards", () => {
+    const [card] = buildCards(
+      [
+        item({
+          commentsUrl: "https://news.ycombinator.com/item?id=123",
+        }),
+      ],
+      0,
+    );
+    expect(card!.commentsUrl).toBe(
+      "https://news.ycombinator.com/item?id=123",
+    );
+  });
+
   it("formats github stars/today/forks with thousands separators and a fallback suffix", () => {
     const [card] = buildCards(
       [

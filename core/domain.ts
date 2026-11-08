@@ -50,6 +50,7 @@ export interface CardView {
   index: number;
   title: string;
   url: string;
+  commentsUrl?: string;
   brief?: string;
   briefPrefix?: string;
   briefSuffix?: string;

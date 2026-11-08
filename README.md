@@ -74,7 +74,7 @@ npx lighthouse https://reader.boringcode.dev --view
 - **Scheduled refresh** every 1 hour on wall-clock boundaries
 - **Manual refresh** from the header re-fetches the current feed view from backend stored items only; it does **not** re-fetch upstream sources
 - **Persisted visited-link dimming** for feed card titles across reload/reopen using local storage
-- **Optional article preview side panel** (off by default, toggled in Reader settings) that opens a reader view beside the feed and includes an **Open source** button
+- **Optional article preview side panel** (off by default, toggled in Reader settings) that opens a reader view beside the feed with inline links/emphasis, image captions, tables, publication date/reading time, source-specific Hacker News comments, and an **Open source** button
 - **Saved articles** with a per-card bookmark toggle, a `Saved` filter, and a desktop preview-panel toggle; stored locally under `feedreader.bookmarks`
 - **PWA-ready assets and offline caching** including manifest, service worker, touch icons, cached shell assets, and cached `/api/items` responses for previously visited views
 - **Reconnect list refresh** re-fetches the current view from backend stored items only; it does **not** refresh upstream sources
@@ -256,11 +256,11 @@ Query params:
 
 ### `GET /api/preview`
 
-Returns a reader view (text and image blocks) for a stored feed item.
+Returns a reader view for a stored feed item: rich text segments, image blocks with captions, table blocks, and publication/reading-time metadata.
 
 - `url` — required; must exactly match the URL of an item currently stored in D1
 
-The Worker fetches the article with a timeout and 400 KB cap, rejects non-HTML responses and non-public hosts, and never returns upstream markup. Responses are edge-cached for 30 minutes. Returns `404` for unknown URLs and `502` when the upstream page cannot be previewed.
+The Worker fetches the article with a timeout and 400 KB cap, rejects non-HTML responses and non-public hosts, and never returns upstream markup. Inline targets are restricted to validated public http(s) URLs. Responses are edge-cached for 30 minutes. Returns `404` for unknown URLs and `502` when the upstream page cannot be previewed.
 
 ### `POST /api/refresh`
 
@@ -355,7 +355,9 @@ Presentation-layer note:
 
 - when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
 - `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
-- the panel shows the extracted title, byline, and text/image blocks; images load directly from the source with lazy loading and no referrer; `Open source` opens the original page
+- the panel shows the extracted title, byline, publication date/reading time, rich text with validated inline links/emphasis/inline code, image blocks with captions and intrinsic dimensions, and semantic tables; images load directly from the source with lazy loading and no referrer; `Open source` opens the original page
+- Hacker News items also show a **Comments** action in the panel header that opens the HN discussion; other sources omit it
+- external links inside the preview open in a new tab with `noopener noreferrer` and no referrer
 - the article currently being previewed is highlighted in the feed; the preview header shows the card’s stats/date metadata without repeating the title
 - previous/next buttons at the bottom of the panel move through the currently rendered feed or Saved list
 - previews are fetched by the Worker via `GET /api/preview?url=…`; only URLs already stored as feed items are accepted, and upstream HTML is never injected into the page

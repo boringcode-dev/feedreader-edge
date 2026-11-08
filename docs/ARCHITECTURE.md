@@ -8,7 +8,7 @@
 | [`core/ports.ts`](../core/ports.ts)                                                   | `FeedRepository` interface — the persistence seam platform adapters implement.                |
 | [`core/service.ts`](../core/service.ts)                                               | Refresh orchestration, feed pagination, health payloads, card-building, and error projection. |
 | [`core/render.ts`](../core/render.ts)                                                 | Server-side HTML rendering for the feed UI.                                                   |
-| [`core/preview.ts`](../core/preview.ts)                                               | Reader-view URL validation, guarded article fetch, and text/image extraction.                |
+| [`core/preview.ts`](../core/preview.ts)                                               | Reader-view URL validation, guarded article fetch, and rich text/image/table extraction.      |
 | [`core/sources/`](../core/sources)                                                    | Upstream source adapters plus shared HTTP/DOM helpers.                                        |
 | [`platforms/cloudflare/src/index.ts`](../platforms/cloudflare/src/index.ts)           | Worker request router and scheduled entrypoint.                                               |
 | [`platforms/cloudflare/src/repository.ts`](../platforms/cloudflare/src/repository.ts) | D1-backed `FeedRepository` implementation.                                                    |
@@ -79,7 +79,8 @@ The optional side-panel preview is served by `GET /api/preview?url=…`.
 
 - The requested URL must exactly match a stored `items.url`. This check, not the fetch layer, is what keeps the endpoint from acting as an open proxy; `feedreader.articlePreviewEnabled` only controls the client behavior.
 - `core/preview.ts` additionally rejects non-http(s) schemes, credentials, non-standard ports, and loopback/private/link-local hosts, and re-checks the final URL after redirects.
-- Article fetches time out after 10 seconds and read at most 400 KB. The extractor removes scripts/navigation/footer noise and returns text and image blocks only — upstream HTML is never returned or injected. Text renders with `textContent`; image URLs are re-validated as public http(s) resources and loaded directly by the browser with `loading="lazy"` and `referrerpolicy="no-referrer"`.
+- Article fetches time out after 10 seconds and read at most 400 KB. The extractor removes scripts/navigation/footer noise and returns structured text segments, image blocks, and table blocks only — upstream HTML is never returned or injected. Text renders with `textContent`/DOM nodes; inline anchors are limited to URLs that pass the same public http(s) validation, and image URLs are re-validated before the browser loads them directly with `loading="lazy"` and `referrerpolicy="no-referrer"`.
+- Image blocks may include a `figcaption`-derived caption and intrinsic width/height to reserve layout space. Known avatar/profile-image hosts and paths are dropped before the image cap so author-list chrome doesn't displace article figures. Table blocks carry a header flag and capped rows/cells. The response also includes byline, publication date, and an estimated reading time. Hacker News cards expose their comments URL to the preview header; other sources do not.
 - The client highlights the card matching the open preview and provides previous/next navigation over the currently rendered card list. No extra server state is involved.
 - Successful previews are edge-cached for 30 minutes; the Cache API is a no-op in local `wrangler dev`.
 

@@ -84,7 +84,7 @@ function renderCard(card: CardView): string {
           </p>`
     : "";
   return `
-        <article class="item-card" data-source="${escapeHtml(card.source)}">
+        <article class="item-card" data-source="${escapeHtml(card.source)}" data-comments-url="${escapeHtml(card.commentsUrl ?? "")}">
           <h2 class="item-title">
             <span class="item-index">${card.index}.</span>
             <a href="${escapeHtml(card.url)}" target="_blank" rel="noreferrer">${escapeHtml(card.title)}</a>
@@ -149,8 +149,8 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=64" />
-    <script src="/static/app.js?v=55" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=66" />
+    <script src="/static/app.js?v=58" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -469,6 +469,11 @@ ${errorsBlock}
                 <path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="currentColor"/>
               </svg>
             </button>
+            <a class="icon-button preview-panel-comments is-hidden" data-preview-comments href="#" target="_blank" rel="noreferrer noopener" aria-label="Comments" title="Comments">
+              <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7l-4.5 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/>
+              </svg>
+            </a>
             <a class="icon-button preview-panel-open" data-preview-open href="#" target="_blank" rel="noreferrer noopener" aria-label="Open source" title="Open source">
               <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M14 5h5v5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
@@ -487,6 +492,7 @@ ${errorsBlock}
         <div class="preview-panel-scroll" data-preview-scroll aria-live="polite">
           <h2 class="preview-panel-title" data-preview-title>Article preview</h2>
           <p class="preview-panel-byline is-hidden" data-preview-byline></p>
+          <p class="preview-panel-reading-meta is-hidden" data-preview-reading-meta></p>
           <p class="preview-panel-status" data-preview-status>Select an article to preview it here.</p>
           <div class="preview-panel-content" data-preview-content></div>
         </div>

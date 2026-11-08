@@ -4,7 +4,17 @@ import {
   fetchArticlePreview,
   normalizePreviewUrl,
   PreviewUnavailableError,
+  type PreviewBlock,
 } from "../preview.ts";
+
+function blockText(block: PreviewBlock): string {
+  if (block.type === "image") return "";
+  if (block.type === "table") return block.rows.flat().join(" ");
+  if (block.type === "code") return block.text;
+  return "segments" in block
+    ? block.segments.map((segment) => segment.text).join("")
+    : block.text;
+}
 
 const ARTICLE_HTML = `<!doctype html>
 <html>
@@ -145,9 +155,9 @@ describe("extractArticlePreview", () => {
     expect(preview.blocks).toHaveLength(1);
     const firstBlock = preview.blocks[0];
     expect(firstBlock?.type).toBe("paragraph");
-    if (firstBlock?.type === "paragraph") {
-      expect(firstBlock.text).toContain("Real article sentence.");
-    }
+    expect(firstBlock && blockText(firstBlock)).toContain(
+      "Real article sentence.",
+    );
   });
 
   it("extracts article images and drops unsafe or tracking images", () => {
@@ -172,6 +182,8 @@ describe("extractArticlePreview", () => {
         type: "image",
         src: "https://example.com/images/hero.jpg",
         alt: "Hero image",
+        width: 1200,
+        height: 630,
       },
       {
         type: "image",
@@ -184,6 +196,189 @@ describe("extractArticlePreview", () => {
         alt: "Responsive",
       },
     ]);
+  });
+
+  it("preserves inline links, emphasis, and inline code as segments", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Linked story" />
+      </head><body><article>
+        <p>
+          Read the <a href="/docs">official docs</a> and <strong>important <em>notes</em></strong> in <code>src/edge.ts</code> for more context.
+        </p>
+      </article></body></html>`,
+      "https://example.com/posts/linked-story",
+    );
+
+    expect(preview.blocks).toEqual([
+      {
+        type: "paragraph",
+        segments: [
+          { text: "Read the " },
+          { text: "official docs", href: "https://example.com/docs" },
+          { text: " and " },
+          { text: "important ", strong: true },
+          { text: "notes", strong: true, em: true },
+          { text: " in " },
+          { text: "src/edge.ts", code: true },
+          { text: " for more context." },
+        ],
+      },
+    ]);
+  });
+
+  it("drops unsafe inline link targets while keeping their text", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Unsafe link story" />
+      </head><body><article>
+        <p>This paragraph has a <a href="javascript:alert(1)">dangerous link</a> that should stay text and <a href="https://example.com/ok">a safe link</a> for context.</p>
+      </article></body></html>`,
+      "https://example.com/posts/unsafe-link-story",
+    );
+
+    const paragraph = preview.blocks.find((block) => block.type === "paragraph");
+    expect(paragraph?.type).toBe("paragraph");
+    if (paragraph?.type !== "paragraph" || !("segments" in paragraph)) {
+      throw new Error("expected a rich paragraph");
+    }
+
+    expect(
+      paragraph.segments
+        .map((segment) => segment.href)
+        .filter((href) => href !== undefined),
+    ).toEqual(["https://example.com/ok"]);
+    expect(paragraph.segments.map((segment) => segment.text).join("")).toContain(
+      "dangerous link",
+    );
+  });
+
+  it("extracts image captions and intrinsic dimensions", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Caption story" />
+      </head><body><article>
+        <p>${"A long enough paragraph about the story. ".repeat(10)}</p>
+        <figure>
+          <img src="/images/chart.png" alt="Chart" width="800" height="450" />
+          <figcaption>Chart: latency by region</figcaption>
+        </figure>
+        <p>${"Another long enough paragraph about the story. ".repeat(10)}</p>
+      </article></body></html>`,
+      "https://example.com/posts/caption-story",
+    );
+
+    expect(preview.blocks.filter((block) => block.type === "image")).toEqual([
+      {
+        type: "image",
+        src: "https://example.com/images/chart.png",
+        alt: "Chart",
+        caption: "Chart: latency by region",
+        width: 800,
+        height: 450,
+      },
+    ]);
+  });
+
+  it("drops contributor avatars while keeping article figures", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Avatar story" />
+      </head><body><article>
+        <p>${"A long enough abstract about the paper. ".repeat(10)}</p>
+        <ul>
+          <li><a href="/alice"><img class="overflow-hidden rounded-full" src="https://cdn-avatars.huggingface.co/v1/production/uploads/1/a.jpeg" alt="" /></a></li>
+          <li><a href="/bob"><img class="overflow-hidden rounded-full" src="/avatars/abc.svg" alt="Bob" /></a></li>
+          <li><a href="/org"><img src="https://www.gravatar.com/avatar/abc?d=retro&amp;size=100" alt="Org" /></a></li>
+          <li><a href="/carol"><img src="https://avatars.githubusercontent.com/u/1?v=4" alt="Carol" /></a></li>
+        </ul>
+        <figure>
+          <img src="https://cdn-uploads.huggingface.co/production/uploads/1/figure.png" alt="Architecture" width="1200" height="600" />
+          <figcaption>Figure 1: Overview.</figcaption>
+        </figure>
+        <p>${"Another long enough paragraph about the paper. ".repeat(10)}</p>
+      </article></body></html>`,
+      "https://huggingface.co/papers/2611.06741",
+    );
+
+    expect(preview.blocks.filter((block) => block.type === "image")).toEqual([
+      {
+        type: "image",
+        src: "https://cdn-uploads.huggingface.co/production/uploads/1/figure.png",
+        alt: "Architecture",
+        caption: "Figure 1: Overview.",
+        width: 1200,
+        height: 600,
+      },
+    ]);
+  });
+
+  it("extracts tables as structured blocks without duplicating cell text", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Table story" />
+      </head><body><article>
+        <p>${"A long enough paragraph about the story. ".repeat(10)}</p>
+        <table>
+          <thead><tr><th>Region</th><th>Latency</th></tr></thead>
+          <tbody>
+            <tr><td>US</td><td>20ms</td></tr>
+            <tr><td>EU</td><td>35ms</td></tr>
+          </tbody>
+        </table>
+        <p>${"Another long enough paragraph about the story. ".repeat(10)}</p>
+      </article></body></html>`,
+      "https://example.com/posts/table-story",
+    );
+
+    expect(preview.blocks.find((block) => block.type === "table")).toEqual({
+      type: "table",
+      header: true,
+      rows: [
+        ["Region", "Latency"],
+        ["US", "20ms"],
+        ["EU", "35ms"],
+      ],
+    });
+    expect(preview.blocks.filter((block) => block.type === "paragraph")).toHaveLength(
+      2,
+    );
+  });
+
+  it("does not duplicate table text inside an enclosing list block", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Nested table story" />
+      </head><body><article>
+        <ul>
+          <li>Intro
+            <table><tr><th>Region</th></tr><tr><td>US</td></tr></table>
+          </li>
+        </ul>
+      </article></body></html>`,
+      "https://example.com/posts/nested-table-story",
+    );
+
+    const list = preview.blocks.find((block) => block.type === "list");
+    expect(list && blockText(list)).not.toContain("Region");
+    expect(preview.blocks.filter((block) => block.type === "table")).toHaveLength(
+      1,
+    );
+  });
+
+  it("extracts publication date and reading time metadata", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Dated story" />
+        <meta property="article:published_time" content="2026-11-05T09:30:00Z" />
+      </head><body><article>
+        <p>${"word ".repeat(400)}</p>
+      </article></body></html>`,
+      "https://example.com/posts/dated-story",
+    );
+
+    expect(preview.publishedAt).toBe("2026-11-05T09:30:00.000Z");
+    expect(preview.readingMinutes).toBe(2);
   });
 
   it("uses the hostname when no title metadata exists", () => {
@@ -308,7 +503,7 @@ describe("fetchArticlePreview", () => {
 
     expect(
       preview.blocks
-        .map((block) => (block.type === "image" ? block.src : block.text))
+        .map((block) => (block.type === "image" ? block.src : blockText(block)))
         .join(" "),
     ).not.toContain(marker);
   });

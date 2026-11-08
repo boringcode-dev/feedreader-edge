@@ -23,6 +23,10 @@ const MAX_REDIRECTS = 5;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const MAX_BLOCKS = 120;
 const MAX_IMAGES = 20;
+const MAX_TABLES = 5;
+const MAX_TABLE_ROWS = 15;
+const MAX_TABLE_COLUMNS = 6;
+const MAX_TABLE_CELL_CHARS = 150;
 const MAX_BLOCK_CHARS = 4_000;
 const MAX_TOTAL_CHARS = 40_000;
 const MIN_PARAGRAPH_CHARS = 25;
@@ -51,15 +55,28 @@ const NOISE_SELECTORS = [
   '[aria-hidden="true"]',
 ];
 
-export type PreviewTextBlockType =
-  | "heading"
-  | "paragraph"
-  | "list"
-  | "quote"
-  | "code";
+export type PreviewTextBlockType = "heading" | "paragraph" | "list" | "quote";
 
-export interface PreviewTextBlock {
+export interface PreviewSegment {
+  text: string;
+  href?: string;
+  strong?: boolean;
+  em?: boolean;
+  code?: boolean;
+}
+
+export interface PreviewPlainTextBlock {
   type: PreviewTextBlockType;
+  text: string;
+}
+
+export interface PreviewRichTextBlock {
+  type: PreviewTextBlockType;
+  segments: PreviewSegment[];
+}
+
+export interface PreviewCodeBlock {
+  type: "code";
   text: string;
 }
 
@@ -67,14 +84,30 @@ export interface PreviewImageBlock {
   type: "image";
   src: string;
   alt: string;
+  caption?: string;
+  width?: number;
+  height?: number;
 }
 
-export type PreviewBlock = PreviewTextBlock | PreviewImageBlock;
+export interface PreviewTableBlock {
+  type: "table";
+  header: boolean;
+  rows: string[][];
+}
+
+export type PreviewBlock =
+  | PreviewPlainTextBlock
+  | PreviewRichTextBlock
+  | PreviewCodeBlock
+  | PreviewImageBlock
+  | PreviewTableBlock;
 
 export interface ArticlePreview {
   title: string;
   siteName: string;
   byline?: string;
+  publishedAt?: string;
+  readingMinutes?: number;
   blocks: PreviewBlock[];
 }
 
@@ -202,6 +235,7 @@ export function extractArticlePreview(
       normalizeText(document.querySelector('[class*="byline"]')?.textContent),
     ),
   );
+  const publishedAt = extractPublishedAt(document);
 
   for (const selector of NOISE_SELECTORS) {
     document.querySelectorAll(selector).forEach((element) => {
@@ -223,9 +257,12 @@ export function extractArticlePreview(
     }
   }
 
-  return byline !== undefined
-    ? { title, siteName, byline, blocks }
-    : { title, siteName, blocks };
+  const readingMinutes = estimateReadingMinutes(blocks);
+  const preview: ArticlePreview = { title, siteName, blocks };
+  if (byline !== undefined) preview.byline = byline;
+  if (publishedAt !== undefined) preview.publishedAt = publishedAt;
+  if (readingMinutes !== undefined) preview.readingMinutes = readingMinutes;
+  return preview;
 }
 
 function extractBlocks(
@@ -236,16 +273,33 @@ function extractBlocks(
   const blocks: PreviewBlock[] = [];
   let totalChars = 0;
   let imageCount = 0;
+  let tableCount = 0;
   const seenImageSources = new Set<string>();
   const titleKey = normalizeText(title);
 
   const elements = Array.from(
     root.querySelectorAll(
-      "h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, img",
+      "h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, img, table",
     ),
   );
   for (const element of elements) {
     if (blocks.length >= MAX_BLOCKS) break;
+
+    if (element.tagName === "TABLE") {
+      if (tableCount >= MAX_TABLES) continue;
+      const table = extractTableBlock(element);
+      if (!table) continue;
+      blocks.push(table);
+      tableCount += 1;
+      totalChars += table.rows.reduce(
+        (sum, row) =>
+          sum + row.reduce((rowSum, cell) => rowSum + cell.length, 0),
+        0,
+      );
+      if (totalChars >= MAX_TOTAL_CHARS) break;
+      continue;
+    }
+    if (element.closest("table")) continue;
 
     if (element.tagName === "IMG") {
       if (imageCount >= MAX_IMAGES) continue;
@@ -257,40 +311,236 @@ function extractBlocks(
       continue;
     }
 
-    if (element.closest("pre") && element.tagName !== "PRE") continue;
+    if (element.tagName === "PRE") {
+      const text = normalizeCodeText(element.textContent);
+      if (text === "") continue;
+      const capped = text.slice(0, MAX_BLOCK_CHARS);
+      blocks.push({ type: "code", text: capped });
+      totalChars += capped.length;
+      if (totalChars >= MAX_TOTAL_CHARS) break;
+      continue;
+    }
+
+    if (element.closest("pre")) continue;
     if (element.closest("li") && element.tagName !== "LI") continue;
     if (element.closest("blockquote") && element.tagName !== "BLOCKQUOTE") {
       continue;
     }
 
     const type = blockTypeFor(element.tagName);
-    const text =
-      type === "code"
-        ? normalizeCodeText(element.textContent)
-        : normalizeText(element.textContent);
+    const segments = extractInlineSegments(element, pageUrl);
+    const text = segments.map((segment) => segment.text).join("");
     if (!isUsefulBlock(type, text)) continue;
     if (type === "heading" && normalizeText(text) === titleKey) continue;
     const lastBlock = blocks[blocks.length - 1];
-    if (lastBlock && lastBlock.type !== "image" && lastBlock.text === text) {
+    if (
+      lastBlock &&
+      isTextBlock(lastBlock) &&
+      textBlockPlainText(lastBlock) === text
+    ) {
       continue;
     }
 
-    const capped = text.slice(0, MAX_BLOCK_CHARS);
-    blocks.push({ type, text: capped });
-    totalChars += capped.length;
+    const cappedSegments = capSegments(segments, MAX_BLOCK_CHARS);
+    const cappedText = cappedSegments
+      .map((segment) => segment.text)
+      .join("");
+    if (hasInlineMarks(cappedSegments)) {
+      blocks.push({ type, segments: cappedSegments });
+    } else {
+      blocks.push({ type, text: cappedText });
+    }
+    totalChars += cappedText.length;
     if (totalChars >= MAX_TOTAL_CHARS) break;
   }
 
   return blocks;
 }
 
+function isTextBlock(
+  block: PreviewBlock,
+): block is PreviewPlainTextBlock | PreviewRichTextBlock {
+  return (
+    block.type === "heading" ||
+    block.type === "paragraph" ||
+    block.type === "list" ||
+    block.type === "quote"
+  );
+}
+
+function textBlockPlainText(
+  block: PreviewPlainTextBlock | PreviewRichTextBlock,
+): string {
+  return "segments" in block
+    ? block.segments.map((segment) => segment.text).join("")
+    : block.text;
+}
+
+interface InlineMarks {
+  href?: string;
+  strong?: boolean;
+  em?: boolean;
+  code?: boolean;
+}
+
+function extractInlineSegments(
+  element: Element,
+  pageUrl: string,
+): PreviewSegment[] {
+  const raw: PreviewSegment[] = [];
+  collectInlineSegments(element, pageUrl, {}, raw);
+  return normalizeInlineSegments(raw);
+}
+
+function collectInlineSegments(
+  node: Node,
+  pageUrl: string,
+  marks: InlineMarks,
+  out: PreviewSegment[],
+): void {
+  if (node.nodeType === 3) {
+    const text = node.textContent ?? "";
+    if (text !== "") out.push({ text, ...marks });
+    return;
+  }
+  if (node.nodeType !== 1) return;
+
+  const element = node as Element;
+  const tagName = element.tagName;
+  if (
+    tagName === "SCRIPT" ||
+    tagName === "STYLE" ||
+    tagName === "NOSCRIPT" ||
+    tagName === "TEMPLATE" ||
+    tagName === "SVG" ||
+    tagName === "CANVAS" ||
+    tagName === "IFRAME" ||
+    tagName === "OBJECT" ||
+    tagName === "EMBED" ||
+    tagName === "FORM" ||
+    tagName === "TABLE"
+  ) {
+    return;
+  }
+  if (tagName === "BR") {
+    out.push({ text: " ", ...marks });
+    return;
+  }
+
+  let nextMarks = marks;
+  if (tagName === "A") {
+    const href = resolveInlineHref(element.getAttribute("href"), pageUrl);
+    if (href !== "") nextMarks = { ...marks, href };
+  } else if (tagName === "STRONG" || tagName === "B") {
+    nextMarks = { ...marks, strong: true };
+  } else if (tagName === "EM" || tagName === "I") {
+    nextMarks = { ...marks, em: true };
+  } else if (tagName === "CODE") {
+    nextMarks = { ...marks, code: true };
+  }
+
+  for (const child of Array.from(element.childNodes)) {
+    collectInlineSegments(child, pageUrl, nextMarks, out);
+  }
+}
+
+function resolveInlineHref(raw: string | null, pageUrl: string): string {
+  const trimmed = (raw ?? "").trim();
+  if (trimmed === "") return "";
+  try {
+    return normalizePreviewUrl(new URL(trimmed, pageUrl).toString()) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function normalizeInlineSegments(raw: PreviewSegment[]): PreviewSegment[] {
+  const out: PreviewSegment[] = [];
+  for (const segment of raw) {
+    for (const part of segment.text.split(/(\s+)/)) {
+      if (part === "") continue;
+      appendInlineSegment(out, {
+        ...segment,
+        text: /^\s+$/.test(part) ? " " : part,
+      });
+    }
+  }
+  while (out.length > 0) {
+    out[0]!.text = out[0]!.text.replace(/^ +/, "");
+    if (out[0]!.text !== "") break;
+    out.shift();
+  }
+  while (out.length > 0) {
+    const last = out[out.length - 1]!;
+    last.text = last.text.replace(/ +$/, "");
+    if (last.text !== "") break;
+    out.pop();
+  }
+  return out;
+}
+
+function appendInlineSegment(
+  out: PreviewSegment[],
+  segment: PreviewSegment,
+): void {
+  const last = out[out.length - 1];
+  if (last && sameInlineMarks(last, segment)) {
+    last.text += segment.text;
+    return;
+  }
+  const clean: PreviewSegment = { text: segment.text };
+  if (segment.href !== undefined) clean.href = segment.href;
+  if (segment.strong) clean.strong = true;
+  if (segment.em) clean.em = true;
+  if (segment.code) clean.code = true;
+  out.push(clean);
+}
+
+function sameInlineMarks(a: PreviewSegment, b: PreviewSegment): boolean {
+  return (
+    a.href === b.href &&
+    Boolean(a.strong) === Boolean(b.strong) &&
+    Boolean(a.em) === Boolean(b.em) &&
+    Boolean(a.code) === Boolean(b.code)
+  );
+}
+
+function hasInlineMarks(segments: PreviewSegment[]): boolean {
+  return segments.some(
+    (segment) =>
+      segment.href !== undefined ||
+      segment.strong === true ||
+      segment.em === true ||
+      segment.code === true,
+  );
+}
+
+function capSegments(
+  segments: PreviewSegment[],
+  maxChars: number,
+): PreviewSegment[] {
+  const out: PreviewSegment[] = [];
+  let length = 0;
+  for (const segment of segments) {
+    if (length >= maxChars) break;
+    const text = segment.text.slice(0, maxChars - length);
+    if (text === "") continue;
+    out.push({ ...segment, text });
+    length += text.length;
+  }
+  return out;
+}
+
 function extractImageBlock(
   image: Element,
   pageUrl: string,
 ): PreviewImageBlock | null {
-  const width = parseDimension(image.getAttribute("width"));
-  const height = parseDimension(image.getAttribute("height"));
-  if ((width !== null && width <= 2) || (height !== null && height <= 2)) {
+  const width = parseImageDimension(image.getAttribute("width"));
+  const height = parseImageDimension(image.getAttribute("height"));
+  if (
+    (width !== undefined && width <= 2) ||
+    (height !== undefined && height <= 2)
+  ) {
     return null;
   }
 
@@ -318,12 +568,47 @@ function extractImageBlock(
     }
   }
   if (resolved === "") return null;
+  if (isAvatarImageSrc(resolved)) return null;
 
-  return {
+  const caption = normalizeText(
+    image.closest("figure")?.querySelector("figcaption")?.textContent,
+  ).slice(0, 300);
+  const block: PreviewImageBlock = {
     type: "image",
     src: resolved,
     alt: normalizeText(image.getAttribute("alt")).slice(0, 300),
   };
+  if (caption !== "") block.caption = caption;
+  if (width !== undefined) block.width = width;
+  if (height !== undefined) block.height = height;
+  return block;
+}
+
+function extractTableBlock(table: Element): PreviewTableBlock | null {
+  if (table.parentElement?.closest("table")) return null;
+
+  const rows: string[][] = [];
+  let header = false;
+  for (const row of Array.from(table.querySelectorAll("tr")).slice(
+    0,
+    MAX_TABLE_ROWS,
+  )) {
+    if (row.closest("table") !== table) continue;
+    const cells = Array.from(row.children)
+      .filter((cell) => cell.tagName === "TH" || cell.tagName === "TD")
+      .slice(0, MAX_TABLE_COLUMNS)
+      .map((cell) =>
+        normalizeText(cell.textContent).slice(0, MAX_TABLE_CELL_CHARS),
+      );
+    if (cells.length === 0) continue;
+    if (cells.every((text) => text === "")) continue;
+    if (rows.length === 0) {
+      header = Array.from(row.children).some((cell) => cell.tagName === "TH");
+    }
+    rows.push(cells);
+  }
+
+  return rows.length > 0 ? { type: "table", header, rows } : null;
 }
 
 function resolveImageUrl(raw: string | null, pageUrl: string): string {
@@ -334,6 +619,37 @@ function resolveImageUrl(raw: string | null, pageUrl: string): string {
   } catch {
     return "";
   }
+}
+
+/**
+ * Avatar and profile images are interface chrome, not article figures. They
+ * often appear before the content and would otherwise consume the image cap
+ * before the real paper/repository figures are reached. Match hosts and paths
+ * that exclusively serve avatars rather than guessing from alt text or size.
+ */
+function isAvatarImageSrc(rawUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  if (host === "cdn-avatars.huggingface.co") return true;
+  if (host === "avatars.githubusercontent.com") return true;
+  if (host === "huggingface.co" && url.pathname.startsWith("/avatars/")) {
+    return true;
+  }
+  if (
+    (host === "gravatar.com" || host.endsWith(".gravatar.com")) &&
+    url.pathname.startsWith("/avatar")
+  ) {
+    return true;
+  }
+  if (host === "github.com" && url.pathname.startsWith("/identicons/")) {
+    return true;
+  }
+  return false;
 }
 
 function resolveSrcsetUrl(srcset: string | null, pageUrl: string): string {
@@ -355,10 +671,15 @@ function resolveSrcsetUrl(srcset: string | null, pageUrl: string): string {
   return best;
 }
 
-function parseDimension(raw: string | null): number | null {
-  if (raw === null) return null;
-  const parsed = Number.parseInt(raw, 10);
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+function parseImageDimension(raw: string | null): number | undefined {
+  if (raw === null) return undefined;
+  const trimmed = raw.trim();
+  if (!/^\d+$/.test(trimmed)) return undefined;
+  const parsed = Number.parseInt(trimmed, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 10_000) {
+    return undefined;
+  }
+  return parsed;
 }
 
 function pickContentRoot(document: Document): Element | null {
@@ -416,11 +737,56 @@ function blockTypeFor(tagName: string): PreviewTextBlockType {
       return "list";
     case "BLOCKQUOTE":
       return "quote";
-    case "PRE":
-      return "code";
     default:
       return "paragraph";
   }
+}
+
+function extractPublishedAt(document: Document): string | undefined {
+  const candidates = [
+    metaContent(document, [
+      'meta[property="article:published_time"]',
+      'meta[name="article:published_time"]',
+      'meta[itemprop="datePublished"]',
+      'meta[name="date"]',
+    ]),
+    normalizeText(
+      document.querySelector("time[datetime]")?.getAttribute("datetime"),
+    ),
+  ];
+  for (const candidate of candidates) {
+    if (candidate === "") continue;
+    const parsed = Date.parse(candidate);
+    if (!Number.isNaN(parsed)) return new Date(parsed).toISOString();
+  }
+  return undefined;
+}
+
+function estimateReadingMinutes(
+  blocks: PreviewBlock[],
+): number | undefined {
+  let words = 0;
+  for (const block of blocks) {
+    if (block.type === "image" || block.type === "code") continue;
+    if (block.type === "table") {
+      for (const row of block.rows) {
+        for (const cell of row) words += countWords(cell);
+      }
+      continue;
+    }
+    const text = "segments" in block
+      ? block.segments.map((segment) => segment.text).join(" ")
+      : block.text;
+    words += countWords(text);
+  }
+  if (words === 0) return undefined;
+  return Math.max(1, Math.round(words / 200));
+}
+
+function countWords(text: string): number {
+  return (
+    text.match(/[\p{L}\p{N}]+(?:['’\-][\p{L}\p{N}]+)*/gu) ?? []
+  ).length;
 }
 
 function isUsefulBlock(type: PreviewTextBlockType, text: string): boolean {

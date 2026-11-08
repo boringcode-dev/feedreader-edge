@@ -240,6 +240,8 @@ async function handlePreview(
         title: preview.title || item.title,
         site_name: preview.siteName,
         byline: preview.byline ?? null,
+        published_at: preview.publishedAt ?? null,
+        reading_minutes: preview.readingMinutes ?? null,
         blocks: preview.blocks,
       },
       { headers: { "Cache-Control": `max-age=${PREVIEW_CACHE_TTL_SECONDS}` } },
@@ -258,8 +260,8 @@ async function handlePreview(
  * `.invalid` is reserved by RFC 2606 for exactly this kind of placeholder
  * use, so it's guaranteed not to collide with a real host. */
 function previewCacheRequest(target: string): Request {
-  // v2 invalidates previews cached before image blocks were added.
-  const raw = `preview:v2:${target}`;
+  // v4 invalidates previews cached before contributor avatars were filtered.
+  const raw = `preview:v4:${target}`;
   const url = `https://feedreader-internal.invalid/preview-cache?k=${encodeURIComponent(raw)}`;
   return new Request(url, { method: "GET" });
 }
@@ -360,8 +362,9 @@ function itemsCacheRequest(
   offset: number,
   freshness: string,
 ): Request {
-  // v2 invalidates cached responses produced before the source set changed.
-  const raw = `items:v2:${source} ${sources.join(",")} ${query} ${limit} ${offset} ${freshness}`;
+  // v3 invalidates cached responses produced before card comments URLs were
+  // added.
+  const raw = `items:v3:${source} ${sources.join(",")} ${query} ${limit} ${offset} ${freshness}`;
   const url = `https://feedreader-internal.invalid/items-cache?k=${encodeURIComponent(raw)}`;
   return new Request(url, { method: "GET" });
 }
@@ -400,6 +403,7 @@ function cardsToJson(cards: CardView[]) {
     index: card.index,
     title: card.title,
     url: card.url,
+    comments_url: card.commentsUrl ?? null,
     brief: card.brief ?? null,
     brief_prefix: card.briefPrefix ?? null,
     brief_suffix: card.briefSuffix ?? null,

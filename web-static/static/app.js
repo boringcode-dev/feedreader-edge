@@ -46,9 +46,13 @@
   const previewScroll = document.querySelector("[data-preview-scroll]");
   const previewTitle = document.querySelector("[data-preview-title]");
   const previewByline = document.querySelector("[data-preview-byline]");
+  const previewReadingMeta = document.querySelector(
+    "[data-preview-reading-meta]",
+  );
   const previewStatus = document.querySelector("[data-preview-status]");
   const previewContent = document.querySelector("[data-preview-content]");
   const previewOpenLink = document.querySelector("[data-preview-open]");
+  const previewCommentsLink = document.querySelector("[data-preview-comments]");
   const previewSourceIcon = document.querySelector("[data-preview-source-icon]");
   const previewSourceLabel = document.querySelector(
     "[data-preview-source-label]",
@@ -178,7 +182,7 @@
   const bookmarkIcons = `<svg class="bookmark-icon bookmark-icon--outline" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg><svg class="bookmark-icon bookmark-icon--filled" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="currentColor"/></svg>`;
 
   const cardTemplate = (item) => `
-    <article class="item-card" data-source="${escapeHtml(item.source || "")}">
+    <article class="item-card" data-source="${escapeHtml(item.source || "")}" data-comments-url="${escapeAttr(item.comments_url || "")}">
       <h2 class="item-title">
         <span class="item-index">${escapeHtml(item.index ?? "")}.</span>
         <a href="${escapeAttr(item.url || "#")}" target="_blank" rel="noreferrer">${escapeHtml(item.title || "")}</a>
@@ -334,6 +338,10 @@
       url,
       title,
       source: typeof raw.source === "string" ? raw.source : "",
+      commentsUrl:
+        typeof raw.commentsUrl === "string" && isHttpUrl(raw.commentsUrl)
+          ? normalizeVisitedHref(raw.commentsUrl)
+          : "",
       brief: typeof raw.brief === "string" ? raw.brief.trim() : "",
       host: typeof raw.host === "string" ? raw.host.trim() : "",
       savedAt:
@@ -388,6 +396,7 @@
       url,
       title,
       source: card.dataset.source || "",
+      commentsUrl: card.dataset.commentsUrl || "",
       brief,
       briefMeta:
         separatorIndex >= 0
@@ -404,6 +413,7 @@
           url: data.url,
           title: data.title,
           source: data.source,
+          commentsUrl: data.commentsUrl,
           brief: data.brief,
           host: data.host,
           savedAt: new Date().toISOString(),
@@ -960,11 +970,117 @@
     }
   };
 
+  const setPreviewCommentsLink = (rawUrl) => {
+    if (!previewCommentsLink) return;
+    const target =
+      typeof rawUrl === "string" && isHttpUrl(rawUrl)
+        ? normalizeVisitedHref(rawUrl)
+        : "";
+    previewCommentsLink.href = target || "#";
+    previewCommentsLink.classList.toggle("is-hidden", target === "");
+    if (target === "") {
+      previewCommentsLink.setAttribute("aria-hidden", "true");
+      previewCommentsLink.setAttribute("tabindex", "-1");
+    } else {
+      previewCommentsLink.removeAttribute("aria-hidden");
+      previewCommentsLink.removeAttribute("tabindex");
+    }
+  };
+
+  const renderPreviewSegmentMarks = (segment) => {
+    let node = document.createTextNode(segment.text);
+    const wrappers = [];
+    if (segment.code) wrappers.push("code");
+    if (segment.em) wrappers.push("em");
+    if (segment.strong) wrappers.push("strong");
+    for (const tagName of wrappers) {
+      const wrapper = document.createElement(tagName);
+      wrapper.appendChild(node);
+      node = wrapper;
+    }
+    return node;
+  };
+
+  const renderPreviewSegments = (container, segments) => {
+    let index = 0;
+    while (index < segments.length) {
+      const segment = segments[index];
+      if (
+        !segment ||
+        typeof segment.text !== "string" ||
+        segment.text === ""
+      ) {
+        index += 1;
+        continue;
+      }
+      if (!segment.href || !isHttpUrl(segment.href)) {
+        container.appendChild(renderPreviewSegmentMarks(segment));
+        index += 1;
+        continue;
+      }
+
+      const anchor = document.createElement("a");
+      anchor.href = segment.href;
+      anchor.target = "_blank";
+      anchor.rel = "noopener noreferrer";
+      anchor.referrerPolicy = "no-referrer";
+      while (index < segments.length) {
+        const current = segments[index];
+        if (
+          !current ||
+          current.href !== segment.href ||
+          typeof current.text !== "string" ||
+          current.text === ""
+        ) {
+          break;
+        }
+        anchor.appendChild(renderPreviewSegmentMarks(current));
+        index += 1;
+      }
+      container.appendChild(anchor);
+    }
+  };
+
+  const renderPreviewTable = (block) => {
+    const rows = Array.isArray(block.rows)
+      ? block.rows.filter((row) => Array.isArray(row))
+      : [];
+    if (rows.length === 0) return null;
+
+    const wrap = document.createElement("div");
+    wrap.className = "preview-panel-table-wrap";
+    const table = document.createElement("table");
+    table.className = "preview-panel-table";
+    const appendRow = (parent, cells, tagName) => {
+      const row = document.createElement("tr");
+      for (const cell of cells) {
+        const element = document.createElement(tagName);
+        if (tagName === "th") element.scope = "col";
+        element.textContent = typeof cell === "string" ? cell : "";
+        row.appendChild(element);
+      }
+      parent.appendChild(row);
+    };
+
+    if (block.header === true) {
+      const thead = document.createElement("thead");
+      appendRow(thead, rows[0], "th");
+      table.appendChild(thead);
+    }
+    const tbody = document.createElement("tbody");
+    for (const row of block.header === true ? rows.slice(1) : rows) {
+      appendRow(tbody, row, "td");
+    }
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    return wrap;
+  };
+
   const renderPreviewBlocks = (blocks) => {
     if (!previewContent) return;
     previewContent.replaceChildren();
     for (const block of blocks) {
-      if (!block) continue;
+      if (!block || typeof block !== "object") continue;
       if (block.type === "image") {
         if (typeof block.src !== "string" || !isHttpUrl(block.src)) continue;
         const figure = document.createElement("figure");
@@ -974,6 +1090,15 @@
         image.alt = typeof block.alt === "string" ? block.alt : "";
         image.loading = "lazy";
         image.decoding = "async";
+        if (
+          Number.isFinite(block.width) &&
+          Number.isFinite(block.height) &&
+          block.width > 0 &&
+          block.height > 0
+        ) {
+          image.setAttribute("width", String(Math.round(block.width)));
+          image.setAttribute("height", String(Math.round(block.height)));
+        }
         // Server-validated public http(s) URLs only; direct loading is
         // intentional (no image proxy). No-referrer keeps the reader URL out
         // of the image request.
@@ -990,12 +1115,23 @@
         image.addEventListener("error", () => figure.remove(), { once: true });
         image.src = block.src;
         figure.appendChild(image);
+        const caption =
+          typeof block.caption === "string" ? block.caption.trim() : "";
+        if (caption !== "") {
+          const figcaption = document.createElement("figcaption");
+          figcaption.className = "preview-panel-caption";
+          figcaption.textContent = caption;
+          figure.appendChild(figcaption);
+        }
         previewContent.appendChild(figure);
         continue;
       }
-      if (typeof block.text !== "string" || block.text === "") {
+      if (block.type === "table") {
+        const table = renderPreviewTable(block);
+        if (table) previewContent.appendChild(table);
         continue;
       }
+
       const tagName =
         block.type === "heading"
           ? "h3"
@@ -1008,7 +1144,13 @@
       if (block.type === "list") {
         element.classList.add("preview-panel-list");
       }
-      element.textContent = block.text;
+      if (Array.isArray(block.segments)) {
+        renderPreviewSegments(element, block.segments);
+        if (element.childNodes.length === 0) continue;
+      } else {
+        if (typeof block.text !== "string" || block.text === "") continue;
+        element.textContent = block.text;
+      }
       previewContent.appendChild(element);
     }
   };
@@ -1023,12 +1165,17 @@
       previewByline.textContent = "";
       previewByline.classList.add("is-hidden");
     }
+    if (previewReadingMeta) {
+      previewReadingMeta.textContent = "";
+      previewReadingMeta.classList.add("is-hidden");
+    }
     if (previewTitle) {
       previewTitle.textContent = "Article preview";
     }
     if (previewOpenLink) {
       previewOpenLink.href = "#";
     }
+    setPreviewCommentsLink("");
     if (previewMeta) {
       previewMeta.textContent = "";
       previewMeta.classList.add("is-hidden");
@@ -1046,7 +1193,15 @@
     resetPreviewPanel();
   };
 
-  const openArticlePreview = ({ url, title, source, host, brief, briefMeta }) => {
+  const openArticlePreview = ({
+    url,
+    title,
+    source,
+    host,
+    brief,
+    briefMeta,
+    commentsUrl,
+  }) => {
     if (!articlePreviewSupported || !url || !isHttpUrl(url) || !previewPanel) {
       return;
     }
@@ -1057,6 +1212,7 @@
       source,
       host,
       brief,
+      commentsUrl,
     };
     applyBookmarkState();
     applyPreviewActiveCardState();
@@ -1078,12 +1234,17 @@
     pageBody?.classList.add("is-preview-open");
     document.body.classList.add("is-preview-open");
     setPreviewSource(source, host);
+    setPreviewCommentsLink(commentsUrl);
     if (previewTitle) {
       previewTitle.textContent = title || "Article preview";
     }
     if (previewByline) {
       previewByline.textContent = "";
       previewByline.classList.add("is-hidden");
+    }
+    if (previewReadingMeta) {
+      previewReadingMeta.textContent = "";
+      previewReadingMeta.classList.add("is-hidden");
     }
     if (previewOpenLink) {
       previewOpenLink.href = url;
@@ -1092,7 +1253,7 @@
     setPreviewStatus("Loading preview…");
     previewScroll?.scrollTo({ top: 0 });
 
-    fetch(`/api/preview?url=${encodeURIComponent(url)}&v=2`, {
+    fetch(`/api/preview?url=${encodeURIComponent(url)}&v=4`, {
       headers: { Accept: "application/json" },
       signal: controller.signal,
     })
@@ -1123,6 +1284,25 @@
             bylineParts.length === 0,
           );
         }
+        if (previewReadingMeta) {
+          const readingParts = [];
+          const publishedLabel = formatLocalizedBriefDate(
+            payload.published_at,
+            "published",
+          );
+          if (publishedLabel) readingParts.push(publishedLabel);
+          if (
+            typeof payload.reading_minutes === "number" &&
+            payload.reading_minutes > 0
+          ) {
+            readingParts.push(`${payload.reading_minutes} min read`);
+          }
+          previewReadingMeta.textContent = readingParts.join(" · ");
+          previewReadingMeta.classList.toggle(
+            "is-hidden",
+            readingParts.length === 0,
+          );
+        }
         renderPreviewBlocks(blocks);
         setPreviewStatus(
           "No readable text was found. Open the source to read the article.",
@@ -1138,6 +1318,7 @@
         }
         previewContent?.replaceChildren();
         previewByline?.classList.add("is-hidden");
+        previewReadingMeta?.classList.add("is-hidden");
         setPreviewStatus(
           "Preview isn't available for this article. Open the source to read it.",
         );
@@ -1227,6 +1408,7 @@
             index: i + 1,
             title: bookmark.title,
             url: bookmark.url,
+            comments_url: bookmark.commentsUrl || "",
             brief: bookmark.brief || undefined,
             host: bookmark.host,
           }),
