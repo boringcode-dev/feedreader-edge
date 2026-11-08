@@ -4,9 +4,16 @@
 //
 // `fetchArticlePreview` is deliberately conservative: http(s) only, no
 // credentials, no non-standard ports, and no loopback/private/link-local
-// hosts (both the requested URL and the final post-redirect URL are
-// checked). Callers should additionally verify the URL belongs to a stored
-// feed item before calling this, so the endpoint can't act as an open proxy.
+// hosts (both the requested URL and every post-redirect URL are checked).
+// Callers should additionally verify the URL belongs to a stored feed item
+// before calling this, so the endpoint can't act as an open proxy.
+//
+// Residual DNS-rebinding note: Workers cannot reach private IP space by
+// literal, and fetch() re-resolves hostnames at connect time. Workers fetch
+// exposes no hook to pin a validated DNS answer, so a hostname whose DNS
+// answer changes between validation and connect remains a theoretical
+// rebinding vector; the stored-item allowlist and platform egress rules are
+// the layers that bound it.
 
 import { parseHtmlDocument } from "./sources/dom.ts";
 
