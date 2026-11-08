@@ -1,6 +1,6 @@
 // Reader-view extraction and safe article fetching for the side preview
-// panel. Output is plain text only — never upstream HTML — so rendering it
-// with textContent cannot introduce script/markup injection.
+// panel. Output is plain text plus validated image URLs — never upstream
+// HTML — so rendering it cannot introduce script/markup injection.
 //
 // `fetchArticlePreview` is deliberately conservative: http(s) only, no
 // credentials, no non-standard ports, and no loopback/private/link-local
@@ -22,6 +22,7 @@ const DEFAULT_TIMEOUT_MS = 10_000;
 const MAX_REDIRECTS = 5;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
 const MAX_BLOCKS = 120;
+const MAX_IMAGES = 20;
 const MAX_BLOCK_CHARS = 4_000;
 const MAX_TOTAL_CHARS = 40_000;
 const MIN_PARAGRAPH_CHARS = 25;
@@ -50,17 +51,25 @@ const NOISE_SELECTORS = [
   '[aria-hidden="true"]',
 ];
 
-export type PreviewBlockType =
+export type PreviewTextBlockType =
   | "heading"
   | "paragraph"
   | "list"
   | "quote"
   | "code";
 
-export interface PreviewBlock {
-  type: PreviewBlockType;
+export interface PreviewTextBlock {
+  type: PreviewTextBlockType;
   text: string;
 }
+
+export interface PreviewImageBlock {
+  type: "image";
+  src: string;
+  alt: string;
+}
+
+export type PreviewBlock = PreviewTextBlock | PreviewImageBlock;
 
 export interface ArticlePreview {
   title: string;
@@ -201,7 +210,7 @@ export function extractArticlePreview(
   }
 
   const root = pickContentRoot(document);
-  const blocks = root ? extractBlocks(root, title) : [];
+  const blocks = root ? extractBlocks(root, title, pageUrl) : [];
   if (blocks.length === 0) {
     const description = normalizeText(
       metaContent(document, [
@@ -219,16 +228,35 @@ export function extractArticlePreview(
     : { title, siteName, blocks };
 }
 
-function extractBlocks(root: Element, title: string): PreviewBlock[] {
+function extractBlocks(
+  root: Element,
+  title: string,
+  pageUrl: string,
+): PreviewBlock[] {
   const blocks: PreviewBlock[] = [];
   let totalChars = 0;
+  let imageCount = 0;
+  const seenImageSources = new Set<string>();
   const titleKey = normalizeText(title);
 
   const elements = Array.from(
-    root.querySelectorAll("h1, h2, h3, h4, h5, h6, p, li, blockquote, pre"),
+    root.querySelectorAll(
+      "h1, h2, h3, h4, h5, h6, p, li, blockquote, pre, img",
+    ),
   );
   for (const element of elements) {
     if (blocks.length >= MAX_BLOCKS) break;
+
+    if (element.tagName === "IMG") {
+      if (imageCount >= MAX_IMAGES) continue;
+      const image = extractImageBlock(element, pageUrl);
+      if (!image || seenImageSources.has(image.src)) continue;
+      seenImageSources.add(image.src);
+      blocks.push(image);
+      imageCount += 1;
+      continue;
+    }
+
     if (element.closest("pre") && element.tagName !== "PRE") continue;
     if (element.closest("li") && element.tagName !== "LI") continue;
     if (element.closest("blockquote") && element.tagName !== "BLOCKQUOTE") {
@@ -242,7 +270,8 @@ function extractBlocks(root: Element, title: string): PreviewBlock[] {
         : normalizeText(element.textContent);
     if (!isUsefulBlock(type, text)) continue;
     if (type === "heading" && normalizeText(text) === titleKey) continue;
-    if (blocks.length > 0 && blocks[blocks.length - 1]!.text === text) {
+    const lastBlock = blocks[blocks.length - 1];
+    if (lastBlock && lastBlock.type !== "image" && lastBlock.text === text) {
       continue;
     }
 
@@ -253,6 +282,83 @@ function extractBlocks(root: Element, title: string): PreviewBlock[] {
   }
 
   return blocks;
+}
+
+function extractImageBlock(
+  image: Element,
+  pageUrl: string,
+): PreviewImageBlock | null {
+  const width = parseDimension(image.getAttribute("width"));
+  const height = parseDimension(image.getAttribute("height"));
+  if ((width !== null && width <= 2) || (height !== null && height <= 2)) {
+    return null;
+  }
+
+  let resolved = "";
+  for (const attribute of [
+    "src",
+    "data-src",
+    "data-lazy-src",
+    "data-original",
+  ]) {
+    resolved = resolveImageUrl(image.getAttribute(attribute), pageUrl);
+    if (resolved !== "") break;
+  }
+  if (resolved === "") {
+    const pictureSource = image
+      .closest("picture")
+      ?.querySelector("source[srcset]");
+    for (const srcset of [
+      image.getAttribute("srcset"),
+      image.getAttribute("data-srcset"),
+      pictureSource?.getAttribute("srcset") ?? null,
+    ]) {
+      resolved = resolveSrcsetUrl(srcset, pageUrl);
+      if (resolved !== "") break;
+    }
+  }
+  if (resolved === "") return null;
+
+  return {
+    type: "image",
+    src: resolved,
+    alt: normalizeText(image.getAttribute("alt")).slice(0, 300),
+  };
+}
+
+function resolveImageUrl(raw: string | null, pageUrl: string): string {
+  const trimmed = (raw ?? "").trim();
+  if (trimmed === "" || trimmed.startsWith("data:")) return "";
+  try {
+    return normalizePreviewUrl(new URL(trimmed, pageUrl).toString()) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function resolveSrcsetUrl(srcset: string | null, pageUrl: string): string {
+  const raw = (srcset ?? "").trim();
+  if (raw === "") return "";
+  let best = "";
+  let bestScore = -1;
+  for (const part of raw.split(",")) {
+    const [candidate = "", descriptor = ""] = part.trim().split(/\s+/);
+    const resolved = resolveImageUrl(candidate, pageUrl);
+    if (resolved === "") continue;
+    const score = Number.parseFloat(descriptor);
+    const normalizedScore = Number.isFinite(score) ? score : 1;
+    if (normalizedScore > bestScore) {
+      best = resolved;
+      bestScore = normalizedScore;
+    }
+  }
+  return best;
+}
+
+function parseDimension(raw: string | null): number | null {
+  if (raw === null) return null;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
 }
 
 function pickContentRoot(document: Document): Element | null {
@@ -297,7 +403,7 @@ function contentScore(element: Element): number {
   return score;
 }
 
-function blockTypeFor(tagName: string): PreviewBlockType {
+function blockTypeFor(tagName: string): PreviewTextBlockType {
   switch (tagName) {
     case "H1":
     case "H2":
@@ -317,7 +423,7 @@ function blockTypeFor(tagName: string): PreviewBlockType {
   }
 }
 
-function isUsefulBlock(type: PreviewBlockType, text: string): boolean {
+function isUsefulBlock(type: PreviewTextBlockType, text: string): boolean {
   if (text === "") return false;
   switch (type) {
     case "paragraph":

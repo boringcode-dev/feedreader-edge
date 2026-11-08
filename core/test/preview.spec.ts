@@ -143,7 +143,47 @@ describe("extractArticlePreview", () => {
     const preview = extractArticlePreview(html, "https://example.com/story");
 
     expect(preview.blocks).toHaveLength(1);
-    expect(preview.blocks[0]!.text).toContain("Real article sentence.");
+    const firstBlock = preview.blocks[0];
+    expect(firstBlock?.type).toBe("paragraph");
+    if (firstBlock?.type === "paragraph") {
+      expect(firstBlock.text).toContain("Real article sentence.");
+    }
+  });
+
+  it("extracts article images and drops unsafe or tracking images", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Image story" />
+      </head><body><article>
+        <p>${"A long enough paragraph about the story. ".repeat(10)}</p>
+        <img src="/images/hero.jpg" alt="Hero image" width="1200" height="630" />
+        <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP" data-src="https://cdn.example.com/lazy.jpg" alt="Lazy loaded" />
+        <img src="http://127.0.0.1/private.png" alt="Private" />
+        <img src="http://127.0.0.1/tracker.png" width="1" height="1" alt="" />
+        <img src="javascript:alert(1)" alt="Bad" />
+        <img srcset="/images/small.jpg 400w, /images/large.jpg 1200w" alt="Responsive" />
+        <p>${"Another long enough paragraph about the story. ".repeat(10)}</p>
+      </article></body></html>`,
+      "https://example.com/posts/image-story",
+    );
+
+    expect(preview.blocks.filter((block) => block.type === "image")).toEqual([
+      {
+        type: "image",
+        src: "https://example.com/images/hero.jpg",
+        alt: "Hero image",
+      },
+      {
+        type: "image",
+        src: "https://cdn.example.com/lazy.jpg",
+        alt: "Lazy loaded",
+      },
+      {
+        type: "image",
+        src: "https://example.com/images/large.jpg",
+        alt: "Responsive",
+      },
+    ]);
   });
 
   it("uses the hostname when no title metadata exists", () => {
@@ -266,8 +306,10 @@ describe("fetchArticlePreview", () => {
       fetchImpl: async () => htmlResponse(html),
     });
 
-    expect(preview.blocks.map((block) => block.text).join(" ")).not.toContain(
-      marker,
-    );
+    expect(
+      preview.blocks
+        .map((block) => (block.type === "image" ? block.src : block.text))
+        .join(" "),
+    ).not.toContain(marker);
   });
 });

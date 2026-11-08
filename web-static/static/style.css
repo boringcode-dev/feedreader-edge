@@ -895,6 +895,18 @@ body.is-dialog-open {
   gap: 0.62rem;
 }
 
+.preview-panel-figure {
+  margin: 0;
+}
+
+.preview-panel-image {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.65rem;
+  background: var(--surface-raised);
+}
+
 .preview-panel-content > * {
   margin: 0;
 }

@@ -889,7 +889,33 @@
     if (!previewContent) return;
     previewContent.replaceChildren();
     for (const block of blocks) {
-      if (!block || typeof block.text !== "string" || block.text === "") {
+      if (!block) continue;
+      if (block.type === "image") {
+        if (typeof block.src !== "string" || !isHttpUrl(block.src)) continue;
+        const figure = document.createElement("figure");
+        figure.className = "preview-panel-figure";
+        const image = document.createElement("img");
+        image.className = "preview-panel-image";
+        image.alt = typeof block.alt === "string" ? block.alt : "";
+        image.loading = "lazy";
+        image.decoding = "async";
+        image.referrerPolicy = "no-referrer";
+        image.addEventListener("load", () => {
+          if (
+            image.naturalWidth > 0 &&
+            image.naturalWidth < 32 &&
+            image.naturalHeight < 32
+          ) {
+            figure.remove();
+          }
+        }, { once: true });
+        image.addEventListener("error", () => figure.remove(), { once: true });
+        image.src = block.src;
+        figure.appendChild(image);
+        previewContent.appendChild(figure);
+        continue;
+      }
+      if (typeof block.text !== "string" || block.text === "") {
         continue;
       }
       const tagName =
@@ -973,7 +999,7 @@
     setPreviewStatus("Loading preview…");
     previewScroll?.scrollTo({ top: 0 });
 
-    fetch(`/api/preview?url=${encodeURIComponent(url)}`, {
+    fetch(`/api/preview?url=${encodeURIComponent(url)}&v=2`, {
       headers: { Accept: "application/json" },
       signal: controller.signal,
     })

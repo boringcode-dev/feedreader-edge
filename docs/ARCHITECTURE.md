@@ -8,7 +8,7 @@
 | [`core/ports.ts`](../core/ports.ts)                                                   | `FeedRepository` interface — the persistence seam platform adapters implement.                |
 | [`core/service.ts`](../core/service.ts)                                               | Refresh orchestration, feed pagination, health payloads, card-building, and error projection. |
 | [`core/render.ts`](../core/render.ts)                                                 | Server-side HTML rendering for the feed UI.                                                   |
-| [`core/preview.ts`](../core/preview.ts)                                               | Reader-view URL validation, guarded article fetch, and plain-text extraction.                 |
+| [`core/preview.ts`](../core/preview.ts)                                               | Reader-view URL validation, guarded article fetch, and text/image extraction.                |
 | [`core/sources/`](../core/sources)                                                    | Upstream source adapters plus shared HTTP/DOM helpers.                                        |
 | [`platforms/cloudflare/src/index.ts`](../platforms/cloudflare/src/index.ts)           | Worker request router and scheduled entrypoint.                                               |
 | [`platforms/cloudflare/src/repository.ts`](../platforms/cloudflare/src/repository.ts) | D1-backed `FeedRepository` implementation.                                                    |
@@ -79,7 +79,7 @@ The optional side-panel preview is served by `GET /api/preview?url=…`.
 
 - The requested URL must exactly match a stored `items.url`. This check, not the fetch layer, is what keeps the endpoint from acting as an open proxy; `feedreader.articlePreviewEnabled` only controls the client behavior.
 - `core/preview.ts` additionally rejects non-http(s) schemes, credentials, non-standard ports, and loopback/private/link-local hosts, and re-checks the final URL after redirects.
-- Article fetches time out after 10 seconds and read at most 400 KB. The extractor removes scripts/navigation/footer noise and returns plain-text blocks only — upstream HTML is never returned or injected, so the panel renders with `textContent`.
+- Article fetches time out after 10 seconds and read at most 400 KB. The extractor removes scripts/navigation/footer noise and returns text and image blocks only — upstream HTML is never returned or injected. Text renders with `textContent`; image URLs are re-validated as public http(s) resources and loaded directly by the browser with `loading="lazy"` and `referrerpolicy="no-referrer"`.
 - Successful previews are edge-cached for 30 minutes; the Cache API is a no-op in local `wrangler dev`.
 
 See [RUNBOOK.md](RUNBOOK.md) for failure modes.
