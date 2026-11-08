@@ -963,6 +963,12 @@
       const iconPath = sourceIconPaths[source] || "";
       previewSourceIcon.src = iconPath;
       previewSourceIcon.classList.toggle("is-hidden", iconPath === "");
+      for (const key of availableSources) {
+        previewSourceIcon.classList.toggle(
+          `source-icon-image--${key}`,
+          key === source,
+        );
+      }
     }
   };
 
