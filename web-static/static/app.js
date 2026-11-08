@@ -857,18 +857,10 @@
     root.dataset.theme = theme;
     localStorage.setItem(themeStorageKey, theme);
     if (metaThemeColor) {
-      metaThemeColor.setAttribute(
-        "content",
-        theme === "dark" ? "#111e2c" : "#e1ebf7",
-      );
+      // The installed iOS PWA uses theme-color for the opaque status bar;
+      // keep every variant in sync with the user's explicit theme choice.
       document.querySelectorAll('meta[name="theme-color"]').forEach((node) => {
-        const media = node.getAttribute("media");
-        if (!media) {
-          node.setAttribute(
-            "content",
-            theme === "dark" ? "#111e2c" : "#e1ebf7",
-          );
-        }
+        node.setAttribute("content", theme === "dark" ? "#111e2c" : "#e1ebf7");
       });
     }
     if (themeToggle) {

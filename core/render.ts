@@ -145,14 +145,14 @@ export function renderIndexPage(data: PageData): string {
     <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e1ebf7" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="reader" />
     <link rel="manifest" href="/site.webmanifest?v=12" />
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
     <link rel="stylesheet" href="/static/style.css?v=54" />
-    <script src="/static/app.js?v=46" defer></script>
+    <script src="/static/app.js?v=47" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
