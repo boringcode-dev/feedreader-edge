@@ -48,6 +48,10 @@ export class FakeFeedRepository implements FeedRepository {
     return [];
   }
 
+  async findItemByUrl(): Promise<FeedItem | null> {
+    return null;
+  }
+
   async listFeedItems(): Promise<FeedItem[]> {
     return [];
   }

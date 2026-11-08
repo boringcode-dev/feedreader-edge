@@ -151,8 +151,8 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=47" />
-    <script src="/static/app.js?v=38" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=54" />
+    <script src="/static/app.js?v=46" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -308,6 +308,26 @@ export function renderIndexPage(data: PageData): string {
           </div>
         </section>
         </div>
+        <section class="config-section" data-article-preview-section aria-labelledby="config-reading-title">
+          <div class="config-section-header">
+            <h3 id="config-reading-title" class="config-section-title">Reading</h3>
+            <p class="config-section-copy">Read articles in a side panel without leaving the feed. Available on desktop and tablet.</p>
+          </div>
+          <div class="config-options">
+            <label class="config-option">
+              <input type="checkbox" data-article-preview-toggle />
+              <span class="config-option-icon" aria-hidden="true">
+                <svg class="choice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8">
+                  <path d="M4 5.5h7.5a1.5 1.5 0 0 1 1.5 1.5v12a2 2 0 0 0-2-2H4Z"/>
+                  <path d="M20 5.5h-7.5A1.5 1.5 0 0 0 11 7v12a2 2 0 0 1 2-2h7Z"/>
+                </svg>
+              </span>
+              <span class="config-option-body">
+                <span class="config-option-title">Preview articles in a side panel</span>
+              </span>
+            </label>
+          </div>
+        </section>
         <section class="config-section" aria-labelledby="config-personalization-title">
           <div class="config-section-header">
             <h3 id="config-personalization-title" class="config-section-title">AI personalization</h3>
@@ -419,7 +439,8 @@ export function renderIndexPage(data: PageData): string {
       </form>
     </dialog>
 ${errorsBlock}
-    <main class="shell page-body">
+    <main class="shell page-body" data-page-body>
+      <div class="feed-column">
       <p class="personalized-indicator is-hidden" data-personalized-indicator>
         <svg class="personalized-indicator-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.937A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L13.5 8.5a2 2 0 0 0 1.437 1.437l6.135 1.582a.5.5 0 0 1 0 .962L14.937 14.063A2 2 0 0 0 13.5 15.5l-1.582 6.135a.5.5 0 0 1-.963 0z"/>
@@ -438,6 +459,37 @@ ${errorsBlock}
       <footer class="site-footer">
         <p><span class="footer-copyright">© ${data.currentYear}</span><span class="footer-sep">·</span><a class="footer-link" href="https://github.com/boringcode-dev/feedreader-edge" target="_blank" rel="noreferrer"><img class="footer-github-mark" src="/static/source-icons/github.svg" alt="" aria-hidden="true" /><span>GitHub</span></a></p>
       </footer>
+      </div>
+      <aside class="preview-panel is-hidden" data-preview-panel aria-label="Article preview">
+        <div class="preview-panel-header">
+          <p class="preview-panel-source">
+            <img class="source-icon-image source-icon-image--host is-hidden" data-preview-source-icon src="" alt="" aria-hidden="true" />
+            <span class="preview-panel-source-label" data-preview-source-label></span>
+          </p>
+          <div class="preview-panel-actions">
+            <a class="preview-panel-open" data-preview-open href="#" target="_blank" rel="noreferrer noopener">
+              <span>Open source</span>
+              <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14 5h5v5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                <path d="M19 5l-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                <path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+              </svg>
+            </a>
+            <button class="icon-button preview-panel-close" type="button" data-preview-close aria-label="Close article preview" title="Close article preview">
+              <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                <path d="M18 6L6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="preview-panel-scroll" data-preview-scroll aria-live="polite">
+          <h2 class="preview-panel-title" data-preview-title>Article preview</h2>
+          <p class="preview-panel-byline is-hidden" data-preview-byline></p>
+          <p class="preview-panel-status" data-preview-status>Select an article to preview it here.</p>
+          <div class="preview-panel-content" data-preview-content></div>
+        </div>
+      </aside>
     </main>
   </body>
 </html>

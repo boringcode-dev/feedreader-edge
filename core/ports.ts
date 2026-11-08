@@ -29,6 +29,12 @@ export interface FeedRepository {
   ): Promise<void>;
   listSourceStates(): Promise<Record<string, SyncState>>;
   getCurrentItems(source: string, limit: number): Promise<FeedItem[]>;
+  /**
+   * Returns the stored item whose `url` exactly matches, or null. Used by
+   * /api/preview to confirm the requested article is actually in the feed —
+   * the preview endpoint must not become an open proxy for arbitrary URLs.
+   */
+  findItemByUrl(url: string): Promise<FeedItem | null>;
   listFeedItems(
     limit: number,
     offset: number,

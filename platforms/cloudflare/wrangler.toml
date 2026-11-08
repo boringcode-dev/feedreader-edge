@@ -13,8 +13,10 @@ enabled = true
 # Local `wrangler dev` host/port. 8787 is wrangler's own default but is
 # already taken by another local service on this machine — override here
 # (or per-run with `--ip`/`--port`, e.g. `npm run dev -- --port 8789`).
+# 0.0.0.0 exposes the dev server on the LAN so real phones/tablets can load
+# it; restrict with --ip 127.0.0.1 when that isn't needed.
 [dev]
-ip = "127.0.0.1"
+ip = "0.0.0.0"
 port = 8788
 
 # Hourly, UTC. Asia/Ho_Chi_Minh (UTC+7, no DST) hourly wall-clock boundaries

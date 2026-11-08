@@ -71,6 +71,15 @@ With real Workers AI credentials, exercise `/api/personalize` with two paraphras
 
 Use Cloudflare dashboard → Workers & Pages → `feedreader` → Triggers → Cron Triggers, or `wrangler tail` while a scheduled run is expected, to confirm `sync_state.last_attempt_at` is updating without user-triggered traffic.
 
+## Article preview failures
+
+`GET /api/preview?url=…` only previews URLs that still exist in `items`, so a pruned or changed article URL returns `404` even if it is still visible in an open tab. Other statuses:
+
+- `422` — the stored URL is not public http(s) (for example an upstream feed emitted a `javascript:` or localhost link)
+- `502` — the upstream article timed out, returned non-HTML, or refused the fetch; the panel shows its fallback message and the **Open source** link still works
+
+Successful previews are edge-cached for 30 minutes. Local `wrangler dev` treats the Cache API as a no-op, so repeated clicks re-fetch. If previews start hitting Worker CPU limits, lower `DEFAULT_MAX_BYTES` in `core/preview.ts` (400 KB today) — parsing the upstream HTML with `linkedom` is the expensive step.
+
 ## Local SSR smoke procedure
 
 Before considering any `core/render.ts` change done:
@@ -95,5 +104,6 @@ Before considering any `core/render.ts` change done:
    - the reader settings dialog opens and closes
    - empty-state and error-banner markup still look sane
    - `View more` visibility matches whether another page exists
+   - enabling article preview, clicking a card, and confirming the panel renders and `Open source` points at the article
 
 4. If the change also affects `/api/items`, hit the endpoint directly and verify the JSON shape still matches what `web-static/static/app.js` expects.

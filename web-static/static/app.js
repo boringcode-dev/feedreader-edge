@@ -36,6 +36,25 @@
     "[data-ai-personalization-toggle]",
   );
   const interestsInput = document.querySelector("[data-interests-input]");
+  const articlePreviewToggle = document.querySelector(
+    "[data-article-preview-toggle]",
+  );
+  const articlePreviewSection = document.querySelector(
+    "[data-article-preview-section]",
+  );
+  const pageBody = document.querySelector("[data-page-body]");
+  const previewPanel = document.querySelector("[data-preview-panel]");
+  const previewCloseButton = document.querySelector("[data-preview-close]");
+  const previewScroll = document.querySelector("[data-preview-scroll]");
+  const previewTitle = document.querySelector("[data-preview-title]");
+  const previewByline = document.querySelector("[data-preview-byline]");
+  const previewStatus = document.querySelector("[data-preview-status]");
+  const previewContent = document.querySelector("[data-preview-content]");
+  const previewOpenLink = document.querySelector("[data-preview-open]");
+  const previewSourceIcon = document.querySelector("[data-preview-source-icon]");
+  const previewSourceLabel = document.querySelector(
+    "[data-preview-source-label]",
+  );
   const personalizedIndicator = document.querySelector(
     "[data-personalized-indicator]",
   );
@@ -84,6 +103,7 @@
   const themeStorageKey = "feedreader.theme";
   const interestsStorageKey = "feedreader.interests";
   const aiPersonalizationStorageKey = "feedreader.aiPersonalizationEnabled";
+  const articlePreviewStorageKey = "feedreader.articlePreviewEnabled";
   const interestsMaxLength = 300;
   const defaultInterests =
     "startups, engineering, open-source, Artificial Intelligence (AI), Machine Learning (ML)";
@@ -98,6 +118,8 @@
   let visitedLinks = loadVisitedLinks();
   let interests = loadInterests();
   let aiPersonalizationEnabled = interests !== "" && loadAiPersonalizationEnabled();
+  let articlePreviewEnabled = loadArticlePreviewEnabled();
+  const articlePreviewSupported = previewSupportedOnDevice();
   let personalizedActive = false;
   let installPromptHidden = loadInstallPromptHidden();
   let activeQuery = (searchInput?.value || "").trim();
@@ -117,6 +139,8 @@
   let offlineViewUnavailable = false;
   let reconnectRefetchInFlight = false;
   let deferredInstallPrompt = null;
+  let previewRequestSequence = 0;
+  let previewAbortController = null;
 
   function emptyMessageForState({ source, query }) {
     if (offlineViewUnavailable) {
@@ -340,6 +364,18 @@
     localStorage.setItem(aiPersonalizationStorageKey, next ? "true" : "false");
   }
 
+  function loadArticlePreviewEnabled() {
+    try {
+      return localStorage.getItem(articlePreviewStorageKey) === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  function persistArticlePreviewEnabled(next) {
+    localStorage.setItem(articlePreviewStorageKey, next ? "true" : "false");
+  }
+
   function loadInstallPromptHidden() {
     try {
       return localStorage.getItem(installPromptHiddenStorageKey) === "true";
@@ -434,6 +470,12 @@
     }
     if (interestsInput) {
       interestsInput.value = interests;
+    }
+  }
+
+  function syncArticlePreviewOption() {
+    if (articlePreviewToggle) {
+      articlePreviewToggle.checked = articlePreviewEnabled;
     }
   }
 
@@ -635,6 +677,181 @@
       hideToast();
     }, 2200);
   };
+
+  function isHttpUrl(rawUrl) {
+    try {
+      const parsed = new URL(rawUrl, window.location.origin);
+      return parsed.protocol === "http:" || parsed.protocol === "https:";
+    } catch {
+      return false;
+    }
+  }
+
+  const setPreviewStatus = (message, { hidden = false } = {}) => {
+    if (!previewStatus) return;
+    previewStatus.textContent = hidden ? "" : message;
+    previewStatus.classList.toggle("is-hidden", hidden);
+  };
+
+  const setPreviewSource = (source, host) => {
+    const label = sourceLabels[source] || source || "";
+    if (previewSourceLabel) {
+      previewSourceLabel.textContent = host ? `${label} · ${host}` : label;
+    }
+    if (previewSourceIcon) {
+      const iconPath = sourceIconPaths[source] || "";
+      previewSourceIcon.src = iconPath;
+      previewSourceIcon.classList.toggle("is-hidden", iconPath === "");
+    }
+  };
+
+  const renderPreviewBlocks = (blocks) => {
+    if (!previewContent) return;
+    previewContent.replaceChildren();
+    for (const block of blocks) {
+      if (!block || typeof block.text !== "string" || block.text === "") {
+        continue;
+      }
+      const tagName =
+        block.type === "heading"
+          ? "h3"
+          : block.type === "quote"
+            ? "blockquote"
+            : block.type === "code"
+              ? "pre"
+              : "p";
+      const element = document.createElement(tagName);
+      if (block.type === "list") {
+        element.classList.add("preview-panel-list");
+      }
+      element.textContent = block.text;
+      previewContent.appendChild(element);
+    }
+  };
+
+  const resetPreviewPanel = () => {
+    previewPanel?.classList.add("is-hidden");
+    pageBody?.classList.remove("is-preview-open");
+    document.body.classList.remove("is-preview-open");
+    previewContent?.replaceChildren();
+    if (previewByline) {
+      previewByline.textContent = "";
+      previewByline.classList.add("is-hidden");
+    }
+    if (previewTitle) {
+      previewTitle.textContent = "Article preview";
+    }
+    if (previewOpenLink) {
+      previewOpenLink.href = "#";
+    }
+    setPreviewStatus("Select an article to preview it here.");
+  };
+
+  const closeArticlePreview = () => {    previewRequestSequence += 1;
+    previewAbortController?.abort();
+    previewAbortController = null;
+    resetPreviewPanel();
+  };
+
+  const openArticlePreview = ({ url, title, source, host }) => {
+    if (!articlePreviewSupported || !url || !isHttpUrl(url) || !previewPanel) {
+      return;
+    }
+
+    previewRequestSequence += 1;
+    const requestId = previewRequestSequence;
+    previewAbortController?.abort();
+    const controller = new AbortController();
+    previewAbortController = controller;
+
+    previewPanel.classList.remove("is-hidden");
+    previewPanel.setAttribute("aria-busy", "true");
+    pageBody?.classList.add("is-preview-open");
+    document.body.classList.add("is-preview-open");    setPreviewSource(source, host);
+    if (previewTitle) {
+      previewTitle.textContent = title || "Article preview";
+    }
+    if (previewByline) {
+      previewByline.textContent = "";
+      previewByline.classList.add("is-hidden");
+    }
+    if (previewOpenLink) {
+      previewOpenLink.href = url;
+    }
+    previewContent?.replaceChildren();
+    setPreviewStatus("Loading preview…");
+    previewScroll?.scrollTo({ top: 0 });
+
+    fetch(`/api/preview?url=${encodeURIComponent(url)}`, {
+      headers: { Accept: "application/json" },
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (requestId !== previewRequestSequence) return null;
+        if (!response.ok) {
+          throw new Error(`preview failed: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((payload) => {
+        if (!payload || requestId !== previewRequestSequence) return;
+        const blocks = Array.isArray(payload.blocks) ? payload.blocks : [];
+        const nextTitle =
+          typeof payload.title === "string" && payload.title.trim() !== ""
+            ? payload.title
+            : title;
+        if (previewTitle) {
+          previewTitle.textContent = nextTitle || "Article preview";
+        }
+        const bylineParts = [payload.byline, payload.site_name].filter(
+          (value) => typeof value === "string" && value.trim() !== "",
+        );
+        if (previewByline) {
+          previewByline.textContent = bylineParts.join(" · ");
+          previewByline.classList.toggle(
+            "is-hidden",
+            bylineParts.length === 0,
+          );
+        }
+        renderPreviewBlocks(blocks);
+        setPreviewStatus(
+          "No readable text was found. Open the source to read the article.",
+          { hidden: blocks.length > 0 },
+        );
+      })
+      .catch((error) => {
+        if (
+          error?.name === "AbortError" ||
+          requestId !== previewRequestSequence
+        ) {
+          return;
+        }
+        previewContent?.replaceChildren();
+        previewByline?.classList.add("is-hidden");
+        setPreviewStatus(
+          "Preview isn't available for this article. Open the source to read it.",
+        );
+      })
+      .finally(() => {
+        if (requestId === previewRequestSequence) {
+          previewPanel.setAttribute("aria-busy", "false");
+        }
+      });
+  };
+
+  if (previewCloseButton) {
+    previewCloseButton.addEventListener("click", closeArticlePreview);
+  }
+
+  document.addEventListener("keydown", (event) => {
+    if (
+      event.key === "Escape" &&
+      previewPanel &&
+      !previewPanel.classList.contains("is-hidden")
+    ) {
+      closeArticlePreview();
+    }
+  });
 
   const applyTheme = (theme) => {
     root.dataset.theme = theme;
@@ -924,6 +1141,7 @@
     syncDensityOptions();
     syncThemeOptions();
     syncPersonalizationOptions();
+    syncArticlePreviewOption();
     if (typeof configDialog?.showModal === "function" && !configDialog.open) {
       configDialog.showModal();
       syncDialogOpenState(true);
@@ -962,6 +1180,33 @@
     const ua = navigator.userAgent || "";
     if (/ipad/i.test(ua)) return true;
     return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+  }
+
+  /**
+   * The side-panel preview is a large-screen feature. Phones (iPhone and
+   * phone-class Android/other mobile UAs) keep the original click-to-source
+   * behavior; iPads and tablet-class devices are allowed even in portrait.
+   * A coarse-pointer, short-screen fallback catches phone-class devices whose
+   * UA doesn't identify them, without treating a narrow desktop window as a
+   * phone (screen.width is the physical screen, not the viewport).
+   */
+  function previewSupportedOnDevice() {
+    const ua = navigator.userAgent || "";
+    if (/iphone|ipod/i.test(ua)) return false;
+    if (navigator.userAgentData?.mobile === true) return false;
+    if (/android/i.test(ua) && /mobile/i.test(ua)) return false;
+    if (/windows phone|iemobile|blackberry|opera mini|opera mobi/i.test(ua)) {
+      return false;
+    }
+    if (isIPadDevice()) return true;
+
+    const smallestSide = Math.min(
+      window.screen?.width || 0,
+      window.screen?.height || 0,
+    );
+    const coarsePointer =
+      window.matchMedia?.("(pointer: coarse)")?.matches === true;
+    return !(coarsePointer && smallestSide > 0 && smallestSide < 600);
   }
 
   function isMobileDevice() {
@@ -1012,6 +1257,7 @@
     nextTheme,
     nextPersonalizationEnabled,
     nextInterests,
+    nextArticlePreviewEnabled,
   ) {
     const normalizedSources = normalizeSelectedSources(nextSources);
     if (normalizedSources.length === 0) {
@@ -1037,6 +1283,8 @@
     const interestsChanged = normalizedInterests !== interests;
     const personalizationEnabledChanged =
       nextPersonalizationEnabled !== aiPersonalizationEnabled;
+    const articlePreviewEnabledChanged =
+      nextArticlePreviewEnabled !== articlePreviewEnabled;
 
     if (themeChanged) {
       applyTheme(normalizedTheme);
@@ -1054,6 +1302,14 @@
     if (personalizationEnabledChanged) {
       aiPersonalizationEnabled = nextPersonalizationEnabled;
       persistAiPersonalizationEnabled(aiPersonalizationEnabled);
+    }
+
+    if (articlePreviewEnabledChanged) {
+      articlePreviewEnabled = nextArticlePreviewEnabled;
+      persistArticlePreviewEnabled(articlePreviewEnabled);
+      if (!articlePreviewEnabled) {
+        closeArticlePreview();
+      }
     }
 
     if (!sourcesChanged && !interestsChanged && !personalizationEnabledChanged) {
@@ -1118,6 +1374,7 @@
           currentThemeSelection(),
           aiPersonalizationToggle?.checked ?? false,
           interestsInput?.value ?? "",
+          articlePreviewToggle?.checked ?? false,
         );
       } catch (error) {
         showToast("Failed to apply reader settings", "error");
@@ -1272,18 +1529,40 @@
   }
 
   if (cardsGrid) {
-    cardsGrid.addEventListener("click", (event) => {
-      const link = event.target.closest(".item-title a");
-      if (!link) return;
-      rememberVisitedLink(link.href);
-    });
+    const isPlainLeftClick = (event) =>
+      event.button === 0 &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.shiftKey &&
+      !event.altKey;
 
     cardsGrid.addEventListener("click", (event) => {
-      if (event.target.closest("a")) return;
-      if (window.getSelection().toString() !== "") return;
+      const clickedLink = event.target.closest(".item-title a");
+      if (clickedLink) {
+        rememberVisitedLink(clickedLink.href);
+      }
+
       const card = event.target.closest(".item-card");
       const link = card?.querySelector(".item-title a");
-      link?.click();
+      if (!link) return;
+      if (window.getSelection().toString() !== "") return;
+
+      if (articlePreviewEnabled && articlePreviewSupported) {
+        if (!isPlainLeftClick(event)) return;
+        const previewUrl = link.getAttribute("href") || "";
+        if (!isHttpUrl(previewUrl)) return;
+        event.preventDefault();
+        openArticlePreview({
+          url: previewUrl,
+          title: (link.textContent || "").trim(),
+          source: card.dataset.source || "",
+          host: card.querySelector(".item-host-text")?.textContent || "",
+        });
+        return;
+      }
+
+      if (event.target.closest("a")) return;
+      link.click();
     });
   }
 
@@ -1384,6 +1663,11 @@
 
   syncConfigOptions();
   syncDensityOptions();
+  syncArticlePreviewOption();
+  articlePreviewSection?.classList.toggle(
+    "is-hidden",
+    !articlePreviewSupported,
+  );
   applyVisitedLinkState();
   localizeBriefDates();
   const shouldBootstrapRefetch =

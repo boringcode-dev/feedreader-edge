@@ -76,6 +76,7 @@ npx lighthouse https://reader.boringcode.dev --view
 - **Scheduled refresh** every 1 hour on wall-clock boundaries
 - **Manual refresh** from the header re-fetches the current feed view from backend stored items only; it does **not** re-fetch upstream sources
 - **Persisted visited-link dimming** for feed card titles across reload/reopen using local storage
+- **Optional article preview side panel** (off by default, toggled in Reader settings) that opens a reader view beside the feed and includes an **Open source** button
 - **PWA-ready assets and offline caching** including manifest, service worker, touch icons, cached shell assets, and cached `/api/items` responses for previously visited views
 - **Reconnect list refresh** re-fetches the current view from backend stored items only; it does **not** refresh upstream sources
 - **Cloudflare-native deployment** with Workers, D1, Cron Triggers, and Workers Static Assets
@@ -254,6 +255,14 @@ Query params:
 - `limit` — page size
 - `offset` — pagination offset
 
+### `GET /api/preview`
+
+Returns a plain-text reader view for a stored feed item.
+
+- `url` — required; must exactly match the URL of an item currently stored in D1
+
+The Worker fetches the article with a timeout and 400 KB cap, rejects non-HTML responses and non-public hosts, and never returns upstream markup. Responses are edge-cached for 30 minutes. Returns `404` for unknown URLs and `502` when the upstream page cannot be previewed.
+
 ### `POST /api/refresh`
 
 Triggers an immediate upstream refresh across all sources and returns per-source outcomes.
@@ -323,6 +332,7 @@ Presentation-layer note:
 - the dialog sections are ordered as:
   - `Theme`
   - `UI density`
+  - `Reading`
   - `Sources`
 - theme and density options are shown in a 2-column layout to reduce dialog height
 - clicking the dialog backdrop closes it
@@ -330,6 +340,7 @@ Presentation-layer note:
 - selected sources are stored in `localStorage` under `feedreader.sources`
 - selected density is stored in `localStorage` under `feedreader.uiDensity`
 - selected theme is stored in `localStorage` under `feedreader.theme`
+- article preview is off by default and stored in `localStorage` under `feedreader.articlePreviewEnabled`
 - source-specific filters render as **real icon-only buttons**
 - `All` remains a text button
 - the source dialog renders **real source icons** before each source name
@@ -341,6 +352,16 @@ Presentation-layer note:
   - each enabled source
 - if **exactly 1** source is enabled, the filter bar shows only that source
 - the `All` view aggregates only over the enabled source set, not over disabled sources
+
+### Article preview
+
+- when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
+- `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
+- the panel shows the extracted title, byline, and plain-text blocks; `Open source` opens the original page
+- previews are fetched by the Worker via `GET /api/preview?url=…`; only URLs already stored as feed items are accepted, and upstream HTML is never injected into the page
+- on desktop and iPad landscape the layout expands to the full viewport width, with the preview panel fixed on the right at about 65% of the width and 0.8rem top/bottom insets; the page keeps its normal scroll behavior
+- on screens 900px or narrower the panel covers the full viewport width with a close button
+- preview is offered on desktop and tablet-class devices only; on phones the Reading option is hidden and tapping an article opens its source in a new tab
 
 ---
 

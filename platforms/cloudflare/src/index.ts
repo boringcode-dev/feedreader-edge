@@ -15,6 +15,10 @@ import {
 import { build, type Source } from "../../../core/sources/index.ts";
 import { renderIndexPage } from "../../../core/render.ts";
 import {
+  fetchArticlePreview,
+  normalizePreviewUrl,
+} from "../../../core/preview.ts";
+import {
   MAX_INTERESTS_LENGTH,
   itemKey,
   mergeRankedKeysOrder,
@@ -72,6 +76,11 @@ const PERSONALIZE_CACHE_TTL_SECONDS = 21600;
 // source data refreshes (see latestSuccessAt), so this just bounds
 // staleness if a source somehow stops refreshing.
 const ITEMS_CACHE_TTL_SECONDS = 21600;
+// Reader previews are fetched on demand when the user opens the side panel.
+// A short edge cache keeps repeated clicks from re-fetching the same article
+// (and re-burning the CPU budget on extraction), while still picking up
+// article edits within half an hour.
+const PREVIEW_CACHE_TTL_SECONDS = 1800;
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -82,6 +91,7 @@ export default {
     if (url.pathname === "/") return handleHome(url, env, repo);
     if (url.pathname === "/healthz") return handleHealthz(sources, repo);
     if (url.pathname === "/api/items") return handleItemsApi(url, repo);
+    if (url.pathname === "/api/preview") return handlePreview(url, env, repo);
     if (url.pathname === "/api/version") return handleVersion(env);
     if (url.pathname === "/api/personalize") {
       if (request.method !== "POST") {
@@ -190,6 +200,72 @@ function handleVersion(env: Env): Response {
 
 function currentAppVersion(env: Env): string {
   return env.APP_VERSION?.trim() || "dev";
+}
+
+/**
+ * Reader preview for the side panel. The client sends the card's href, but
+ * this only fetches URLs that exactly match a stored feed item — otherwise
+ * the endpoint would be an open proxy. Extraction returns plain-text blocks;
+ * see core/preview.ts for the SSRF checks and byte cap.
+ */
+async function handlePreview(
+  url: URL,
+  env: Env,
+  repo: D1Repository,
+): Promise<Response> {
+  const requestedUrl = (url.searchParams.get("url") ?? "").trim();
+  if (requestedUrl === "") {
+    return Response.json({ error: "url is required" }, { status: 400 });
+  }
+
+  const item = await repo.findItemByUrl(requestedUrl);
+  if (!item) {
+    return Response.json({ error: "unknown article" }, { status: 404 });
+  }
+
+  const target = normalizePreviewUrl(item.url);
+  if (!target) {
+    return Response.json(
+      { error: "preview is not available for this article" },
+      { status: 422 },
+    );
+  }
+
+  const cacheRequest = previewCacheRequest(target);
+  const cached = await readEdgeCache(cacheRequest);
+  if (cached) return cached;
+
+  try {
+    const preview = await fetchArticlePreview(target, {
+      userAgent: loadConfig(env).userAgent,
+    });
+    const response = Response.json(
+      {
+        url: item.url,
+        title: preview.title || item.title,
+        site_name: preview.siteName,
+        byline: preview.byline ?? null,
+        blocks: preview.blocks,
+      },
+      { headers: { "Cache-Control": `max-age=${PREVIEW_CACHE_TTL_SECONDS}` } },
+    );
+    await writeEdgeCache(cacheRequest, response.clone());
+    return response;
+  } catch {
+    return Response.json(
+      { error: "preview is not available for this article" },
+      { status: 502 },
+    );
+  }
+}
+
+/** Synthetic GET request used purely as a Cache API key — never fetched.
+ * `.invalid` is reserved by RFC 2606 for exactly this kind of placeholder
+ * use, so it's guaranteed not to collide with a real host. */
+function previewCacheRequest(target: string): Request {
+  const raw = `preview:v1:${target}`;
+  const url = `https://feedreader-internal.invalid/preview-cache?k=${encodeURIComponent(raw)}`;
+  return new Request(url, { method: "GET" });
 }
 
 /**

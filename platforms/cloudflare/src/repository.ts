@@ -168,6 +168,14 @@ export class D1Repository implements FeedRepository {
     return results.map(rowToFeedItem);
   }
 
+  async findItemByUrl(url: string): Promise<FeedItem | null> {
+    const row = await this.db
+      .prepare(`SELECT ${ITEM_COLUMNS} FROM items WHERE url = ? LIMIT 1`)
+      .bind(url)
+      .first<ItemRow>();
+    return row ? rowToFeedItem(row) : null;
+  }
+
   async listFeedItems(
     limit: number,
     offset: number,
