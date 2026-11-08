@@ -75,7 +75,7 @@ npx lighthouse https://reader.boringcode.dev --view
 - **Manual refresh** from the header re-fetches the current feed view from backend stored items only; it does **not** re-fetch upstream sources
 - **Persisted visited-link dimming** for feed card titles across reload/reopen using local storage
 - **Optional article preview** (off by default, toggled in Reader settings) that opens a reader view beside the feed on wide screens or full-screen on phones, with inline links/emphasis, image captions, tables, publication date/reading time, source-specific Hacker News comments, and an **Open source** button
-- **Saved articles** with a per-card bookmark toggle, a `Saved` filter, and a preview-panel toggle; stored locally under `feedreader.bookmarks`
+- **Saved articles** with an optional per-card bookmark toggle, a `Saved` filter, and a preview-panel toggle; bookmark controls are disabled by default and can be enabled in Reader settings, with saved items stored locally under `feedreader.bookmarks`
 - **PWA-ready assets and offline caching** including manifest, service worker, touch icons, cached shell assets, and cached `/api/items` responses for previously visited views
 - **Reconnect list refresh** re-fetches the current view from backend stored items only; it does **not** refresh upstream sources
 - **Cloudflare-native deployment** with Workers, D1, Cron Triggers, and Workers Static Assets
@@ -331,6 +331,8 @@ Presentation-layer note:
   - `Theme`
   - `UI density`
   - `Reading`
+  - `Bookmarks`
+  - `AI personalization`
   - `Sources`
 - theme and density options are shown in a 2-column layout to reduce dialog height
 - clicking the dialog backdrop closes it
@@ -339,6 +341,7 @@ Presentation-layer note:
 - selected density is stored in `localStorage` under `feedreader.uiDensity`
 - selected theme is stored in `localStorage` under `feedreader.theme`
 - article preview is off by default and stored in `localStorage` under `feedreader.articlePreviewEnabled`
+- bookmark controls are off by default and stored in `localStorage` under `feedreader.bookmarksEnabled`; enabling them shows the bookmark controls and Saved filter, and disabling them hides those controls without deleting saved items
 - source-specific filters render as **real icon-only buttons**
 - `All` remains a text button
 - the source dialog renders **real source icons** before each source name
@@ -367,11 +370,13 @@ Presentation-layer note:
 
 ### Bookmarks
 
-- every feed card has a bookmark toggle at the right of its host row; clicking it does not open the article
-- the preview panel header has the same toggle for the article currently open
-- a `Saved` filter at the end of the filter bar shows saved articles and their count; search filters the saved list locally
+- bookmark controls are off by default and can be enabled in Reader settings
+- when enabled, every feed card has a bookmark toggle at the right of its host row; clicking it does not open the article
+- when enabled, the preview panel header has the same toggle for the article currently open
+- when enabled, a `Saved` filter at the end of the filter bar shows saved articles and their count; search filters the saved list locally
 - bookmarks store a display snapshot (title, source, brief, host) in `localStorage` under `feedreader.bookmarks`, so they survive source pruning and offline use without a server API
 - the list is capped at 500 entries; removing a bookmark updates the count and, while the Saved view is active, removes the card immediately
+- disabling bookmarks hides the card and preview toggles plus the Saved filter, leaves the Saved view if it was active, and keeps saved items in `localStorage` for when the feature is re-enabled
 - the per-card toggle is available on every device; the preview panel header also exposes it while reading
 
 ---

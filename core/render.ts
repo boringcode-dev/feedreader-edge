@@ -150,7 +150,7 @@ export function renderIndexPage(data: PageData): string {
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
     <link rel="stylesheet" href="/static/style.css?v=66" />
-    <script src="/static/app.js?v=60" defer></script>
+    <script src="/static/app.js?v=62" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -322,6 +322,25 @@ export function renderIndexPage(data: PageData): string {
               </span>
               <span class="config-option-body">
                 <span class="config-option-title">Preview articles in a reader view</span>
+              </span>
+            </label>
+          </div>
+        </section>
+        <section class="config-section" data-bookmarks-section aria-labelledby="config-bookmarks-title">
+          <div class="config-section-header">
+            <h3 id="config-bookmarks-title" class="config-section-title">Bookmarks</h3>
+            <p class="config-section-copy">Save articles for later and show the Saved filter.</p>
+          </div>
+          <div class="config-options">
+            <label class="config-option">
+              <input type="checkbox" data-bookmarks-toggle />
+              <span class="config-option-icon" aria-hidden="true">
+                <svg class="choice-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8">
+                  <path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z"/>
+                </svg>
+              </span>
+              <span class="config-option-body">
+                <span class="config-option-title">Enable bookmarks</span>
               </span>
             </label>
           </div>

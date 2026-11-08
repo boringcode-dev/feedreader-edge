@@ -37,6 +37,7 @@
   const articlePreviewToggle = document.querySelector(
     "[data-article-preview-toggle]",
   );
+  const bookmarksToggle = document.querySelector("[data-bookmarks-toggle]");
   const pageBody = document.querySelector("[data-page-body]");
   const previewPanel = document.querySelector("[data-preview-panel]");
   const previewCloseButton = document.querySelector("[data-preview-close]");
@@ -106,6 +107,7 @@
   const visitedLinksStorageKey = "feedreader.visited";
   const visitedLinksLimit = 500;
   const bookmarksStorageKey = "feedreader.bookmarks";
+  const bookmarksEnabledStorageKey = "feedreader.bookmarksEnabled";
   const bookmarksLimit = 500;
   const themeStorageKey = "feedreader.theme";
   const interestsStorageKey = "feedreader.interests";
@@ -128,6 +130,7 @@
   let uiDensity = loadUIDensity();
   let visitedLinks = loadVisitedLinks();
   let bookmarks = loadBookmarks();
+  let bookmarksEnabled = loadBookmarksEnabled();
   let interests = loadInterests();
   let aiPersonalizationEnabled = interests !== "" && loadAiPersonalizationEnabled();
   let articlePreviewEnabled = loadArticlePreviewEnabled();
@@ -374,6 +377,18 @@
     );
   }
 
+  function loadBookmarksEnabled() {
+    try {
+      return localStorage.getItem(bookmarksEnabledStorageKey) === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  function persistBookmarksEnabled(next) {
+    localStorage.setItem(bookmarksEnabledStorageKey, next ? "true" : "false");
+  }
+
   function isBookmarked(rawUrl) {
     const url = normalizeVisitedHref(rawUrl);
     if (!url) return false;
@@ -418,6 +433,7 @@
   }
 
   function toggleBookmark(data) {
+    if (!bookmarksEnabled) return false;
     const url = normalizeVisitedHref(data?.url);
     if (!url) return false;
     const index = bookmarks.findIndex((bookmark) => bookmark.url === url);
@@ -478,6 +494,7 @@
         const button = card.querySelector("[data-bookmark-toggle]");
         if (!link || !button) return;
         const saved = isBookmarked(link.getAttribute("href") || "");
+        button.classList.toggle("is-hidden", !bookmarksEnabled);
         button.classList.toggle("is-saved", saved);
         button.setAttribute("aria-pressed", String(saved));
         const label = saved ? "Remove from saved" : "Save for later";
@@ -489,6 +506,7 @@
       const saved = currentPreviewItem
         ? isBookmarked(currentPreviewItem.url)
         : false;
+      previewBookmarkButton.classList.toggle("is-hidden", !bookmarksEnabled);
       previewBookmarkButton.classList.toggle("is-saved", saved);
       previewBookmarkButton.setAttribute("aria-pressed", String(saved));
       const label = saved ? "Remove from saved" : "Save for later";
@@ -672,7 +690,8 @@
       selectedSources.length > 1
         ? ["all", ...selectedSources]
         : [...selectedSources];
-    return [...keys, "saved"];
+    if (bookmarksEnabled) keys.push("saved");
+    return keys;
   }
 
   function personalizationConfigured() {
@@ -728,6 +747,12 @@
   function syncArticlePreviewOption() {
     if (articlePreviewToggle) {
       articlePreviewToggle.checked = articlePreviewEnabled;
+    }
+  }
+
+  function syncBookmarksOption() {
+    if (bookmarksToggle) {
+      bookmarksToggle.checked = bookmarksEnabled;
     }
   }
 
@@ -1779,6 +1804,7 @@
     nextPersonalizationEnabled,
     nextInterests,
     nextArticlePreviewEnabled,
+    nextBookmarksEnabled,
   ) {
     const normalizedSources = normalizeSelectedSources(nextSources);
     if (normalizedSources.length === 0) {
@@ -1806,6 +1832,8 @@
       nextPersonalizationEnabled !== aiPersonalizationEnabled;
     const articlePreviewEnabledChanged =
       nextArticlePreviewEnabled !== articlePreviewEnabled;
+    const bookmarksEnabledChanged =
+      nextBookmarksEnabled !== bookmarksEnabled;
 
     if (themeChanged) {
       applyTheme(normalizedTheme);
@@ -1833,7 +1861,24 @@
       }
     }
 
-    if (!sourcesChanged && !interestsChanged && !personalizationEnabledChanged) {
+    let bookmarkFilterChanged = false;
+    if (bookmarksEnabledChanged) {
+      bookmarksEnabled = nextBookmarksEnabled;
+      persistBookmarksEnabled(bookmarksEnabled);
+      const previousFilter = activeFilter;
+      ensureActiveFilterIsVisible();
+      bookmarkFilterChanged = activeFilter !== previousFilter;
+      renderFilters();
+      renderSearch();
+      applyBookmarkState();
+    }
+
+    if (
+      !sourcesChanged &&
+      !interestsChanged &&
+      !personalizationEnabledChanged &&
+      !bookmarkFilterChanged
+    ) {
       syncDensityOptions();
       closeConfigDialog();
       return;
@@ -1896,6 +1941,7 @@
           aiPersonalizationToggle?.checked ?? false,
           interestsInput?.value ?? "",
           articlePreviewToggle?.checked ?? false,
+          bookmarksToggle?.checked ?? false,
         );
       } catch (error) {
         showToast("Failed to apply reader settings", "error");
@@ -2197,6 +2243,7 @@
   syncConfigOptions();
   syncDensityOptions();
   syncArticlePreviewOption();
+  syncBookmarksOption();
   applyVisitedLinkState();
   applyBookmarkState();
   applyPreviewActiveCardState();
@@ -2208,7 +2255,11 @@
     (activeFilter === "all"
       ? selectedSources.length !== availableSources.length
       : !selectedSources.includes(activeFilter));
+  const filterBeforeVisibility = activeFilter;
   ensureActiveFilterIsVisible();
+  if (activeFilter !== filterBeforeVisibility) {
+    updateURL();
+  }
   renderFilters();
   renderSearch();
   renderFeedBody();

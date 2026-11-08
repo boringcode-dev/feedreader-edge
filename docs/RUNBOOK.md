@@ -104,6 +104,6 @@ Before considering any `core/render.ts` change done:
    - empty-state and error-banner markup still look sane
    - `View more` visibility matches whether another page exists
    - enabling article preview, clicking a card, and confirming the panel renders rich text links, images/captions (without contributor avatars), tables, reading metadata, and (for Hacker News) the Comments action; `Open source` points at the article; the active card is highlighted and previous/next move through the visible list
-   - bookmarking a card, confirming the Saved count and view, then reloading to confirm the bookmark persists
+   - enabling bookmarks in Reader settings, bookmarking a card, confirming the Saved count and view, then reloading to confirm the bookmark persists; disabling bookmarks hides the card/preview controls and Saved filter, leaves the Saved view, and re-enabling restores the saved item
 
 4. If the change also affects `/api/items`, hit the endpoint directly and verify the JSON shape still matches what `web-static/static/app.js` expects.
