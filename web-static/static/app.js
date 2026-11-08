@@ -53,6 +53,9 @@
   const previewSourceLabel = document.querySelector(
     "[data-preview-source-label]",
   );
+  const previewBookmarkButton = document.querySelector(
+    "[data-preview-bookmark]",
+  );
   const personalizedIndicator = document.querySelector(
     "[data-personalized-indicator]",
   );
@@ -98,6 +101,8 @@
   const densityConfigStorageKey = "feedreader.uiDensity";
   const visitedLinksStorageKey = "feedreader.visited";
   const visitedLinksLimit = 500;
+  const bookmarksStorageKey = "feedreader.bookmarks";
+  const bookmarksLimit = 500;
   const themeStorageKey = "feedreader.theme";
   const interestsStorageKey = "feedreader.interests";
   const aiPersonalizationStorageKey = "feedreader.aiPersonalizationEnabled";
@@ -110,10 +115,15 @@
   const loadedAppVersion = document.body.dataset.appVersion || "";
   const updateCheckIntervalMs = 15 * 60 * 1000;
 
-  let activeFilter = cardsGrid?.dataset.currentSource || "all";
+  const initialView = new URL(window.location.href).searchParams.get("view");
+  let activeFilter =
+    initialView === "saved"
+      ? "saved"
+      : cardsGrid?.dataset.currentSource || "all";
   let selectedSources = loadSelectedSources();
   let uiDensity = loadUIDensity();
   let visitedLinks = loadVisitedLinks();
+  let bookmarks = loadBookmarks();
   let interests = loadInterests();
   let aiPersonalizationEnabled = interests !== "" && loadAiPersonalizationEnabled();
   let articlePreviewEnabled = loadArticlePreviewEnabled();
@@ -139,10 +149,16 @@
   let deferredInstallPrompt = null;
   let previewRequestSequence = 0;
   let previewAbortController = null;
+  let currentPreviewItem = null;
 
   function emptyMessageForState({ source, query }) {
     if (offlineViewUnavailable) {
       return "Offline and no cached items are available for this view yet.";
+    }
+    if (source === "saved") {
+      return query
+        ? "No saved articles match your search."
+        : "No saved articles yet. Tap the bookmark icon on any card to save it for later.";
     }
     if (query) {
       if (source && source !== "all") {
@@ -156,6 +172,8 @@
     return "No items yet. The scheduler will populate the feed automatically.";
   }
 
+  const bookmarkIcons = `<svg class="bookmark-icon bookmark-icon--outline" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg><svg class="bookmark-icon bookmark-icon--filled" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="currentColor"/></svg>`;
+
   const cardTemplate = (item) => `
     <article class="item-card" data-source="${escapeHtml(item.source || "")}">
       <h2 class="item-title">
@@ -163,7 +181,7 @@
         <a href="${escapeAttr(item.url || "#")}" target="_blank" rel="noreferrer">${escapeHtml(item.title || "")}</a>
       </h2>
       ${item.brief ? `<p class="item-brief"${item.brief_prefix ? ` data-brief-prefix="${escapeAttr(item.brief_prefix)}"` : ""}${item.brief_suffix ? ` data-brief-suffix="${escapeAttr(item.brief_suffix)}"` : ""}${item.brief_date_iso ? ` data-brief-date-iso="${escapeAttr(item.brief_date_iso)}" data-brief-date-kind="${escapeAttr(item.brief_date_kind || "")}"` : ""}><span class="item-brief-text">${escapeHtml(item.brief)}</span></p>` : ""}
-      <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeAttr(item.source || "")}" src="${escapeAttr(sourceIconPaths[item.source] || "")}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(item.host || hostLabel(item.url || ""))}</span></p>
+      <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeAttr(item.source || "")}" src="${escapeAttr(sourceIconPaths[item.source] || "")}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(item.host || hostLabel(item.url || ""))}</span><button class="item-bookmark" type="button" data-bookmark-toggle aria-label="Save for later" title="Save for later" aria-pressed="false">${bookmarkIcons}</button></p>
     </article>
   `;
 
@@ -304,6 +322,154 @@
     applyVisitedLinkState();
   }
 
+  function normalizeBookmark(raw) {
+    if (!raw || typeof raw !== "object") return null;
+    const url = normalizeVisitedHref(raw.url);
+    const title = typeof raw.title === "string" ? raw.title.trim() : "";
+    if (!url || !title) return null;
+    return {
+      url,
+      title,
+      source: typeof raw.source === "string" ? raw.source : "",
+      brief: typeof raw.brief === "string" ? raw.brief.trim() : "",
+      host: typeof raw.host === "string" ? raw.host.trim() : "",
+      savedAt:
+        typeof raw.savedAt === "string"
+          ? raw.savedAt
+          : new Date(0).toISOString(),
+    };
+  }
+
+  function loadBookmarks() {
+    try {
+      const parsed = JSON.parse(
+        localStorage.getItem(bookmarksStorageKey) || "null",
+      );
+      if (!Array.isArray(parsed)) return [];
+      const seen = new Set();
+      return parsed
+        .map(normalizeBookmark)
+        .filter((bookmark) => {
+          if (!bookmark || seen.has(bookmark.url)) return false;
+          seen.add(bookmark.url);
+          return true;
+        })
+        .slice(-bookmarksLimit);
+    } catch {
+      return [];
+    }
+  }
+
+  function persistBookmarks() {
+    localStorage.setItem(
+      bookmarksStorageKey,
+      JSON.stringify(bookmarks.slice(-bookmarksLimit)),
+    );
+  }
+
+  function isBookmarked(rawUrl) {
+    const url = normalizeVisitedHref(rawUrl);
+    if (!url) return false;
+    return bookmarks.some((bookmark) => bookmark.url === url);
+  }
+
+  function bookmarkDataFromCard(card) {
+    const link = card?.querySelector(".item-title a");
+    if (!link) return null;
+    const url = normalizeVisitedHref(link.getAttribute("href") || "");
+    const title = (link.textContent || "").trim();
+    if (!url || !title) return null;
+    return {
+      url,
+      title,
+      source: card.dataset.source || "",
+      brief: (card.querySelector(".item-brief-text")?.textContent || "").trim(),
+      host: (card.querySelector(".item-host-text")?.textContent || "").trim(),
+      savedAt: new Date().toISOString(),
+    };
+  }
+
+  function toggleBookmark(data) {
+    const url = normalizeVisitedHref(data?.url);
+    if (!url) return false;
+    const index = bookmarks.findIndex((bookmark) => bookmark.url === url);
+    let saved;
+    if (index >= 0) {
+      bookmarks.splice(index, 1);
+      saved = false;
+    } else {
+      bookmarks.push({
+        ...data,
+        url,
+        savedAt: data.savedAt || new Date().toISOString(),
+      });
+      if (bookmarks.length > bookmarksLimit) {
+        bookmarks = bookmarks.slice(-bookmarksLimit);
+      }
+      saved = true;
+    }
+    persistBookmarks();
+    applyBookmarkState();
+    renderFilters();
+    if (activeFilter === "saved") {
+      renderSavedFeed({ query: activeQuery });
+    }
+    return saved;
+  }
+
+  function toggleBookmarkFromCard(card) {
+    const data = bookmarkDataFromCard(card);
+    if (!data) return;
+    const saved = toggleBookmark(data);
+    showToast(saved ? "Saved for later" : "Removed from saved");
+  }
+
+  function savedMatchesQuery(bookmark, query) {
+    const terms = query
+      .trim()
+      .toLowerCase()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (terms.length === 0) return true;
+    const haystack = [
+      bookmark.title,
+      bookmark.brief,
+      bookmark.host,
+      sourceLabels[bookmark.source] || bookmark.source,
+      bookmark.url,
+    ]
+      .join(" ")
+      .toLowerCase();
+    return terms.every((term) => haystack.includes(term));
+  }
+
+  function applyBookmarkState() {
+    if (cardsGrid) {
+      cardsGrid.querySelectorAll(".item-card").forEach((card) => {
+        const link = card.querySelector(".item-title a");
+        const button = card.querySelector("[data-bookmark-toggle]");
+        if (!link || !button) return;
+        const saved = isBookmarked(link.getAttribute("href") || "");
+        button.classList.toggle("is-saved", saved);
+        button.setAttribute("aria-pressed", String(saved));
+        const label = saved ? "Remove from saved" : "Save for later";
+        button.setAttribute("aria-label", label);
+        button.setAttribute("title", label);
+      });
+    }
+    if (previewBookmarkButton) {
+      const saved = currentPreviewItem
+        ? isBookmarked(currentPreviewItem.url)
+        : false;
+      previewBookmarkButton.classList.toggle("is-saved", saved);
+      previewBookmarkButton.setAttribute("aria-pressed", String(saved));
+      const label = saved ? "Remove from saved" : "Save for later";
+      previewBookmarkButton.setAttribute("aria-label", label);
+      previewBookmarkButton.setAttribute("title", label);
+      previewBookmarkButton.disabled = !currentPreviewItem;
+    }
+  }
+
   function loadSelectedSources() {
     try {
       const parsed = JSON.parse(
@@ -421,10 +587,11 @@
   }
 
   function visibleFilterKeys() {
-    if (selectedSources.length > 1) {
-      return ["all", ...selectedSources];
-    }
-    return [...selectedSources];
+    const keys =
+      selectedSources.length > 1
+        ? ["all", ...selectedSources]
+        : [...selectedSources];
+    return [...keys, "saved"];
   }
 
   function personalizationConfigured() {
@@ -445,6 +612,12 @@
         const isActive = key === activeFilter;
         if (key === "all") {
           return `<button class="filter-button${isActive ? " is-active" : ""}" type="button" data-filter="${key}" aria-pressed="${String(isActive)}" aria-label="For You" title="For You">For You</button>`;
+        }
+        if (key === "saved") {
+          const count = bookmarks.length;
+          const label =
+            count > 0 ? `Saved articles (${count})` : "Saved articles";
+          return `<button class="filter-button filter-button--saved${isActive ? " is-active" : ""}" type="button" data-filter="saved" aria-pressed="${String(isActive)}" aria-label="${escapeAttr(label)}" title="${escapeAttr(label)}">${bookmarkIcons}${count > 0 ? `<span class="filter-badge">${count}</span>` : ""}</button>`;
         }
         return `<button class="filter-button filter-button--icon${isActive ? " is-active" : ""}" type="button" data-filter="${key}" aria-pressed="${String(isActive)}" aria-label="${escapeAttr(sourceLabels[key] || key)}" title="${escapeAttr(sourceLabels[key] || key)}"><img class="source-icon-image source-icon-image--filter source-icon-image--${escapeAttr(key)}" src="${escapeAttr(sourceIconPaths[key] || "")}" alt="" aria-hidden="true" /></button>`;
       })
@@ -610,7 +783,10 @@
       );
     }
     if (searchSourceInput) {
-      searchSourceInput.value = activeFilter === "all" ? "" : activeFilter;
+      searchSourceInput.value =
+        activeFilter === "all" || activeFilter === "saved"
+          ? ""
+          : activeFilter;
     }
     if (controlsRow) {
       controlsRow.classList.toggle("is-search-active", isVisible);
@@ -619,10 +795,16 @@
 
   const updateURL = () => {
     const url = new URL(window.location.href);
-    if (activeFilter === "all") {
+    if (activeFilter === "saved") {
+      url.searchParams.set("view", "saved");
       url.searchParams.delete("source");
     } else {
-      url.searchParams.set("source", activeFilter);
+      url.searchParams.delete("view");
+      if (activeFilter === "all") {
+        url.searchParams.delete("source");
+      } else {
+        url.searchParams.set("source", activeFilter);
+      }
     }
     if (activeQuery) {
       url.searchParams.set("q", activeQuery);
@@ -729,6 +911,7 @@
 
   const resetPreviewPanel = () => {
     previewPanel?.classList.add("is-hidden");
+    currentPreviewItem = null;
     pageBody?.classList.remove("is-preview-open");
     document.body.classList.remove("is-preview-open");
     previewContent?.replaceChildren();
@@ -743,6 +926,7 @@
       previewOpenLink.href = "#";
     }
     setPreviewStatus("Select an article to preview it here.");
+    applyBookmarkState();
   };
 
   const closeArticlePreview = () => {    previewRequestSequence += 1;
@@ -751,10 +935,19 @@
     resetPreviewPanel();
   };
 
-  const openArticlePreview = ({ url, title, source, host }) => {
+  const openArticlePreview = ({ url, title, source, host, brief }) => {
     if (!articlePreviewSupported || !url || !isHttpUrl(url) || !previewPanel) {
       return;
     }
+
+    currentPreviewItem = {
+      url: normalizeVisitedHref(url),
+      title,
+      source,
+      host,
+      brief,
+    };
+    applyBookmarkState();
 
     previewRequestSequence += 1;
     const requestId = previewRequestSequence;
@@ -841,6 +1034,14 @@
     previewCloseButton.addEventListener("click", closeArticlePreview);
   }
 
+  if (previewBookmarkButton) {
+    previewBookmarkButton.addEventListener("click", () => {
+      if (!currentPreviewItem) return;
+      const saved = toggleBookmark(currentPreviewItem);
+      showToast(saved ? "Saved for later" : "Removed from saved");
+    });
+  }
+
   document.addEventListener("keydown", (event) => {
     if (
       event.key === "Escape" &&
@@ -887,6 +1088,38 @@
     );
   };
 
+  const renderSavedFeed = ({ query = "" } = {}) => {
+    const saved = bookmarks
+      .filter((bookmark) => savedMatchesQuery(bookmark, query))
+      .sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+    if (cardsGrid) {
+      const html = saved
+        .map((bookmark, i) =>
+          cardTemplate({
+            source: bookmark.source,
+            index: i + 1,
+            title: bookmark.title,
+            url: bookmark.url,
+            brief: bookmark.brief || undefined,
+            host: bookmark.host,
+          }),
+        )
+        .join("");
+      cardsGrid.innerHTML = html; // HTML is built from escaped stored fields.
+      cardsGrid.dataset.hasNext = "false";
+      cardsGrid.dataset.currentSource = "saved";
+    }
+    loadedCount = saved.length;
+    hasNext = false;
+    offlineViewUnavailable = false;
+    personalizedActive = false;
+    renderPersonalizedIndicator();
+    applyVisitedLinkState();
+    applyBookmarkState();
+    localizeBriefDates(cardsGrid);
+    renderFeedBody();
+  };
+
   const fetchItems = async ({
     source,
     query,
@@ -896,6 +1129,12 @@
     showLoadingToast = true,
   }) => {
     syncConnectivityState();
+    if (source === "saved") {
+      requestSequence += 1;
+      renderSavedFeed({ query });
+      setFeedLoading(false);
+      return;
+    }
     const personalize = shouldShowPersonalized();
     const requestId = ++requestSequence;
     setFeedLoading(true, {
@@ -977,6 +1216,7 @@
       }
       loadedCount = append ? loadedCount + items.length : items.length;
       applyVisitedLinkState();
+      applyBookmarkState();
 
       if (personalize) {
         personalizedActive = payload.personalization !== "none";
@@ -1114,7 +1354,10 @@
     renderFeedBody();
     try {
       await refetchCurrentView({ loadingMessage: "Refreshing feed…" });
-      showToast("Feed refreshed", "success");
+      showToast(
+        activeFilter === "saved" ? "Saved list refreshed" : "Feed refreshed",
+        "success",
+      );
       return true;
     } catch (error) {
       showToast("Refresh failed", "error");
@@ -1527,6 +1770,13 @@
       !event.altKey;
 
     cardsGrid.addEventListener("click", (event) => {
+      const bookmarkButton = event.target.closest("[data-bookmark-toggle]");
+      if (bookmarkButton) {
+        event.preventDefault();
+        toggleBookmarkFromCard(bookmarkButton.closest(".item-card"));
+        return;
+      }
+
       const clickedLink = event.target.closest(".item-title a");
       if (clickedLink) {
         rememberVisitedLink(clickedLink.href);
@@ -1547,6 +1797,7 @@
           title: (link.textContent || "").trim(),
           source: card.dataset.source || "",
           host: card.querySelector(".item-host-text")?.textContent || "",
+          brief: (card.querySelector(".item-brief-text")?.textContent || "").trim(),
         });
         return;
       }
@@ -1620,6 +1871,16 @@
     refetchCurrentViewAfterReconnect().catch(() => {});
   });
 
+  window.addEventListener("storage", (event) => {
+    if (event.key !== bookmarksStorageKey) return;
+    bookmarks = loadBookmarks();
+    applyBookmarkState();
+    renderFilters();
+    if (activeFilter === "saved") {
+      renderSavedFeed({ query: activeQuery });
+    }
+  });
+
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker
@@ -1659,8 +1920,10 @@
     !articlePreviewSupported,
   );
   applyVisitedLinkState();
+  applyBookmarkState();
   localizeBriefDates();
   const shouldBootstrapRefetch =
+    activeFilter === "saved" ||
     shouldShowPersonalized() ||
     (activeFilter === "all"
       ? selectedSources.length !== availableSources.length

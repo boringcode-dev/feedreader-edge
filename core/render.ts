@@ -89,7 +89,7 @@ function renderCard(card: CardView): string {
             <span class="item-index">${card.index}.</span>
             <a href="${escapeHtml(card.url)}" target="_blank" rel="noreferrer">${escapeHtml(card.title)}</a>
           </h2>${briefBlock}
-          <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeHtml(card.source)}" src="${escapeHtml(sourceIconPath(card.source))}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(card.host)}</span></p>
+          <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeHtml(card.source)}" src="${escapeHtml(sourceIconPath(card.source))}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(card.host)}</span><button class="item-bookmark" type="button" data-bookmark-toggle aria-label="Save for later" title="Save for later" aria-pressed="false"><svg class="bookmark-icon bookmark-icon--outline" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg><svg class="bookmark-icon bookmark-icon--filled" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="currentColor"/></svg></button></p>
         </article>`;
 }
 
@@ -149,8 +149,8 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=56" />
-    <script src="/static/app.js?v=48" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=59" />
+    <script src="/static/app.js?v=51" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -458,8 +458,15 @@ ${errorsBlock}
             <span class="preview-panel-source-label" data-preview-source-label></span>
           </p>
           <div class="preview-panel-actions">
-            <a class="preview-panel-open" data-preview-open href="#" target="_blank" rel="noreferrer noopener">
-              <span>Open source</span>
+            <button class="icon-button preview-panel-bookmark" type="button" data-preview-bookmark aria-label="Save for later" title="Save for later" aria-pressed="false">
+              <svg class="bookmark-icon bookmark-icon--outline" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/>
+              </svg>
+              <svg class="bookmark-icon bookmark-icon--filled" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="currentColor"/>
+              </svg>
+            </button>
+            <a class="icon-button preview-panel-open" data-preview-open href="#" target="_blank" rel="noreferrer noopener" aria-label="Open source" title="Open source">
               <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M14 5h5v5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
                 <path d="M19 5l-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>

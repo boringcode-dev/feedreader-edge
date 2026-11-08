@@ -29,6 +29,10 @@
 - Platform-specific persistence and request wiring live under `platforms/*`.
 - A second deployment target should implement `FeedRepository` once and provide its own entrypoint rather than forking `core/service.ts` or `core/render.ts`.
 
+## Client state
+
+Browser-only preferences and reading state live in `localStorage`: theme, density, visible sources, the article-preview setting, visited links, and saved articles. Bookmarks store a display snapshot and never leave the device, so they survive source pruning and offline use without a server API.
+
 ## Data model and refresh behavior
 
 - Items are upserted by `(source, external_id)`.

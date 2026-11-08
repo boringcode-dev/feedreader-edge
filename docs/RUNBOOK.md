@@ -104,5 +104,6 @@ Before considering any `core/render.ts` change done:
    - empty-state and error-banner markup still look sane
    - `View more` visibility matches whether another page exists
    - enabling article preview, clicking a card, and confirming the panel renders and `Open source` points at the article
+   - bookmarking a card, confirming the Saved count and view, then reloading to confirm the bookmark persists
 
 4. If the change also affects `/api/items`, hit the endpoint directly and verify the JSON shape still matches what `web-static/static/app.js` expects.
