@@ -356,6 +356,8 @@ Presentation-layer note:
 - when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
 - `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
 - the panel shows the extracted title, byline, and text/image blocks; images load directly from the source with lazy loading and no referrer; `Open source` opens the original page
+- the article currently being previewed is highlighted in the feed; the preview header shows the card’s stats/date metadata without repeating the title
+- previous/next buttons at the bottom of the panel move through the currently rendered feed or Saved list
 - previews are fetched by the Worker via `GET /api/preview?url=…`; only URLs already stored as feed items are accepted, and upstream HTML is never injected into the page
 - on desktop and iPad landscape the layout expands to the full viewport width, with the preview panel fixed on the right at about 65% of the width and 0.8rem top/bottom insets; the page keeps its normal scroll behavior
 - on screens 900px or narrower the panel covers the full viewport width with a close button

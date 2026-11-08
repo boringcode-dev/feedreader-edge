@@ -149,8 +149,8 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=61" />
-    <script src="/static/app.js?v=53" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=64" />
+    <script src="/static/app.js?v=55" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -453,10 +453,13 @@ ${errorsBlock}
       </div>
       <aside class="preview-panel is-hidden" data-preview-panel aria-label="Article preview">
         <div class="preview-panel-header">
-          <p class="preview-panel-source">
-            <img class="source-icon-image source-icon-image--host is-hidden" data-preview-source-icon src="" alt="" aria-hidden="true" />
-            <span class="preview-panel-source-label" data-preview-source-label></span>
-          </p>
+          <div class="preview-panel-header-info">
+            <p class="preview-panel-source">
+              <img class="source-icon-image source-icon-image--host is-hidden" data-preview-source-icon src="" alt="" aria-hidden="true" />
+              <span class="preview-panel-source-label" data-preview-source-label></span>
+            </p>
+            <p class="preview-panel-card-meta is-hidden" data-preview-meta></p>
+          </div>
           <div class="preview-panel-actions">
             <button class="icon-button preview-panel-bookmark" type="button" data-preview-bookmark aria-label="Save for later" title="Save for later" aria-pressed="false">
               <svg class="bookmark-icon bookmark-icon--outline" viewBox="0 0 24 24" aria-hidden="true">
@@ -486,6 +489,20 @@ ${errorsBlock}
           <p class="preview-panel-byline is-hidden" data-preview-byline></p>
           <p class="preview-panel-status" data-preview-status>Select an article to preview it here.</p>
           <div class="preview-panel-content" data-preview-content></div>
+        </div>
+        <div class="preview-panel-footer">
+          <button class="preview-panel-nav" type="button" data-preview-prev aria-label="Previous article" title="Previous article" disabled>
+            <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M14.5 6.5 9 12l5.5 5.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+            </svg>
+            <span>Previous</span>
+          </button>
+          <button class="preview-panel-nav" type="button" data-preview-next aria-label="Next article" title="Next article" disabled>
+            <span>Next</span>
+            <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M9.5 6.5 15 12l-5.5 5.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+            </svg>
+          </button>
         </div>
       </aside>
     </main>

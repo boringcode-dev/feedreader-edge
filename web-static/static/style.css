@@ -17,11 +17,11 @@
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
-    "Segoe UI",
+    'Segoe UI',
     sans-serif;
 }
 
-:root[data-theme="light"] {
+:root[data-theme='light'] {
   color-scheme: light;
   --bg: #e1ebf7;
   --bg-top: #e1ebf7;
@@ -40,7 +40,7 @@
     system-ui,
     -apple-system,
     BlinkMacSystemFont,
-    "Segoe UI",
+    'Segoe UI',
     sans-serif;
 }
 
@@ -765,7 +765,7 @@ body.is-dialog-open {
 }
 
 .toast.is-loading::before {
-  content: "";
+  content: '';
   width: 0.9rem;
   height: 0.9rem;
   border-radius: 999px;
@@ -792,11 +792,11 @@ body.is-dialog-open {
   display: none;
 }
 
-:root[data-theme="light"] .theme-icon-sun {
+:root[data-theme='light'] .theme-icon-sun {
   display: block;
 }
 
-:root[data-theme="light"] .theme-icon-moon {
+:root[data-theme='light'] .theme-icon-moon {
   display: none;
 }
 
@@ -832,6 +832,26 @@ body.is-dialog-open {
   gap: 0.5rem;
   padding: 0.55rem 0.6rem 0.55rem 0.75rem;
   border-bottom: 1px solid var(--border);
+}
+
+.preview-panel-header-info {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.preview-panel-card-meta {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.76rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .preview-panel-source {
@@ -907,6 +927,55 @@ body.is-dialog-open {
   background: var(--surface-raised);
 }
 
+.preview-panel-footer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.6rem 0.7rem;
+  border-top: 1px solid var(--border);
+}
+
+.preview-panel-nav {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1 1 0;
+  gap: 0.35rem;
+  height: var(--control-height);
+  min-width: 0;
+  padding: 0 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.preview-panel-nav:hover:not(:disabled) {
+  color: var(--text);
+  border-color: color-mix(in srgb, var(--accent) 44%, var(--border));
+  background: var(--accent-soft);
+}
+
+.preview-panel-nav:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.preview-panel-nav:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.preview-panel-nav .theme-icon {
+  width: 1rem;
+  height: 1rem;
+}
+
 .preview-panel-content > * {
   margin: 0;
 }
@@ -947,7 +1016,7 @@ body.is-dialog-open {
 }
 
 .preview-panel-list::before {
-  content: "•";
+  content: '•';
   position: absolute;
   left: 0.2rem;
   color: var(--accent);
@@ -1049,6 +1118,18 @@ body.is-dialog-open {
   display: none;
 }
 
+.item-card.is-previewing {
+  border-color: color-mix(in srgb, var(--accent) 64%, var(--border));
+  box-shadow:
+    var(--shadow),
+    0 0 0 2px var(--accent-soft);
+}
+
+.item-card.is-previewing .item-title a,
+.item-card.is-previewing .item-title a.is-visited {
+  color: var(--text);
+}
+
 .item-index,
 .item-host {
   margin: 0;
@@ -1134,9 +1215,10 @@ body.is-dialog-open {
   justify-content: center;
   flex: 0 0 auto;
   width: 1.6rem;
-  height: 1.25rem;
+  height: 1.6rem;
   margin-left: auto;
-  margin-right: 0.35rem;
+  margin-right: -0.35rem;
+  margin-bottom: -0.35rem;
   padding: 0;
   border: none;
   border-radius: 999px;
@@ -1148,11 +1230,12 @@ body.is-dialog-open {
     background 140ms ease;
 }
 
-/* Keeps the 44px touch target without adding height to the host row. */
+/* Keeps a tall 44px touch target without adding height to the host row or
+   pushing the document wider than the viewport. */
 .item-bookmark::after {
-  content: "";
+  content: '';
   position: absolute;
-  inset: -0.75rem;
+  inset: -0.75rem 0 -0.75rem -0.75rem;
   border-radius: 999px;
 }
 
@@ -1210,11 +1293,11 @@ body.is-dialog-open {
   color: var(--text);
 }
 
-:root[data-ui-density="compact"] {
+:root[data-ui-density='compact'] {
   --control-height: 2rem;
 }
 
-:root[data-ui-density="compact"] .page-header {
+:root[data-ui-density='compact'] .page-header {
   gap: 0.42rem;
   /* Longhands only: the shorthand would reset the preview-mode padding-right
      that keeps the header actions clear of the fixed preview panel. */
@@ -1222,121 +1305,121 @@ body.is-dialog-open {
   padding-bottom: 0.55rem;
 }
 
-:root[data-ui-density="compact"] .controls-row,
-:root[data-ui-density="compact"] .filter-cluster,
-:root[data-ui-density="compact"] .search-cluster {
+:root[data-ui-density='compact'] .controls-row,
+:root[data-ui-density='compact'] .filter-cluster,
+:root[data-ui-density='compact'] .search-cluster {
   gap: 0.35rem;
 }
 
-:root[data-ui-density="compact"] .cards-grid {
+:root[data-ui-density='compact'] .cards-grid {
   gap: 0.42rem;
 }
 
-:root[data-ui-density="compact"] .item-card {
+:root[data-ui-density='compact'] .item-card {
   gap: 0.34rem;
   padding: 0.5rem 0.56rem;
   border-radius: 0.82rem;
 }
 
-:root[data-ui-density="compact"] .item-index {
+:root[data-ui-density='compact'] .item-index {
   font-size: 0.76rem;
 }
 
-:root[data-ui-density="compact"] .item-title {
+:root[data-ui-density='compact'] .item-title {
   font-size: 0.91rem;
   line-height: 1.3;
 }
 
-:root[data-ui-density="compact"] .item-brief {
+:root[data-ui-density='compact'] .item-brief {
   font-size: 0.82rem;
   line-height: 1.38;
 }
 
-:root[data-ui-density="compact"] .item-host {
+:root[data-ui-density='compact'] .item-host {
   font-size: 0.72rem;
 }
 
-:root[data-ui-density="compact"] .config-dialog-form {
+:root[data-ui-density='compact'] .config-dialog-form {
   gap: 0.82rem;
   padding: 0.82rem;
 }
 
-:root[data-ui-density="compact"] .config-dialog-header {
+:root[data-ui-density='compact'] .config-dialog-header {
   gap: 0.55rem;
 }
 
-:root[data-ui-density="compact"] .config-dialog-header h2 {
+:root[data-ui-density='compact'] .config-dialog-header h2 {
   font-size: 0.95rem;
 }
 
-:root[data-ui-density="compact"] .config-dialog-copy {
+:root[data-ui-density='compact'] .config-dialog-copy {
   font-size: 0.84rem;
   line-height: 1.38;
 }
 
-:root[data-ui-density="compact"] .config-section {
+:root[data-ui-density='compact'] .config-section {
   gap: 0.5rem;
 }
 
-:root[data-ui-density="compact"] .config-section-row {
+:root[data-ui-density='compact'] .config-section-row {
   gap: 0.65rem;
 }
 
-:root[data-ui-density="compact"] .config-section-header {
+:root[data-ui-density='compact'] .config-section-header {
   gap: 0.2rem;
 }
 
-:root[data-ui-density="compact"] .config-options {
+:root[data-ui-density='compact'] .config-options {
   gap: 0.5rem;
 }
 
-:root[data-ui-density="compact"] .config-options--two-column {
+:root[data-ui-density='compact'] .config-options--two-column {
   gap: 0.45rem;
 }
 
-:root[data-ui-density="compact"] .config-option {
+:root[data-ui-density='compact'] .config-option {
   gap: 0.55rem;
   padding: 0.62rem 0.72rem;
   border-radius: 0.82rem;
 }
 
-:root[data-ui-density="compact"] .config-option--choice {
+:root[data-ui-density='compact'] .config-option--choice {
   min-height: 42px;
   padding: 0.62rem 0.72rem;
 }
 
-:root[data-ui-density="compact"] .config-option-title {
+:root[data-ui-density='compact'] .config-option-title {
   font-size: 0.86rem;
 }
 
-:root[data-ui-density="compact"] .config-option-copy {
+:root[data-ui-density='compact'] .config-option-copy {
   font-size: 0.78rem;
   line-height: 1.32;
 }
 
-:root[data-ui-density="compact"] .config-option-icon {
+:root[data-ui-density='compact'] .config-option-icon {
   width: 1.1rem;
   height: 1.1rem;
 }
 
-:root[data-ui-density="compact"] .choice-icon {
+:root[data-ui-density='compact'] .choice-icon {
   width: 0.92rem;
   height: 0.92rem;
 }
 
-:root[data-ui-density="compact"] .config-dialog-footer-row {
+:root[data-ui-density='compact'] .config-dialog-footer-row {
   gap: 0.55rem;
 }
 
-:root[data-ui-density="compact"] .config-dialog-actions {
+:root[data-ui-density='compact'] .config-dialog-actions {
   gap: 0.45rem;
 }
 
-:root[data-ui-density="compact"] .config-dialog-meta {
+:root[data-ui-density='compact'] .config-dialog-meta {
   font-size: 0.7rem;
 }
 
-:root[data-ui-density="compact"] .dialog-button {
+:root[data-ui-density='compact'] .dialog-button {
   padding: 0 0.82rem;
   font-size: 0.88rem;
 }
@@ -1391,8 +1474,8 @@ body.is-dialog-open {
   border-radius: 0.2rem;
 }
 
-:root[data-theme="dark"] .footer-github-mark,
-:root[data-theme="dark"] .source-icon-image--github {
+:root[data-theme='dark'] .footer-github-mark,
+:root[data-theme='dark'] .source-icon-image--github {
   filter: invert(1) brightness(1.18);
 }
 
@@ -1440,6 +1523,10 @@ body.is-dialog-open {
 
   .preview-panel-scroll {
     padding-bottom: max(0.9rem, env(safe-area-inset-bottom));
+  }
+
+  .preview-panel-footer {
+    padding-bottom: max(0.6rem, env(safe-area-inset-bottom));
   }
 }
 

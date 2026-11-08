@@ -53,6 +53,9 @@
   const previewSourceLabel = document.querySelector(
     "[data-preview-source-label]",
   );
+  const previewMeta = document.querySelector("[data-preview-meta]");
+  const previewPrevButton = document.querySelector("[data-preview-prev]");
+  const previewNextButton = document.querySelector("[data-preview-next]");
   const previewBookmarkButton = document.querySelector(
     "[data-preview-bookmark]",
   );
@@ -373,20 +376,39 @@
     return bookmarks.some((bookmark) => bookmark.url === url);
   }
 
-  function bookmarkDataFromCard(card) {
+  function cardDataFromCard(card) {
     const link = card?.querySelector(".item-title a");
     if (!link) return null;
     const url = normalizeVisitedHref(link.getAttribute("href") || "");
     const title = (link.textContent || "").trim();
     if (!url || !title) return null;
+    const brief = (card.querySelector(".item-brief-text")?.textContent || "").trim();
+    const separatorIndex = brief.indexOf(" - ");
     return {
       url,
       title,
       source: card.dataset.source || "",
-      brief: (card.querySelector(".item-brief-text")?.textContent || "").trim(),
+      brief,
+      briefMeta:
+        separatorIndex >= 0
+          ? brief.slice(0, separatorIndex).trim()
+          : brief,
       host: (card.querySelector(".item-host-text")?.textContent || "").trim(),
-      savedAt: new Date().toISOString(),
     };
+  }
+
+  function bookmarkDataFromCard(card) {
+    const data = cardDataFromCard(card);
+    return data
+      ? {
+          url: data.url,
+          title: data.title,
+          source: data.source,
+          brief: data.brief,
+          host: data.host,
+          savedAt: new Date().toISOString(),
+        }
+      : null;
   }
 
   function toggleBookmark(data) {
@@ -468,6 +490,59 @@
       previewBookmarkButton.setAttribute("title", label);
       previewBookmarkButton.disabled = !currentPreviewItem;
     }
+  }
+
+  function previewCardIndex() {
+    if (!currentPreviewItem || !cardsGrid) return -1;
+    const cards = Array.from(cardsGrid.querySelectorAll(".item-card"));
+    return cards.findIndex((card) => {
+      const link = card.querySelector(".item-title a");
+      return (
+        link &&
+        normalizeVisitedHref(link.getAttribute("href") || "") ===
+          currentPreviewItem.url
+      );
+    });
+  }
+
+  function applyPreviewActiveCardState() {
+    if (!cardsGrid) return;
+    const activeUrl = currentPreviewItem?.url || "";
+    cardsGrid.querySelectorAll(".item-card").forEach((card) => {
+      const link = card.querySelector(".item-title a");
+      const isActive =
+        activeUrl !== "" &&
+        link &&
+        normalizeVisitedHref(link.getAttribute("href") || "") === activeUrl;
+      card.classList.toggle("is-previewing", Boolean(isActive));
+    });
+  }
+
+  function updatePreviewNavigation() {
+    const cardCount = cardsGrid
+      ? cardsGrid.querySelectorAll(".item-card").length
+      : 0;
+    const index = previewCardIndex();
+    if (previewPrevButton) {
+      previewPrevButton.disabled = index <= 0;
+    }
+    if (previewNextButton) {
+      previewNextButton.disabled = index < 0 || index >= cardCount - 1;
+    }
+  }
+
+  function navigatePreview(direction) {
+    if (!currentPreviewItem || !cardsGrid) return;
+    const cards = Array.from(cardsGrid.querySelectorAll(".item-card"));
+    const index = previewCardIndex();
+    if (index < 0) return;
+    const targetCard = cards[index + direction];
+    if (!targetCard) return;
+    const data = cardDataFromCard(targetCard);
+    if (!data) return;
+    rememberVisitedLink(data.url);
+    openArticlePreview(data);
+    targetCard.scrollIntoView({ block: "nearest" });
   }
 
   function loadSelectedSources() {
@@ -899,6 +974,9 @@
         image.alt = typeof block.alt === "string" ? block.alt : "";
         image.loading = "lazy";
         image.decoding = "async";
+        // Server-validated public http(s) URLs only; direct loading is
+        // intentional (no image proxy). No-referrer keeps the reader URL out
+        // of the image request.
         image.referrerPolicy = "no-referrer";
         image.addEventListener("load", () => {
           if (
@@ -951,17 +1029,24 @@
     if (previewOpenLink) {
       previewOpenLink.href = "#";
     }
+    if (previewMeta) {
+      previewMeta.textContent = "";
+      previewMeta.classList.add("is-hidden");
+    }
     setPreviewStatus("Select an article to preview it here.");
     applyBookmarkState();
+    applyPreviewActiveCardState();
+    updatePreviewNavigation();
   };
 
-  const closeArticlePreview = () => {    previewRequestSequence += 1;
+  const closeArticlePreview = () => {
+    previewRequestSequence += 1;
     previewAbortController?.abort();
     previewAbortController = null;
     resetPreviewPanel();
   };
 
-  const openArticlePreview = ({ url, title, source, host, brief }) => {
+  const openArticlePreview = ({ url, title, source, host, brief, briefMeta }) => {
     if (!articlePreviewSupported || !url || !isHttpUrl(url) || !previewPanel) {
       return;
     }
@@ -974,6 +1059,13 @@
       brief,
     };
     applyBookmarkState();
+    applyPreviewActiveCardState();
+    updatePreviewNavigation();
+    if (previewMeta) {
+      const metaText = typeof briefMeta === "string" ? briefMeta.trim() : "";
+      previewMeta.textContent = metaText;
+      previewMeta.classList.toggle("is-hidden", metaText === "");
+    }
 
     previewRequestSequence += 1;
     const requestId = previewRequestSequence;
@@ -984,7 +1076,8 @@
     previewPanel.classList.remove("is-hidden");
     previewPanel.setAttribute("aria-busy", "true");
     pageBody?.classList.add("is-preview-open");
-    document.body.classList.add("is-preview-open");    setPreviewSource(source, host);
+    document.body.classList.add("is-preview-open");
+    setPreviewSource(source, host);
     if (previewTitle) {
       previewTitle.textContent = title || "Article preview";
     }
@@ -1068,6 +1161,14 @@
     });
   }
 
+  if (previewPrevButton) {
+    previewPrevButton.addEventListener("click", () => navigatePreview(-1));
+  }
+
+  if (previewNextButton) {
+    previewNextButton.addEventListener("click", () => navigatePreview(1));
+  }
+
   document.addEventListener("keydown", (event) => {
     if (
       event.key === "Escape" &&
@@ -1144,6 +1245,8 @@
     applyBookmarkState();
     localizeBriefDates(cardsGrid);
     renderFeedBody();
+    applyPreviewActiveCardState();
+    updatePreviewNavigation();
   };
 
   const fetchItems = async ({
@@ -1243,6 +1346,8 @@
       loadedCount = append ? loadedCount + items.length : items.length;
       applyVisitedLinkState();
       applyBookmarkState();
+      applyPreviewActiveCardState();
+      updatePreviewNavigation();
 
       if (personalize) {
         personalizedActive = payload.personalization !== "none";
@@ -1815,16 +1920,10 @@
 
       if (articlePreviewEnabled && articlePreviewSupported) {
         if (!isPlainLeftClick(event)) return;
-        const previewUrl = link.getAttribute("href") || "";
-        if (!isHttpUrl(previewUrl)) return;
+        const data = cardDataFromCard(card);
+        if (!data || !isHttpUrl(data.url)) return;
         event.preventDefault();
-        openArticlePreview({
-          url: previewUrl,
-          title: (link.textContent || "").trim(),
-          source: card.dataset.source || "",
-          host: card.querySelector(".item-host-text")?.textContent || "",
-          brief: (card.querySelector(".item-brief-text")?.textContent || "").trim(),
-        });
+        openArticlePreview(data);
         return;
       }
 
@@ -1947,6 +2046,8 @@
   );
   applyVisitedLinkState();
   applyBookmarkState();
+  applyPreviewActiveCardState();
+  updatePreviewNavigation();
   localizeBriefDates();
   const shouldBootstrapRefetch =
     activeFilter === "saved" ||
