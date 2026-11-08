@@ -150,7 +150,7 @@ export function renderIndexPage(data: PageData): string {
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
     <link rel="stylesheet" href="/static/style.css?v=66" />
-    <script src="/static/app.js?v=58" defer></script>
+    <script src="/static/app.js?v=59" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -309,7 +309,7 @@ export function renderIndexPage(data: PageData): string {
         <section class="config-section" data-article-preview-section aria-labelledby="config-reading-title">
           <div class="config-section-header">
             <h3 id="config-reading-title" class="config-section-title">Reading</h3>
-            <p class="config-section-copy">Read articles in a side panel without leaving the feed. Available on desktop and tablet.</p>
+            <p class="config-section-copy">Read articles in a reader view without leaving the feed.</p>
           </div>
           <div class="config-options">
             <label class="config-option">
@@ -321,7 +321,7 @@ export function renderIndexPage(data: PageData): string {
                 </svg>
               </span>
               <span class="config-option-body">
-                <span class="config-option-title">Preview articles in a side panel</span>
+                <span class="config-option-title">Preview articles in a reader view</span>
               </span>
             </label>
           </div>

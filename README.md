@@ -74,8 +74,8 @@ npx lighthouse https://reader.boringcode.dev --view
 - **Scheduled refresh** every 1 hour on wall-clock boundaries
 - **Manual refresh** from the header re-fetches the current feed view from backend stored items only; it does **not** re-fetch upstream sources
 - **Persisted visited-link dimming** for feed card titles across reload/reopen using local storage
-- **Optional article preview side panel** (off by default, toggled in Reader settings) that opens a reader view beside the feed with inline links/emphasis, image captions, tables, publication date/reading time, source-specific Hacker News comments, and an **Open source** button
-- **Saved articles** with a per-card bookmark toggle, a `Saved` filter, and a desktop preview-panel toggle; stored locally under `feedreader.bookmarks`
+- **Optional article preview** (off by default, toggled in Reader settings) that opens a reader view beside the feed on wide screens or full-screen on phones, with inline links/emphasis, image captions, tables, publication date/reading time, source-specific Hacker News comments, and an **Open source** button
+- **Saved articles** with a per-card bookmark toggle, a `Saved` filter, and a preview-panel toggle; stored locally under `feedreader.bookmarks`
 - **PWA-ready assets and offline caching** including manifest, service worker, touch icons, cached shell assets, and cached `/api/items` responses for previously visited views
 - **Reconnect list refresh** re-fetches the current view from backend stored items only; it does **not** refresh upstream sources
 - **Cloudflare-native deployment** with Workers, D1, Cron Triggers, and Workers Static Assets
@@ -361,18 +361,18 @@ Presentation-layer note:
 - the article currently being previewed is highlighted in the feed; the preview header shows the card’s stats/date metadata without repeating the title
 - previous/next buttons at the bottom of the panel move through the currently rendered feed or Saved list
 - previews are fetched by the Worker via `GET /api/preview?url=…`; only URLs already stored as feed items are accepted, and upstream HTML is never injected into the page
-- on desktop and iPad landscape the layout expands to the full viewport width, with the preview panel fixed on the right at about 65% of the width and 0.8rem top/bottom insets; the page keeps its normal scroll behavior
+- on screens wider than 900px the layout expands to the full viewport width, with the preview panel fixed on the right at about 65% of the width and 0.8rem top/bottom insets; the page keeps its normal scroll behavior
 - on screens 900px or narrower the panel covers the full viewport width with a close button
-- preview is offered on desktop and tablet-class devices only; on phones the Reading option is hidden and tapping an article opens its source in a new tab
+- preview is available on every device; phones open the reader view full-screen, and the Reading option is always shown in Reader settings
 
 ### Bookmarks
 
 - every feed card has a bookmark toggle at the right of its host row; clicking it does not open the article
-- on desktop, the preview panel header has the same toggle for the article currently open
+- the preview panel header has the same toggle for the article currently open
 - a `Saved` filter at the end of the filter bar shows saved articles and their count; search filters the saved list locally
 - bookmarks store a display snapshot (title, source, brief, host) in `localStorage` under `feedreader.bookmarks`, so they survive source pruning and offline use without a server API
 - the list is capped at 500 entries; removing a bookmark updates the count and, while the Saved view is active, removes the card immediately
-- phones have no preview panel, so the per-card toggle is the bookmark entry point there
+- the per-card toggle is available on every device; the preview panel header also exposes it while reading
 
 ---
 

@@ -37,9 +37,6 @@
   const articlePreviewToggle = document.querySelector(
     "[data-article-preview-toggle]",
   );
-  const articlePreviewSection = document.querySelector(
-    "[data-article-preview-section]",
-  );
   const pageBody = document.querySelector("[data-page-body]");
   const previewPanel = document.querySelector("[data-preview-panel]");
   const previewCloseButton = document.querySelector("[data-preview-close]");
@@ -134,7 +131,6 @@
   let interests = loadInterests();
   let aiPersonalizationEnabled = interests !== "" && loadAiPersonalizationEnabled();
   let articlePreviewEnabled = loadArticlePreviewEnabled();
-  const articlePreviewSupported = previewSupportedOnDevice();
   let personalizedActive = false;
   let installPromptHidden = loadInstallPromptHidden();
   let activeQuery = (searchInput?.value || "").trim();
@@ -1202,7 +1198,7 @@
     briefMeta,
     commentsUrl,
   }) => {
-    if (!articlePreviewSupported || !url || !isHttpUrl(url) || !previewPanel) {
+    if (!url || !isHttpUrl(url) || !previewPanel) {
       return;
     }
 
@@ -1728,33 +1724,6 @@
     return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
   }
 
-  /**
-   * The side-panel preview is a large-screen feature. Phones (iPhone and
-   * phone-class Android/other mobile UAs) keep the original click-to-source
-   * behavior; iPads and tablet-class devices are allowed even in portrait.
-   * A coarse-pointer, short-screen fallback catches phone-class devices whose
-   * UA doesn't identify them, without treating a narrow desktop window as a
-   * phone (screen.width is the physical screen, not the viewport).
-   */
-  function previewSupportedOnDevice() {
-    const ua = navigator.userAgent || "";
-    if (/iphone|ipod/i.test(ua)) return false;
-    if (navigator.userAgentData?.mobile === true) return false;
-    if (/android/i.test(ua) && /mobile/i.test(ua)) return false;
-    if (/windows phone|iemobile|blackberry|opera mini|opera mobi/i.test(ua)) {
-      return false;
-    }
-    if (isIPadDevice()) return true;
-
-    const smallestSide = Math.min(
-      window.screen?.width || 0,
-      window.screen?.height || 0,
-    );
-    const coarsePointer =
-      window.matchMedia?.("(pointer: coarse)")?.matches === true;
-    return !(coarsePointer && smallestSide > 0 && smallestSide < 600);
-  }
-
   function isMobileDevice() {
     if (
       navigator.userAgentData &&
@@ -2100,7 +2069,7 @@
       if (!link) return;
       if (window.getSelection().toString() !== "") return;
 
-      if (articlePreviewEnabled && articlePreviewSupported) {
+      if (articlePreviewEnabled) {
         if (!isPlainLeftClick(event)) return;
         const data = cardDataFromCard(card);
         if (!data || !isHttpUrl(data.url)) return;
@@ -2222,10 +2191,6 @@
   syncConfigOptions();
   syncDensityOptions();
   syncArticlePreviewOption();
-  articlePreviewSection?.classList.toggle(
-    "is-hidden",
-    !articlePreviewSupported,
-  );
   applyVisitedLinkState();
   applyBookmarkState();
   applyPreviewActiveCardState();

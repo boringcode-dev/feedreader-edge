@@ -75,7 +75,7 @@ Instead:
 
 ## Article preview
 
-The optional side-panel preview is served by `GET /api/preview?url=…`.
+The optional article preview is served by `GET /api/preview?url=…`.
 
 - The requested URL must exactly match a stored `items.url`. This check, not the fetch layer, is what keeps the endpoint from acting as an open proxy; `feedreader.articlePreviewEnabled` only controls the client behavior.
 - `core/preview.ts` additionally rejects non-http(s) schemes, credentials, non-standard ports, and loopback/private/link-local hosts, and re-checks the final URL after redirects.
