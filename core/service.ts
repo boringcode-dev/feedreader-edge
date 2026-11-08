@@ -226,12 +226,6 @@ function cardBriefSuffix(item: FeedItem): string | undefined {
       if (item.author && item.author.trim() !== "") return item.author.trim();
       return "Trending paper on Hugging Face";
     }
-    case "alphaxiv": {
-      const summary = normalizedSummary(item.summary);
-      if (summary) return summary;
-      if (item.author && item.author.trim() !== "") return item.author.trim();
-      return "Trending paper on alphaXiv";
-    }
     default:
       return normalizedSummary(item.summary);
   }
@@ -258,10 +252,6 @@ function cardStatFragments(item: FeedItem): string[] {
     case "huggingface":
       if (item.score != null)
         fragments.push(`${formatCount(item.score)} upvotes`);
-      break;
-    case "alphaxiv":
-      if (item.score != null)
-        fragments.push(`${formatCount(item.score)} likes`);
       break;
   }
   return fragments;

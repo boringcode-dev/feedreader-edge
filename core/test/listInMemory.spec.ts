@@ -44,11 +44,11 @@ describe("sortFeedItems", () => {
   it("breaks ties by source rank, then source, then external id", () => {
     const a = item({ externalId: "b", source: "github", sourceRank: 2 });
     const b = item({ externalId: "a", source: "github", sourceRank: 1 });
-    const c = item({ externalId: "a", source: "alphaxiv", sourceRank: 1 });
+    const c = item({ externalId: "a", source: "huggingface", sourceRank: 1 });
     const sorted = sortFeedItems([a, b, c]);
     expect(sorted.map((i) => `${i.source}:${i.externalId}`)).toEqual([
-      "alphaxiv:a",
       "github:a",
+      "huggingface:a",
       "github:b",
     ]);
   });

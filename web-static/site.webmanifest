@@ -2,7 +2,7 @@
   "id": "/",
   "name": "reader",
   "short_name": "reader",
-  "description": "Tiny feed reader for Hacker News, GitHub Trending, Hugging Face Trending Papers, and more.",
+  "description": "Tiny feed reader for Hacker News, GitHub Trending, and Hugging Face Trending Papers.",
   "lang": "en",
   "dir": "ltr",
   "start_url": "/",
@@ -43,21 +43,21 @@
   ],
   "screenshots": [
     {
-      "src": "/manifest-assets/screenshot-wide.png?v=1",
+      "src": "/manifest-assets/screenshot-wide.png?v=2",
       "sizes": "1440x1120",
       "type": "image/png",
       "form_factor": "wide",
       "label": "Reader desktop feed view"
     },
     {
-      "src": "/manifest-assets/screenshot-wide-mobile.png?v=1",
+      "src": "/manifest-assets/screenshot-wide-mobile.png?v=2",
       "sizes": "1440x1120",
       "type": "image/png",
       "form_factor": "wide",
       "label": "Reader mobile feed view"
     },
     {
-      "src": "/manifest-assets/screenshot-mobile.png?v=2",
+      "src": "/manifest-assets/screenshot-mobile.png?v=3",
       "sizes": "430x932",
       "type": "image/png",
       "form_factor": "narrow",

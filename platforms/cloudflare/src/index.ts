@@ -36,12 +36,7 @@ import { loadConfig } from "./config.ts";
 import type { Env } from "./env.d.ts";
 
 const PAGE_SIZE = 12;
-const KNOWN_SOURCES = new Set([
-  "hackernews",
-  "github",
-  "huggingface",
-  "alphaxiv",
-]);
+const KNOWN_SOURCES = new Set(["hackernews", "github", "huggingface"]);
 
 // A second [triggers] cron entry for the weekly prune was tried and reverted:
 // Cloudflare's schedules API rejected the multi-cron deploy ("Some triggers
@@ -364,7 +359,8 @@ function itemsCacheRequest(
   offset: number,
   freshness: string,
 ): Request {
-  const raw = `items:v1:${source} ${sources.join(",")} ${query} ${limit} ${offset} ${freshness}`;
+  // v2 invalidates cached responses produced before the source set changed.
+  const raw = `items:v2:${source} ${sources.join(",")} ${query} ${limit} ${offset} ${freshness}`;
   const url = `https://feedreader-internal.invalid/items-cache?k=${encodeURIComponent(raw)}`;
   return new Request(url, { method: "GET" });
 }
@@ -697,9 +693,9 @@ async function handleInternalRefresh(
 
 /**
  * Issues one fresh Worker invocation per source via the SELF service
- * binding, so each source's fetch+parse — especially GitHub/alphaXiv's DOM
- * parse — gets its own 10ms CPU budget instead of sharing one invocation's
- * budget across all 4 sources. See docs/RUNBOOK.md.
+ * binding, so each source's fetch+parse — especially GitHub's DOM parse —
+ * gets its own 10ms CPU budget instead of sharing one invocation's budget
+ * across all sources. See docs/RUNBOOK.md.
  */
 async function fanOutRefresh(
   env: Env,
@@ -820,11 +816,6 @@ function buildSourceFilters(current: string) {
       label: "Hugging Face Trending Papers",
       iconPath: "/static/source-icons/huggingface.svg",
     },
-    {
-      key: "alphaxiv",
-      label: "alphaXiv",
-      iconPath: "/static/source-icons/alphaxiv.png",
-    },
   ];
   return defs.map((item) => ({ ...item, active: item.key === current }));
 }
@@ -848,8 +839,6 @@ function sourceLabel(source: string): string {
       return "GitHub Trending";
     case "huggingface":
       return "Hugging Face Trending Papers";
-    case "alphaxiv":
-      return "alphaXiv";
     default:
       return "this source";
   }

@@ -67,20 +67,6 @@ describe("buildCards", () => {
     );
   });
 
-  it("formats alphaxiv likes and falls back to author then a generic suffix", () => {
-    const withAuthor = buildCards(
-      [item({ source: "alphaxiv", score: 86, author: "Jane Doe" })],
-      0,
-    )[0]!;
-    expect(withAuthor.brief).toBe("86 likes - Jane Doe");
-
-    const withoutAuthor = buildCards(
-      [item({ source: "alphaxiv", score: 86 })],
-      0,
-    )[0]!;
-    expect(withoutAuthor.brief).toBe("86 likes - Trending paper on alphaXiv");
-  });
-
   it("prefers a real summary over the generic suffix when present", () => {
     const [card] = buildCards(
       [item({ source: "github", summary: "A real description." })],
@@ -108,13 +94,6 @@ describe("buildErrors", () => {
         itemCount: 0,
         items: [],
         lastError: "",
-      },
-      {
-        source: "alphaxiv",
-        label: "alphaXiv",
-        homepageUrl: "",
-        itemCount: 0,
-        items: [],
       },
     ];
     expect(buildErrors(snapshots)).toEqual([

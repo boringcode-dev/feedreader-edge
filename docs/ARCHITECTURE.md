@@ -34,7 +34,7 @@
 - Items are upserted by `(source, external_id)`.
 - A refresh never deletes existing rows — a failed fetch records the failure in `sync_state` and leaves prior data in place.
 - The original `published_at` is preserved across re-fetches via `coalesce(items.published_at, excluded.published_at)` so an upstream source cannot reorder an existing item by later emitting a different date.
-- Sorting and pagination intentionally happen in application memory after SQL filtering. Total item count across the four sources is small enough that keeping one shared comparator is simpler and less error-prone than encoding the full fallback ordering logic separately per adapter.
+- Sorting and pagination intentionally happen in application memory after SQL filtering. Total item count across the three sources is small enough that keeping one shared comparator is simpler and less error-prone than encoding the full fallback ordering logic separately per adapter.
 
 ## `FeedRepository`
 
@@ -60,7 +60,7 @@ This keeps refresh logic, rendering, and feed shaping independent of D1-specific
 
 ## Refresh fan-out design
 
-Cloudflare Workers Free has a tight per-invocation CPU budget. Fetching and parsing all four sources in one handler would create unnecessary coupling between unrelated source failures and CPU spikes.
+Cloudflare Workers Free has a tight per-invocation CPU budget. Fetching and parsing all three sources in one handler would create unnecessary coupling between unrelated source failures and CPU spikes.
 
 Instead:
 

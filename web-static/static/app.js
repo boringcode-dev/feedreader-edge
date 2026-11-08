@@ -1,17 +1,15 @@
 (() => {
   const root = document.documentElement;
-  const availableSources = ["hackernews", "github", "huggingface", "alphaxiv"];
+  const availableSources = ["hackernews", "github", "huggingface"];
   const sourceLabels = {
     hackernews: "Hacker News",
     github: "GitHub Trending",
     huggingface: "Hugging Face Trending Papers",
-    alphaxiv: "alphaXiv",
   };
   const sourceIconPaths = {
     hackernews: "/static/source-icons/hackernews.svg",
     github: "/static/source-icons/github.svg",
     huggingface: "/static/source-icons/huggingface.svg",
-    alphaxiv: "/static/source-icons/alphaxiv.png",
   };
   const filterNav = document.querySelector("[data-filter-nav]");
   const controlsRow = document.querySelector("[data-controls-row]");

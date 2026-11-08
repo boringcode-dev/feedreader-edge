@@ -1,15 +1,14 @@
-const SHELL_CACHE = "reader-shell-v47";
-const ITEMS_CACHE = "reader-items-v22";
+const SHELL_CACHE = "reader-shell-v48";
+const ITEMS_CACHE = "reader-items-v23";
 const CORE_ASSETS = [
   "/",
-  "/static/style.css?v=45",
-  "/static/app.js?v=36",
+  "/static/style.css?v=55",
+  "/static/app.js?v=48",
   "/static/source-icons/hackernews.svg",
   "/static/source-icons/github.svg",
   "/static/source-icons/huggingface.svg",
-  "/static/source-icons/alphaxiv.png",
   "/favicon.svg?v=8",
-  "/site.webmanifest?v=12",
+  "/site.webmanifest?v=13",
   "/apple-touch-icon.png?v=8",
   "/icon-192.png?v=8",
   "/icon-512.png?v=8",

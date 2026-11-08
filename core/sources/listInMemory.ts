@@ -5,7 +5,7 @@
 //
 // Ports internal/repository/sqlite.go's ListFeedItems: sorting and
 // pagination happen in application memory there too (not in SQL), because
-// total item count across all 4 sources is small. Source/search filtering
+// total item count across all sources is small. Source/search filtering
 // in the Go app happens in the SQL WHERE clause; the D1 adapter mirrors that
 // with SQL LIKE, then calls sortFeedItems/paginate from here for ordering.
 // A KV-backed adapter (no SQL available) would call filterFeedItems too.

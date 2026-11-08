@@ -48,7 +48,6 @@ npx lighthouse https://reader.boringcode.dev --view
   - Hacker News
   - GitHub Trending
   - Hugging Face Trending Papers
-  - alphaXiv Explore
 - **Persistent edge storage** with Cloudflare D1
 - **Incremental fetch model** that keeps older items in the database
 - **Server-backed incremental loading**: first page loads 12 items, first-load bootstrap/filter/search/refresh show a toast-based loading state, and `View more` appends more items in place
@@ -57,7 +56,6 @@ npx lighthouse https://reader.boringcode.dev --view
   - GitHub cards show **stars**, **today's stars**, and **forks**
   - GitHub repo titles are normalized to canonical `owner/repo` form from the repo URL path
   - Hugging Face cards show **upvotes**
-  - alphaXiv cards show **likes**
   - published/fetched dates are formatted in the browser locale while preserving the stored UTC calendar date
 - **Responsive, minimalist UI** with:
   - source filters
@@ -249,7 +247,7 @@ Returns feed items for incremental loading.
 
 Query params:
 
-- `source` — optional source filter (`hackernews`, `github`, `huggingface`, `alphaxiv`)
+- `source` — optional source filter (`hackernews`, `github`, `huggingface`)
 - `sources` — optional comma-separated aggregate source set used when the client wants the `All` view scoped to enabled sources (for example `hackernews,github`)
 - `q` — optional case-insensitive search query across title, summary, author, URL host/path, and stored metadata
 - `limit` — page size
@@ -293,7 +291,6 @@ Presentation-layer note:
   - Hacker News: points and comments
   - GitHub: stars, today, forks
   - Hugging Face Papers: upvotes
-  - alphaXiv: likes
 - source icons are not embedded in the brief text itself
 - the current card layout renders the real source icon inline before the host/domain line
 

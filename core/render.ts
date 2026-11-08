@@ -46,8 +46,6 @@ function sourceIconPath(source: string): string {
       return "/static/source-icons/github.svg";
     case "huggingface":
       return "/static/source-icons/huggingface.svg";
-    case "alphaxiv":
-      return "/static/source-icons/alphaxiv.png";
     default:
       return "";
   }
@@ -123,12 +121,12 @@ export function renderIndexPage(data: PageData): string {
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>reader</title>
     <meta name="application-name" content="reader" />
-    <meta name="description" content="Tiny feed reader for Hacker News, GitHub Trending, Hugging Face Trending Papers, and more." />
+    <meta name="description" content="Tiny feed reader for Hacker News, GitHub Trending, and Hugging Face Trending Papers." />
     <link rel="canonical" href="${escapeHtml(data.canonicalUrl)}" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="reader" />
     <meta property="og:title" content="reader — engineering and research signals" />
-    <meta property="og:description" content="Tiny feed reader for Hacker News, GitHub Trending, Hugging Face Trending Papers, and more." />
+    <meta property="og:description" content="Tiny feed reader for Hacker News, GitHub Trending, and Hugging Face Trending Papers." />
     <meta property="og:url" content="${escapeHtml(data.canonicalUrl)}" />
     <meta property="og:image" content="${escapeHtml(data.socialImageUrl)}" />
     <meta property="og:image:alt" content="reader social preview showing branded feed cards for engineering and research sources" />
@@ -136,7 +134,7 @@ export function renderIndexPage(data: PageData): string {
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="reader — engineering and research signals" />
-    <meta name="twitter:description" content="Tiny feed reader for Hacker News, GitHub Trending, Hugging Face Trending Papers, and more." />
+    <meta name="twitter:description" content="Tiny feed reader for Hacker News, GitHub Trending, and Hugging Face Trending Papers." />
     <meta name="twitter:image" content="${escapeHtml(data.socialImageUrl)}" />
     <meta name="twitter:image:alt" content="reader social preview showing branded feed cards for engineering and research sources" />
     <meta name="color-scheme" content="dark light" />
@@ -147,12 +145,12 @@ export function renderIndexPage(data: PageData): string {
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="reader" />
-    <link rel="manifest" href="/site.webmanifest?v=12" />
+    <link rel="manifest" href="/site.webmanifest?v=13" />
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=54" />
-    <script src="/static/app.js?v=47" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=55" />
+    <script src="/static/app.js?v=48" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -375,13 +373,6 @@ export function renderIndexPage(data: PageData): string {
                 <span class="config-option-title">Hugging Face Trending Papers</span>
               </span>
             </label>
-            <label class="config-option">
-              <input type="checkbox" value="alphaxiv" data-source-option checked />
-              <img class="source-icon-image source-icon-image--dialog source-icon-image--alphaxiv" src="/static/source-icons/alphaxiv.png" alt="" aria-hidden="true" />
-              <span class="config-option-body">
-                <span class="config-option-title">alphaXiv</span>
-              </span>
-            </label>
           </div>
         </section>
         <div class="config-dialog-footer-row">
@@ -405,9 +396,9 @@ export function renderIndexPage(data: PageData): string {
             </svg>
           </button>
         </div>
-        <img class="install-dialog-screenshot" data-install-screenshot-mobile src="/manifest-assets/screenshot-mobile.png?v=2" alt="reader running as an installed app on mobile" width="430" height="932" loading="lazy" />
-        <img class="install-dialog-screenshot install-dialog-screenshot-tablet is-hidden" data-install-screenshot-tablet src="/manifest-assets/screenshot-tablet.png?v=1" alt="reader running as an installed app on iPad" width="820" height="1180" loading="lazy" />
-        <img class="install-dialog-screenshot install-dialog-screenshot-desktop is-hidden" data-install-screenshot-desktop src="/manifest-assets/screenshot-wide.png?v=1" alt="reader running as an installed app on desktop" width="1440" height="1120" loading="lazy" />
+        <img class="install-dialog-screenshot" data-install-screenshot-mobile src="/manifest-assets/screenshot-mobile.png?v=3" alt="reader running as an installed app on mobile" width="430" height="932" loading="lazy" />
+        <img class="install-dialog-screenshot install-dialog-screenshot-tablet is-hidden" data-install-screenshot-tablet src="/manifest-assets/screenshot-tablet.png?v=2" alt="reader running as an installed app on iPad" width="820" height="1180" loading="lazy" />
+        <img class="install-dialog-screenshot install-dialog-screenshot-desktop is-hidden" data-install-screenshot-desktop src="/manifest-assets/screenshot-wide.png?v=2" alt="reader running as an installed app on desktop" width="1440" height="1120" loading="lazy" />
         <p class="config-dialog-copy">Add reader to your home screen for a faster, full-screen experience with offline access to your last feed.</p>
         <ol class="install-steps is-hidden" data-install-steps>
           <li>
