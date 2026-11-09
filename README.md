@@ -57,6 +57,7 @@ npx lighthouse https://reader.boringcode.dev --view
   - GitHub repo titles are normalized to canonical `owner/repo` form from the repo URL path
   - Hugging Face cards show **upvotes**
   - published/fetched dates are formatted in the browser locale while preserving the stored UTC calendar date
+- **Card host-row actions** for optional bookmarks, Hacker News comments, and a preview-mode Open source shortcut
 - **Responsive, minimalist UI** with:
   - source filters
   - real source icons in filters, dialog rows, and card metadata
@@ -359,7 +360,8 @@ Presentation-layer note:
 - when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
 - `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
 - the panel shows the extracted title, byline, publication date/reading time, rich text with validated inline links/emphasis/inline code, image blocks with captions and intrinsic dimensions, and semantic tables; images load directly from the source with lazy loading and no referrer; `Open source` opens the original page
-- Hacker News items also show a **Comments** action in the panel header that opens the HN discussion; other sources omit it
+- Hacker News items also show a **Comments** action in the panel header and in the card host row; other sources omit it
+- when preview is enabled, each card’s host row also shows an **Open source** shortcut that opens the article directly without opening the preview
 - external links inside the preview open in a new tab with `noopener noreferrer` and no referrer
 - the article currently being previewed is highlighted in the feed; the preview header shows the card’s stats/date metadata without repeating the title
 - previous/next buttons at the bottom of the panel move through the currently rendered feed or Saved list
@@ -378,6 +380,7 @@ Presentation-layer note:
 - the list is capped at 500 entries; removing a bookmark updates the count and, while the Saved view is active, removes the card immediately
 - disabling bookmarks hides the card and preview toggles plus the Saved filter, leaves the Saved view if it was active, and keeps saved items in `localStorage` for when the feature is re-enabled
 - the per-card toggle is available on every device; the preview panel header also exposes it while reading
+- the bookmark toggle shares the card host-row action group with the Hacker News comments and preview-mode source shortcuts
 
 ---
 

@@ -179,17 +179,26 @@
   }
 
   const bookmarkIcons = `<svg class="bookmark-icon bookmark-icon--outline" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg><svg class="bookmark-icon bookmark-icon--filled" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="currentColor"/></svg>`;
+  const commentsIcon = `<svg class="item-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7l-4.5 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg>`;
+  const sourceIcon = `<svg class="item-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/><path d="M19 5l-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/></svg>`;
 
-  const cardTemplate = (item) => `
+  const cardTemplate = (item) => {
+    const commentsAction =
+      item.comments_url && isHttpUrl(item.comments_url)
+        ? `<a class="item-action item-action--comments" data-card-comments href="${escapeAttr(item.comments_url)}" target="_blank" rel="noreferrer noopener" aria-label="Comments" title="Comments">${commentsIcon}</a>`
+        : "";
+    const sourceAction = `<a class="item-action item-action--source" data-card-source href="${escapeAttr(item.url || "#")}" target="_blank" rel="noreferrer noopener" aria-label="Open source" title="Open source">${sourceIcon}</a>`;
+    return `
     <article class="item-card" data-source="${escapeHtml(item.source || "")}" data-comments-url="${escapeAttr(item.comments_url || "")}">
       <h2 class="item-title">
         <span class="item-index">${escapeHtml(item.index ?? "")}.</span>
         <a href="${escapeAttr(item.url || "#")}" target="_blank" rel="noreferrer">${escapeHtml(item.title || "")}</a>
       </h2>
       ${item.brief ? `<p class="item-brief"${item.brief_prefix ? ` data-brief-prefix="${escapeAttr(item.brief_prefix)}"` : ""}${item.brief_suffix ? ` data-brief-suffix="${escapeAttr(item.brief_suffix)}"` : ""}${item.brief_date_iso ? ` data-brief-date-iso="${escapeAttr(item.brief_date_iso)}" data-brief-date-kind="${escapeAttr(item.brief_date_kind || "")}"` : ""}><span class="item-brief-text">${escapeHtml(item.brief)}</span></p>` : ""}
-      <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeAttr(item.source || "")}" src="${escapeAttr(sourceIconPaths[item.source] || "")}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(item.host || hostLabel(item.url || ""))}</span><button class="item-bookmark" type="button" data-bookmark-toggle aria-label="Save for later" title="Save for later" aria-pressed="false">${bookmarkIcons}</button></p>
+      <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeAttr(item.source || "")}" src="${escapeAttr(sourceIconPaths[item.source] || "")}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(item.host || hostLabel(item.url || ""))}</span><span class="item-actions"><button class="item-bookmark" type="button" data-bookmark-toggle aria-label="Save for later" title="Save for later" aria-pressed="false">${bookmarkIcons}</button>${commentsAction}${sourceAction}</span></p>
     </article>
   `;
+  };
 
   const browserLocales =
     Array.isArray(navigator.languages) && navigator.languages.length > 0
@@ -748,6 +757,10 @@
     if (articlePreviewToggle) {
       articlePreviewToggle.checked = articlePreviewEnabled;
     }
+  }
+
+  function applyArticlePreviewEnabledState() {
+    root.classList.toggle("is-article-preview-enabled", articlePreviewEnabled);
   }
 
   function syncBookmarksOption() {
@@ -1856,6 +1869,7 @@
     if (articlePreviewEnabledChanged) {
       articlePreviewEnabled = nextArticlePreviewEnabled;
       persistArticlePreviewEnabled(articlePreviewEnabled);
+      applyArticlePreviewEnabledState();
       if (!articlePreviewEnabled) {
         closeArticlePreview();
       }
@@ -2111,6 +2125,15 @@
         return;
       }
 
+      const commentsAction = event.target.closest("[data-card-comments]");
+      if (commentsAction) return;
+
+      const sourceAction = event.target.closest("[data-card-source]");
+      if (sourceAction) {
+        rememberVisitedLink(sourceAction.getAttribute("href") || "");
+        return;
+      }
+
       const clickedLink = event.target.closest(".item-title a");
       if (clickedLink) {
         rememberVisitedLink(clickedLink.href);
@@ -2243,6 +2266,7 @@
   syncConfigOptions();
   syncDensityOptions();
   syncArticlePreviewOption();
+  applyArticlePreviewEnabledState();
   syncBookmarksOption();
   applyVisitedLinkState();
   applyBookmarkState();

@@ -1267,6 +1267,15 @@ body.is-dialog-open {
   min-width: 0;
 }
 
+.item-actions {
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  gap: 0.1rem;
+  margin-left: auto;
+  margin-right: -0.35rem;
+}
+
 .bookmark-icon {
   width: 1.05rem;
   height: 1.05rem;
@@ -1294,8 +1303,8 @@ body.is-dialog-open {
   flex: 0 0 auto;
   width: 1.6rem;
   height: 1.6rem;
-  margin-left: auto;
-  margin-right: -0.35rem;
+  margin-left: 0;
+  margin-right: 0;
   margin-bottom: -0.35rem;
   padding: 0;
   border: none;
@@ -1325,6 +1334,54 @@ body.is-dialog-open {
 .item-bookmark:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+.item-action {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 1.6rem;
+  height: 1.6rem;
+  margin-bottom: -0.35rem;
+  padding: 0;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted);
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background 140ms ease;
+}
+
+.item-action::after {
+  content: '';
+  position: absolute;
+  inset: -0.6rem -0.05rem;
+  border-radius: 999px;
+}
+
+.item-action:hover {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.item-action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.item-action-icon {
+  display: block;
+  width: 1.05rem;
+  height: 1.05rem;
+}
+
+:root:not(.is-article-preview-enabled) .item-action--source {
+  display: none;
 }
 
 .item-bookmark.is-saved,

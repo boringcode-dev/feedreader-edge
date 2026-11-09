@@ -83,13 +83,17 @@ function renderCard(card: CardView): string {
             <span class="item-brief-text">${escapeHtml(card.brief)}</span>
           </p>`
     : "";
+  const commentsAction = card.commentsUrl
+    ? `<a class="item-action item-action--comments" data-card-comments href="${escapeHtml(card.commentsUrl)}" target="_blank" rel="noreferrer noopener" aria-label="Comments" title="Comments"><svg class="item-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7l-4.5 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg></a>`
+    : "";
+  const sourceAction = `<a class="item-action item-action--source" data-card-source href="${escapeHtml(card.url)}" target="_blank" rel="noreferrer noopener" aria-label="Open source" title="Open source"><svg class="item-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/><path d="M19 5l-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/></svg></a>`;
   return `
         <article class="item-card" data-source="${escapeHtml(card.source)}" data-comments-url="${escapeHtml(card.commentsUrl ?? "")}">
           <h2 class="item-title">
             <span class="item-index">${card.index}.</span>
             <a href="${escapeHtml(card.url)}" target="_blank" rel="noreferrer">${escapeHtml(card.title)}</a>
           </h2>${briefBlock}
-          <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeHtml(card.source)}" src="${escapeHtml(sourceIconPath(card.source))}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(card.host)}</span><button class="item-bookmark" type="button" data-bookmark-toggle aria-label="Save for later" title="Save for later" aria-pressed="false"><svg class="bookmark-icon bookmark-icon--outline" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg><svg class="bookmark-icon bookmark-icon--filled" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="currentColor"/></svg></button></p>
+          <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeHtml(card.source)}" src="${escapeHtml(sourceIconPath(card.source))}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(card.host)}</span><span class="item-actions"><button class="item-bookmark" type="button" data-bookmark-toggle aria-label="Save for later" title="Save for later" aria-pressed="false"><svg class="bookmark-icon bookmark-icon--outline" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg><svg class="bookmark-icon bookmark-icon--filled" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="currentColor"/></svg></button>${commentsAction}${sourceAction}</span></p>
         </article>`;
 }
 
@@ -149,8 +153,8 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=66" />
-    <script src="/static/app.js?v=62" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=68" />
+    <script src="/static/app.js?v=63" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
