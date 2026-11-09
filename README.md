@@ -365,10 +365,10 @@ Presentation-layer note:
 - **Share** uses the device/browser share sheet when available and falls back to copying the article link; it is available in card host rows, the wide-screen preview header, and the mobile preview actions popup
 - external links inside the preview open in a new tab with `noopener noreferrer` and no referrer
 - the article currently being previewed is highlighted in the feed; the preview header shows the card’s stats/date metadata without repeating the title
-- previous/next buttons at the bottom of the panel move through the currently rendered feed or Saved list
+- previous/next buttons at the bottom of the panel move through the currently rendered feed or Saved list; when the last rendered card is previewed, Next stays enabled if more pages exist and loads the next page before advancing
 - previews are fetched by the Worker via `GET /api/preview?url=…`; only URLs already stored as feed items are accepted, and upstream HTML is never injected into the page
 - on screens wider than 900px the layout expands to the full viewport width, with the preview panel fixed on the right at about 65% of the width and 0.8rem top/bottom insets; the page keeps its normal scroll behavior
-- on screens 900px or narrower the borderless panel covers the full viewport width; the header keeps **Close** plus a `…` button that opens a compact settings-styled actions popup (50% width, action rows only; dismiss with the backdrop, Escape, or by choosing an action) containing the bookmark, Share, comments, and Open source actions; content respects left/right safe-area insets in iPhone landscape
+- on screens 900px or narrower the borderless panel covers the full viewport width; in phone portrait the header keeps only the source/stats metadata, and the footer places `…` and Close after Previous/Next. The `…` button opens a settings-style dialog headed by the article title with its source icon/host and a close button, with the actions stacked as full-width rows over the standard backdrop (dismiss with the close button, backdrop, Escape, or by choosing an action). In phone landscape the `…` and Close controls stay in the header. Content respects left/right safe-area insets in iPhone landscape; while the panel covers the viewport the `theme-color` tint matches the panel surface so the status-bar strip blends with it
 - preview is available on every device; phones open the reader view full-screen, and the Reading option is always shown in Reader settings
 
 ### Bookmarks

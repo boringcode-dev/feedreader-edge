@@ -154,8 +154,8 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=75" />
-    <script src="/static/app.js?v=72" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=92" />
+    <script src="/static/app.js?v=85" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -557,6 +557,21 @@ ${errorsBlock}
           </div>
           <dialog class="config-dialog preview-actions-dialog" id="preview-actions-dialog" data-preview-actions-dialog aria-label="Article actions">
             <div class="config-dialog-form">
+              <div class="config-dialog-header preview-actions-header">
+                <div class="preview-actions-heading">
+                  <h2 class="preview-actions-title" data-preview-actions-title>Article actions</h2>
+                  <p class="preview-actions-source">
+                    <img class="source-icon-image source-icon-image--host is-hidden" data-preview-actions-source-icon src="" alt="" aria-hidden="true" />
+                    <span data-preview-actions-source-label></span>
+                  </p>
+                </div>
+                <button class="icon-button config-close" type="button" data-preview-actions-close aria-label="Close article actions" title="Close article actions">
+                  <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M6 6l12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                    <path d="M18 6L6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                  </svg>
+                </button>
+              </div>
               <div class="config-options preview-actions-dialog-options">
                 <button class="config-option preview-actions-dialog-option" type="button" data-preview-menu-bookmark aria-label="Save for later" title="Save for later" aria-pressed="false">
                   <span class="config-option-icon" aria-hidden="true">

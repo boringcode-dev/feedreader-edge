@@ -60,6 +60,18 @@
   const previewActionsDialog = document.querySelector(
     "[data-preview-actions-dialog]",
   );
+  const previewActionsTitle = document.querySelector(
+    "[data-preview-actions-title]",
+  );
+  const previewActionsCloseButton = document.querySelector(
+    "[data-preview-actions-close]",
+  );
+  const previewActionsSourceIcon = document.querySelector(
+    "[data-preview-actions-source-icon]",
+  );
+  const previewActionsSourceLabel = document.querySelector(
+    "[data-preview-actions-source-label]",
+  );
   const previewMenuBookmarkButton = document.querySelector(
     "[data-preview-menu-bookmark]",
   );
@@ -81,6 +93,10 @@
   const previewMeta = document.querySelector("[data-preview-meta]");
   const previewPrevButton = document.querySelector("[data-preview-prev]");
   const previewNextButton = document.querySelector("[data-preview-next]");
+  const previewActionsContainer = document.querySelector(
+    ".preview-panel-actions",
+  );
+  const previewFooter = document.querySelector(".preview-panel-footer");
   const previewBookmarkButton = document.querySelector(
     "[data-preview-bookmark]",
   );
@@ -141,7 +157,6 @@
   const defaultInterests =
     "startups, engineering, open-source, Artificial Intelligence (AI), Machine Learning (ML)";
   const installPromptHiddenStorageKey = "feedreader.installPromptHidden";
-  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
   const loadedAppVersion = document.body.dataset.appVersion || "";
   const updateCheckIntervalMs = 15 * 60 * 1000;
 
@@ -166,6 +181,7 @@
     ? cardsGrid.querySelectorAll(".item-card").length
     : 0;
   let hasNext = cardsGrid?.dataset.hasNext === "true";
+  let previewAutoLoadingMore = false;
   let searchTimer = null;
   let ignoreNextEmptySearchInput = false;
   let requestSequence = 0;
@@ -570,6 +586,10 @@
   function previewCardIndex() {
     if (!currentPreviewItem || !cardsGrid) return -1;
     const cards = Array.from(cardsGrid.querySelectorAll(".item-card"));
+    const activeIndex = cards.findIndex((card) =>
+      card.classList.contains("is-previewing"),
+    );
+    if (activeIndex >= 0) return activeIndex;
     return cards.findIndex((card) => {
       const link = card.querySelector(".item-title a");
       return (
@@ -578,6 +598,24 @@
           currentPreviewItem.url
       );
     });
+  }
+
+  // Skip duplicate or unusable cards so a click always moves the preview to
+  // a different article, even when appended pages overlap the current list.
+  function previewTargetIndex(direction) {
+    if (!currentPreviewItem || !cardsGrid) return -1;
+    const cards = Array.from(cardsGrid.querySelectorAll(".item-card"));
+    const index = previewCardIndex();
+    if (index < 0) return -1;
+    for (
+      let target = index + direction;
+      target >= 0 && target < cards.length;
+      target += direction
+    ) {
+      const data = cardDataFromCard(cards[target]);
+      if (data && data.url !== currentPreviewItem.url) return target;
+    }
+    return -1;
   }
 
   function applyPreviewActiveCardState() {
@@ -594,30 +632,59 @@
   }
 
   function updatePreviewNavigation() {
-    const cardCount = cardsGrid
-      ? cardsGrid.querySelectorAll(".item-card").length
-      : 0;
-    const index = previewCardIndex();
+    const currentIndex = previewCardIndex();
     if (previewPrevButton) {
-      previewPrevButton.disabled = index <= 0;
+      previewPrevButton.disabled = previewTargetIndex(-1) < 0;
     }
     if (previewNextButton) {
-      previewNextButton.disabled = index < 0 || index >= cardCount - 1;
+      const hasNextCard = previewTargetIndex(1) >= 0;
+      previewNextButton.disabled =
+        currentIndex < 0 || (!hasNextCard && !hasNext);
     }
   }
 
-  function navigatePreview(direction) {
-    if (!currentPreviewItem || !cardsGrid) return;
+  function openPreviewAtIndex(targetIndex) {
+    if (!cardsGrid) return;
     const cards = Array.from(cardsGrid.querySelectorAll(".item-card"));
-    const index = previewCardIndex();
-    if (index < 0) return;
-    const targetCard = cards[index + direction];
-    if (!targetCard) return;
+    const targetCard = cards[targetIndex];
     const data = cardDataFromCard(targetCard);
     if (!data) return;
     rememberVisitedLink(data.url);
     openArticlePreview(data);
     targetCard.scrollIntoView({ block: "nearest" });
+  }
+
+  async function loadMoreForPreview() {
+    if (previewAutoLoadingMore || feedLoading || !hasNext) return;
+    previewAutoLoadingMore = true;
+    try {
+      await fetchItems({
+        source: activeFilter,
+        query: activeQuery,
+        offset: loadedCount,
+        append: true,
+        loadingMessage: "Loading more items…",
+      });
+      const targetIndex = previewTargetIndex(1);
+      if (targetIndex >= 0) openPreviewAtIndex(targetIndex);
+    } catch {
+      showToast("Failed to load more items", "error");
+    } finally {
+      previewAutoLoadingMore = false;
+      updatePreviewNavigation();
+    }
+  }
+
+  function navigatePreview(direction) {
+    if (!currentPreviewItem || !cardsGrid) return;
+    const targetIndex = previewTargetIndex(direction);
+    if (targetIndex >= 0) {
+      openPreviewAtIndex(targetIndex);
+      return;
+    }
+    if (direction === 1 && hasNext) {
+      void loadMoreForPreview();
+    }
   }
 
   function loadSelectedSources() {
@@ -1099,22 +1166,22 @@
     previewStatus.classList.toggle("is-hidden", hidden);
   };
 
+  const setSourceIcon = (image, source) => {
+    if (!image) return;
+    const iconPath = sourceIconPaths[source] || "";
+    image.src = iconPath;
+    image.classList.toggle("is-hidden", iconPath === "");
+    for (const key of availableSources) {
+      image.classList.toggle(`source-icon-image--${key}`, key === source);
+    }
+  };
+
   const setPreviewSource = (source, host) => {
     const label = sourceLabels[source] || source || "";
     if (previewSourceLabel) {
       previewSourceLabel.textContent = host ? `${label} · ${host}` : label;
     }
-    if (previewSourceIcon) {
-      const iconPath = sourceIconPaths[source] || "";
-      previewSourceIcon.src = iconPath;
-      previewSourceIcon.classList.toggle("is-hidden", iconPath === "");
-      for (const key of availableSources) {
-        previewSourceIcon.classList.toggle(
-          `source-icon-image--${key}`,
-          key === source,
-        );
-      }
-    }
+    setSourceIcon(previewSourceIcon, source);
   };
 
   const setPreviewCommentsLink = (rawUrl) => {
@@ -1146,8 +1213,23 @@
     }
   };
 
+  const updatePreviewActionsHeader = () => {
+    const source = currentPreviewItem?.source || "";
+    if (previewActionsTitle) {
+      previewActionsTitle.textContent =
+        currentPreviewItem?.title || "Article actions";
+    }
+    if (previewActionsSourceLabel) {
+      const host = (currentPreviewItem?.host || "").trim();
+      previewActionsSourceLabel.textContent =
+        host || sourceLabels[source] || "";
+    }
+    setSourceIcon(previewActionsSourceIcon, source);
+  };
+
   const openPreviewActionsDialog = () => {
     if (!previewActionsDialog || previewActionsDialog.open) return;
+    updatePreviewActionsHeader();
     if (typeof previewActionsDialog.showModal === "function") {
       previewActionsDialog.showModal();
     } else {
@@ -1155,11 +1237,6 @@
     }
     syncDialogOpenState(true);
     previewOverflowButton?.setAttribute("aria-expanded", "true");
-    previewActionsDialog
-      .querySelector(
-        ".preview-actions-dialog-option:not(.is-hidden):not([disabled])",
-      )
-      ?.focus();
   };
 
   const closePreviewActionsDialog = ({ restoreFocus = false } = {}) => {
@@ -1345,12 +1422,70 @@
     }
   };
 
+  const mobilePreviewMedia = window.matchMedia("(max-width: 900px)");
+  let previewLockedScrollY = 0;
+  let previewBodyLocked = false;
+
+  // iOS Safari hit-tests fixed overlays against the document scroll position.
+  // Pinning the body removes the scrolling root while the full-screen preview
+  // is open, so rotation and appended cards cannot leave stale tap targets.
+  const lockPreviewScroll = (scrollY = window.scrollY) => {
+    if (previewBodyLocked || !mobilePreviewMedia.matches) return;
+    previewLockedScrollY = scrollY;
+    previewBodyLocked = true;
+    document.body.style.setProperty(
+      "--preview-scroll-lock",
+      `${-previewLockedScrollY}px`,
+    );
+  };
+
+  // While the preview is open on wide screens the page still scrolls, so keep
+  // the last position to restore if the viewport crosses back under 900px.
+  // Ignore the scroll-to-zero that the pinned body produces on mobile.
+  window.addEventListener(
+    "scroll",
+    () => {
+      if (previewBodyLocked) return;
+      if (
+        previewPanel &&
+        !previewPanel.classList.contains("is-hidden") &&
+        mobilePreviewMedia.matches
+      ) {
+        return;
+      }
+      previewLockedScrollY = window.scrollY;
+    },
+    { passive: true },
+  );
+
+  const unlockPreviewScroll = () => {
+    if (!previewBodyLocked) return;
+    previewBodyLocked = false;
+    document.body.style.removeProperty("--preview-scroll-lock");
+    window.scrollTo(0, previewLockedScrollY);
+  };
+
+  // Toggle the fixed panel out of and back into layout so WebKit rebuilds its
+  // hit-test geometry after rotation. The preview's own scroll is preserved.
+  function refreshPreviewPanelLayer() {
+    if (!previewPanel || previewPanel.classList.contains("is-hidden")) return;
+    const scrollTop = previewScroll?.scrollTop ?? 0;
+    const previousDisplay = previewPanel.style.display;
+    previewPanel.style.display = "none";
+    void previewPanel.offsetHeight;
+    previewPanel.style.display = previousDisplay;
+    if (previewScroll) previewScroll.scrollTop = scrollTop;
+  }
+
   const resetPreviewPanel = () => {
     closePreviewActionsDialog();
     previewPanel?.classList.add("is-hidden");
     currentPreviewItem = null;
     pageBody?.classList.remove("is-preview-open");
     document.body.classList.remove("is-preview-open");
+    root.classList.remove("is-preview-open");
+    unlockPreviewScroll();
+    syncThemeColor();
     previewContent?.replaceChildren();
     if (previewByline) {
       previewByline.textContent = "";
@@ -1427,10 +1562,13 @@
     const controller = new AbortController();
     previewAbortController = controller;
 
+    lockPreviewScroll();
     previewPanel.classList.remove("is-hidden");
     previewPanel.setAttribute("aria-busy", "true");
     pageBody?.classList.add("is-preview-open");
     document.body.classList.add("is-preview-open");
+    root.classList.add("is-preview-open");
+    syncThemeColor();
     setPreviewSource(source, host);
     setPreviewCommentsLink(commentsUrl);
     if (previewTitle) {
@@ -1578,6 +1716,10 @@
     });
   }
 
+  previewActionsCloseButton?.addEventListener("click", () => {
+    closePreviewActionsDialog({ restoreFocus: true });
+  });
+
   previewMenuCommentsLink?.addEventListener("click", () => {
     closePreviewActionsDialog();
   });
@@ -1604,6 +1746,74 @@
     if (event.matches) closePreviewActionsDialog();
   });
 
+  const mobilePortraitMedia = window.matchMedia(
+    "(max-width: 560px) and (orientation: portrait)",
+  );
+
+  // In phone portrait the header only carries article metadata; keep the
+  // overflow and close controls in the footer next to Prev/Next so they are
+  // reachable with one hand.
+  const syncPreviewActionPlacement = () => {
+    if (
+      !previewActionsContainer ||
+      !previewFooter ||
+      !previewOverflowButton ||
+      !previewCloseButton
+    ) {
+      return;
+    }
+    const target = mobilePortraitMedia.matches
+      ? previewFooter
+      : previewActionsContainer;
+    let moved = false;
+    if (previewOverflowButton.parentElement !== target) {
+      target.append(previewOverflowButton);
+      moved = true;
+    }
+    if (previewCloseButton.parentElement !== target) {
+      target.append(previewCloseButton);
+      moved = true;
+    }
+    if (moved && !previewActionsDialog?.open) refreshPreviewPanelLayer();
+  };
+
+  syncPreviewActionPlacement();
+  mobilePortraitMedia.addEventListener?.("change", syncPreviewActionPlacement);
+
+  const syncPreviewScrollLock = () => {
+    if (!previewPanel || previewPanel.classList.contains("is-hidden")) return;
+    syncThemeColor();
+    if (mobilePreviewMedia.matches) {
+      // The media query can change before this fires, so the document may
+      // already have been reset to the top. Use the tracked position instead.
+      lockPreviewScroll(previewLockedScrollY);
+    } else {
+      unlockPreviewScroll();
+    }
+  };
+  mobilePreviewMedia.addEventListener?.("change", syncPreviewScrollLock);
+
+  window.addEventListener("orientationchange", () => {
+    if (!previewPanel || previewPanel.classList.contains("is-hidden")) return;
+    closePreviewActionsDialog();
+    if (previewBodyLocked) {
+      const lockedTop = `${-previewLockedScrollY}px`;
+      const reapplyLock = () => {
+        if (!previewBodyLocked) return;
+        document.body.style.setProperty("--preview-scroll-lock", lockedTop);
+      };
+      // Re-apply the lock once iOS has applied the new viewport metrics so the
+      // fixed panel's tap targets are rebuilt against the rotated geometry.
+      document.body.style.removeProperty("--preview-scroll-lock");
+      requestAnimationFrame(reapplyLock);
+      window.setTimeout(reapplyLock, 250);
+    }
+    // WebKit can keep the pre-rotation hit-test regions for fixed elements;
+    // rebuild the panel once early and once after the viewport settles.
+    window.setTimeout(refreshPreviewPanelLayer, 100);
+    window.setTimeout(refreshPreviewPanelLayer, 400);
+  });
+
   if (previewPrevButton) {
     previewPrevButton.addEventListener("click", () => navigatePreview(-1));
   }
@@ -1620,16 +1830,30 @@
     }
   });
 
+  // The iOS status bar/toolbar tint comes from theme-color. Match the preview
+  // panel surface while it covers the viewport so the top strip doesn't show
+  // the page background behind the panel.
+  function syncThemeColor() {
+    const previewCoversViewport =
+      previewPanel &&
+      !previewPanel.classList.contains("is-hidden") &&
+      mobilePreviewMedia.matches;
+    const styles = getComputedStyle(root);
+    const color = (
+      previewCoversViewport
+        ? styles.getPropertyValue("--surface")
+        : styles.getPropertyValue("--bg")
+    ).trim();
+    if (!color) return;
+    document.querySelectorAll('meta[name="theme-color"]').forEach((node) => {
+      node.setAttribute("content", color);
+    });
+  }
+
   const applyTheme = (theme) => {
     root.dataset.theme = theme;
     localStorage.setItem(themeStorageKey, theme);
-    if (metaThemeColor) {
-      // The installed iOS PWA uses theme-color for the opaque status bar;
-      // keep every variant in sync with the user's explicit theme choice.
-      document.querySelectorAll('meta[name="theme-color"]').forEach((node) => {
-        node.setAttribute("content", theme === "dark" ? "#111e2c" : "#e1ebf7");
-      });
-    }
+    syncThemeColor();
     if (themeToggle) {
       themeToggle.setAttribute(
         "aria-label",
