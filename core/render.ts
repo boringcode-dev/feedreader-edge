@@ -153,8 +153,8 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=68" />
-    <script src="/static/app.js?v=63" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=71" />
+    <script src="/static/app.js?v=66" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -504,6 +504,13 @@ ${errorsBlock}
                 <path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
               </svg>
             </a>
+            <button class="icon-button preview-panel-overflow" type="button" data-preview-overflow aria-label="More article actions" title="More article actions" aria-haspopup="dialog" aria-expanded="false" aria-controls="preview-actions-dialog">
+              <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="5" cy="12" r="1.6" fill="currentColor"/>
+                <circle cx="12" cy="12" r="1.6" fill="currentColor"/>
+                <circle cx="19" cy="12" r="1.6" fill="currentColor"/>
+              </svg>
+            </button>
             <button class="icon-button preview-panel-close" type="button" data-preview-close aria-label="Close article preview" title="Close article preview">
               <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M6 6l12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
@@ -511,6 +518,47 @@ ${errorsBlock}
               </svg>
             </button>
           </div>
+          <dialog class="config-dialog preview-actions-dialog" id="preview-actions-dialog" data-preview-actions-dialog aria-label="Article actions">
+            <div class="config-dialog-form">
+              <div class="config-options preview-actions-dialog-options">
+                <button class="config-option preview-actions-dialog-option" type="button" data-preview-menu-bookmark aria-label="Save for later" title="Save for later" aria-pressed="false">
+                  <span class="config-option-icon" aria-hidden="true">
+                    <svg class="bookmark-icon bookmark-icon--outline" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/>
+                    </svg>
+                    <svg class="bookmark-icon bookmark-icon--filled" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="currentColor"/>
+                    </svg>
+                  </span>
+                  <span class="config-option-body">
+                    <span class="config-option-title" data-preview-menu-bookmark-label>Save for later</span>
+                  </span>
+                </button>
+                <a class="config-option preview-actions-dialog-option is-hidden" data-preview-menu-comments href="#" target="_blank" rel="noreferrer noopener" aria-label="Comments" title="Comments">
+                  <span class="config-option-icon" aria-hidden="true">
+                    <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M5 5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7l-4.5 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/>
+                    </svg>
+                  </span>
+                  <span class="config-option-body">
+                    <span class="config-option-title">Comments</span>
+                  </span>
+                </a>
+                <a class="config-option preview-actions-dialog-option" data-preview-menu-open href="#" target="_blank" rel="noreferrer noopener" aria-label="Open source" title="Open source">
+                  <span class="config-option-icon" aria-hidden="true">
+                    <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M14 5h5v5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                      <path d="M19 5l-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                      <path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                    </svg>
+                  </span>
+                  <span class="config-option-body">
+                    <span class="config-option-title">Open source</span>
+                  </span>
+                </a>
+              </div>
+            </div>
+          </dialog>
         </div>
         <div class="preview-panel-scroll" data-preview-scroll aria-live="polite">
           <h2 class="preview-panel-title" data-preview-title>Article preview</h2>

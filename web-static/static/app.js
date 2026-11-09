@@ -51,6 +51,22 @@
   const previewContent = document.querySelector("[data-preview-content]");
   const previewOpenLink = document.querySelector("[data-preview-open]");
   const previewCommentsLink = document.querySelector("[data-preview-comments]");
+  const previewOverflowButton = document.querySelector(
+    "[data-preview-overflow]",
+  );
+  const previewActionsDialog = document.querySelector(
+    "[data-preview-actions-dialog]",
+  );
+  const previewMenuBookmarkButton = document.querySelector(
+    "[data-preview-menu-bookmark]",
+  );
+  const previewMenuBookmarkLabel = document.querySelector(
+    "[data-preview-menu-bookmark-label]",
+  );
+  const previewMenuCommentsLink = document.querySelector(
+    "[data-preview-menu-comments]",
+  );
+  const previewMenuOpenLink = document.querySelector("[data-preview-menu-open]");
   const previewSourceIcon = document.querySelector("[data-preview-source-icon]");
   const previewSourceLabel = document.querySelector(
     "[data-preview-source-label]",
@@ -511,17 +527,33 @@
         button.setAttribute("title", label);
       });
     }
+    const previewSaved = currentPreviewItem
+      ? isBookmarked(currentPreviewItem.url)
+      : false;
+    const previewBookmarkLabel = previewSaved
+      ? "Remove from saved"
+      : "Save for later";
     if (previewBookmarkButton) {
-      const saved = currentPreviewItem
-        ? isBookmarked(currentPreviewItem.url)
-        : false;
       previewBookmarkButton.classList.toggle("is-hidden", !bookmarksEnabled);
-      previewBookmarkButton.classList.toggle("is-saved", saved);
-      previewBookmarkButton.setAttribute("aria-pressed", String(saved));
-      const label = saved ? "Remove from saved" : "Save for later";
-      previewBookmarkButton.setAttribute("aria-label", label);
-      previewBookmarkButton.setAttribute("title", label);
+      previewBookmarkButton.classList.toggle("is-saved", previewSaved);
+      previewBookmarkButton.setAttribute("aria-pressed", String(previewSaved));
+      previewBookmarkButton.setAttribute("aria-label", previewBookmarkLabel);
+      previewBookmarkButton.setAttribute("title", previewBookmarkLabel);
       previewBookmarkButton.disabled = !currentPreviewItem;
+    }
+    if (previewMenuBookmarkButton) {
+      previewMenuBookmarkButton.classList.toggle("is-hidden", !bookmarksEnabled);
+      previewMenuBookmarkButton.classList.toggle("is-saved", previewSaved);
+      previewMenuBookmarkButton.setAttribute(
+        "aria-pressed",
+        String(previewSaved),
+      );
+      previewMenuBookmarkButton.setAttribute("aria-label", previewBookmarkLabel);
+      previewMenuBookmarkButton.setAttribute("title", previewBookmarkLabel);
+      previewMenuBookmarkButton.disabled = !currentPreviewItem;
+      if (previewMenuBookmarkLabel) {
+        previewMenuBookmarkLabel.textContent = previewBookmarkLabel;
+      }
     }
   }
 
@@ -1011,20 +1043,63 @@
   };
 
   const setPreviewCommentsLink = (rawUrl) => {
-    if (!previewCommentsLink) return;
     const target =
       typeof rawUrl === "string" && isHttpUrl(rawUrl)
         ? normalizeVisitedHref(rawUrl)
         : "";
-    previewCommentsLink.href = target || "#";
-    previewCommentsLink.classList.toggle("is-hidden", target === "");
-    if (target === "") {
-      previewCommentsLink.setAttribute("aria-hidden", "true");
-      previewCommentsLink.setAttribute("tabindex", "-1");
-    } else {
-      previewCommentsLink.removeAttribute("aria-hidden");
-      previewCommentsLink.removeAttribute("tabindex");
+    if (previewCommentsLink) {
+      previewCommentsLink.href = target || "#";
+      previewCommentsLink.classList.toggle("is-hidden", target === "");
+      if (target === "") {
+        previewCommentsLink.setAttribute("aria-hidden", "true");
+        previewCommentsLink.setAttribute("tabindex", "-1");
+      } else {
+        previewCommentsLink.removeAttribute("aria-hidden");
+        previewCommentsLink.removeAttribute("tabindex");
+      }
     }
+    if (previewMenuCommentsLink) {
+      previewMenuCommentsLink.href = target || "#";
+      previewMenuCommentsLink.classList.toggle("is-hidden", target === "");
+      if (target === "") {
+        previewMenuCommentsLink.setAttribute("aria-hidden", "true");
+        previewMenuCommentsLink.setAttribute("tabindex", "-1");
+      } else {
+        previewMenuCommentsLink.removeAttribute("aria-hidden");
+        previewMenuCommentsLink.removeAttribute("tabindex");
+      }
+    }
+  };
+
+  const openPreviewActionsDialog = () => {
+    if (!previewActionsDialog || previewActionsDialog.open) return;
+    if (typeof previewActionsDialog.showModal === "function") {
+      previewActionsDialog.showModal();
+    } else {
+      previewActionsDialog.setAttribute("open", "open");
+    }
+    syncDialogOpenState(true);
+    previewOverflowButton?.setAttribute("aria-expanded", "true");
+    previewActionsDialog
+      .querySelector(
+        ".preview-actions-dialog-option:not(.is-hidden):not([disabled])",
+      )
+      ?.focus();
+  };
+
+  const closePreviewActionsDialog = ({ restoreFocus = false } = {}) => {
+    if (!previewActionsDialog) return;
+    if (
+      previewActionsDialog.open &&
+      typeof previewActionsDialog.close === "function"
+    ) {
+      previewActionsDialog.close();
+    } else {
+      previewActionsDialog.removeAttribute("open");
+    }
+    syncDialogOpenState(false);
+    previewOverflowButton?.setAttribute("aria-expanded", "false");
+    if (restoreFocus) previewOverflowButton?.focus();
   };
 
   const renderPreviewSegmentMarks = (segment) => {
@@ -1196,6 +1271,7 @@
   };
 
   const resetPreviewPanel = () => {
+    closePreviewActionsDialog();
     previewPanel?.classList.add("is-hidden");
     currentPreviewItem = null;
     pageBody?.classList.remove("is-preview-open");
@@ -1214,6 +1290,9 @@
     }
     if (previewOpenLink) {
       previewOpenLink.href = "#";
+    }
+    if (previewMenuOpenLink) {
+      previewMenuOpenLink.href = "#";
     }
     setPreviewCommentsLink("");
     if (previewMeta) {
@@ -1246,6 +1325,7 @@
       return;
     }
 
+    closePreviewActionsDialog();
     currentPreviewItem = {
       url: normalizeVisitedHref(url),
       title,
@@ -1288,6 +1368,9 @@
     }
     if (previewOpenLink) {
       previewOpenLink.href = url;
+    }
+    if (previewMenuOpenLink) {
+      previewMenuOpenLink.href = url;
     }
     previewContent?.replaceChildren();
     setPreviewStatus("Loading preview…");
@@ -1374,13 +1457,57 @@
     previewCloseButton.addEventListener("click", closeArticlePreview);
   }
 
+  const toggleCurrentPreviewBookmark = () => {
+    if (!currentPreviewItem) return;
+    const saved = toggleBookmark(currentPreviewItem);
+    showToast(saved ? "Saved for later" : "Removed from saved");
+  };
+
   if (previewBookmarkButton) {
-    previewBookmarkButton.addEventListener("click", () => {
-      if (!currentPreviewItem) return;
-      const saved = toggleBookmark(currentPreviewItem);
-      showToast(saved ? "Saved for later" : "Removed from saved");
+    previewBookmarkButton.addEventListener(
+      "click",
+      toggleCurrentPreviewBookmark,
+    );
+  }
+
+  if (previewMenuBookmarkButton) {
+    previewMenuBookmarkButton.addEventListener("click", () => {
+      toggleCurrentPreviewBookmark();
+      closePreviewActionsDialog({ restoreFocus: true });
     });
   }
+
+  if (previewOverflowButton) {
+    previewOverflowButton.addEventListener("click", () => {
+      openPreviewActionsDialog();
+    });
+  }
+
+  previewMenuCommentsLink?.addEventListener("click", () => {
+    closePreviewActionsDialog();
+  });
+  previewMenuOpenLink?.addEventListener("click", () => {
+    closePreviewActionsDialog();
+  });
+
+  previewActionsDialog?.addEventListener("click", (event) => {
+    if (event.target === previewActionsDialog) {
+      closePreviewActionsDialog({ restoreFocus: true });
+    }
+  });
+  previewActionsDialog?.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closePreviewActionsDialog({ restoreFocus: true });
+  });
+  previewActionsDialog?.addEventListener("close", () => {
+    previewOverflowButton?.setAttribute("aria-expanded", "false");
+    syncDialogOpenState(false);
+  });
+
+  const desktopPreviewMedia = window.matchMedia("(min-width: 901px)");
+  desktopPreviewMedia.addEventListener?.("change", (event) => {
+    if (event.matches) closePreviewActionsDialog();
+  });
 
   if (previewPrevButton) {
     previewPrevButton.addEventListener("click", () => navigatePreview(-1));
@@ -1391,11 +1518,9 @@
   }
 
   document.addEventListener("keydown", (event) => {
-    if (
-      event.key === "Escape" &&
-      previewPanel &&
-      !previewPanel.classList.contains("is-hidden")
-    ) {
+    if (event.key !== "Escape") return;
+    if (previewActionsDialog?.open) return;
+    if (previewPanel && !previewPanel.classList.contains("is-hidden")) {
       closeArticlePreview();
     }
   });

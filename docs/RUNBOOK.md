@@ -105,6 +105,7 @@ Before considering any `core/render.ts` change done:
    - `View more` visibility matches whether another page exists
    - enabling article preview, clicking a card, and confirming the panel renders rich text links, images/captions (without contributor avatars), tables, reading metadata, and (for Hacker News) the Comments action; `Open source` points at the article; the active card is highlighted and previous/next move through the visible list
    - card host-row shortcuts: Hacker News cards show Comments, Open source appears only while preview is enabled, and both open their targets without opening the preview
+   - on a phone-width viewport, the preview panel has no outer border and its header shows only `…` and Close; the `…` button opens a compact settings-styled actions popup (50% width, rows only), which closes on backdrop click/Escape and leaves the preview open
    - enabling bookmarks in Reader settings, bookmarking a card, confirming the Saved count and view, then reloading to confirm the bookmark persists; disabling bookmarks hides the card/preview controls and Saved filter, leaves the Saved view, and re-enabling restores the saved item
 
 4. If the change also affects `/api/items`, hit the endpoint directly and verify the JSON shape still matches what `web-static/static/app.js` expects.

@@ -360,14 +360,14 @@ Presentation-layer note:
 - when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
 - `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
 - the panel shows the extracted title, byline, publication date/reading time, rich text with validated inline links/emphasis/inline code, image blocks with captions and intrinsic dimensions, and semantic tables; images load directly from the source with lazy loading and no referrer; `Open source` opens the original page
-- Hacker News items also show a **Comments** action in the panel header and in the card host row; other sources omit it
+- Hacker News items also show a **Comments** action in the panel header (directly on wide screens, in the `…` action dialog on narrow screens) and in the card host row; other sources omit it
 - when preview is enabled, each card’s host row also shows an **Open source** shortcut that opens the article directly without opening the preview
 - external links inside the preview open in a new tab with `noopener noreferrer` and no referrer
 - the article currently being previewed is highlighted in the feed; the preview header shows the card’s stats/date metadata without repeating the title
 - previous/next buttons at the bottom of the panel move through the currently rendered feed or Saved list
 - previews are fetched by the Worker via `GET /api/preview?url=…`; only URLs already stored as feed items are accepted, and upstream HTML is never injected into the page
 - on screens wider than 900px the layout expands to the full viewport width, with the preview panel fixed on the right at about 65% of the width and 0.8rem top/bottom insets; the page keeps its normal scroll behavior
-- on screens 900px or narrower the panel covers the full viewport width with a close button
+- on screens 900px or narrower the borderless panel covers the full viewport width; the header keeps **Close** plus a `…` button that opens a compact settings-styled actions popup (50% width, action rows only; dismiss with the backdrop, Escape, or by choosing an action) containing the bookmark, comments, and Open source actions
 - preview is available on every device; phones open the reader view full-screen, and the Reading option is always shown in Reader settings
 
 ### Bookmarks

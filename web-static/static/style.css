@@ -827,6 +827,7 @@ body.is-dialog-open {
 }
 
 .preview-panel-header {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -879,6 +880,55 @@ body.is-dialog-open {
   align-items: center;
   flex: 0 0 auto;
   gap: 0.45rem;
+}
+
+.preview-panel-overflow {
+  display: none;
+}
+
+.preview-panel-overflow[aria-expanded='true'] {
+  color: var(--text);
+  background: var(--accent-soft);
+}
+
+.config-dialog.preview-actions-dialog {
+  width: 50vw;
+  max-width: 50vw;
+}
+
+.preview-actions-dialog .config-dialog-form {
+  gap: 0.9rem;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
+}
+
+.preview-actions-dialog-options {
+  gap: 0.55rem;
+}
+
+.preview-actions-dialog-option {
+  width: 100%;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+}
+
+.preview-actions-dialog-option.is-saved {
+  color: var(--accent);
+}
+
+.preview-actions-dialog-option.is-saved .config-option-icon,
+.preview-actions-dialog-option.is-saved .config-option-title {
+  color: var(--accent);
+}
+
+.preview-actions-dialog-option.is-saved .bookmark-icon--outline {
+  display: none;
+}
+
+.preview-actions-dialog-option.is-saved .bookmark-icon--filled {
+  display: block;
 }
 
 .preview-panel-scroll {
@@ -1648,8 +1698,19 @@ body.is-dialog-open {
     z-index: 30;
     width: 100%;
     max-height: none;
+    border: 0;
     border-radius: 0;
     box-shadow: none;
+  }
+
+  .preview-panel-actions .preview-panel-bookmark,
+  .preview-panel-actions .preview-panel-comments,
+  .preview-panel-actions .preview-panel-open {
+    display: none;
+  }
+
+  .preview-panel-overflow {
+    display: inline-flex;
   }
 
   .preview-panel-header {
