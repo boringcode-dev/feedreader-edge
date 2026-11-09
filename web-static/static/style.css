@@ -1949,7 +1949,15 @@ body.is-dialog-open {
 }
 
 @media (max-width: 560px) and (orientation: portrait) and (display-mode: standalone) {
-  .page-header,
+  .page-header {
+    padding-top: calc(max(0.85rem, env(safe-area-inset-top)) + 1.25rem);
+  }
+
+  /* Compact density sets its own page-header padding with higher specificity. */
+  :root[data-ui-density='compact'] .page-header {
+    padding-top: calc(max(0.85rem, env(safe-area-inset-top)) + 1.25rem);
+  }
+
   .preview-panel-header {
     padding-top: calc(max(0.85rem, env(safe-area-inset-top)) + 0.75rem);
   }
