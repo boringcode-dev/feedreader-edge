@@ -57,7 +57,7 @@ npx lighthouse https://reader.boringcode.dev --view
   - GitHub repo titles are normalized to canonical `owner/repo` form from the repo URL path
   - Hugging Face cards show **upvotes**
   - published/fetched dates are formatted in the browser locale while preserving the stored UTC calendar date
-- **Card host-row actions** for optional bookmarks, Hacker News comments, sharing, and a preview-mode Open source shortcut
+- **Card host-row actions** for optional bookmarks and a more-actions dialog with Share, Hacker News comments, and Open source
 - **Responsive, minimalist UI** with:
   - source filters
   - real source icons in filters, dialog rows, and card metadata
@@ -360,28 +360,28 @@ Presentation-layer note:
 - when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
 - `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
 - the panel shows the extracted title, byline, publication date/reading time, rich text with validated inline links/emphasis/inline code, image blocks with captions and intrinsic dimensions, and semantic tables; images load directly from the source with lazy loading and no referrer; `Open source` opens the original page
-- Hacker News items also show a **Comments** action in the panel header (directly on wide screens, in the `…` action dialog on narrow screens) and in the card host row; other sources omit it
-- when preview is enabled, each card’s host row also shows an **Open source** shortcut that opens the article directly without opening the preview
-- **Share** uses the device/browser share sheet when available and falls back to copying the article link; it is available in card host rows, the wide-screen preview header, and the mobile preview actions popup
+- Hacker News items also show a **Comments** action inside the preview and card `…` dialogs; other sources omit it
+- each card’s `…` dialog includes an **Open source** action that opens the article directly without opening the preview
+- **Share** uses the device/browser share sheet when available and falls back to copying the article link; it is available in both the card and preview `…` dialogs
 - external links inside the preview open in a new tab with `noopener noreferrer` and no referrer
 - the article currently being previewed is highlighted in the feed; the preview header shows the card’s stats/date metadata without repeating the title
 - previous/next buttons at the bottom of the panel move through the currently rendered feed or Saved list; when the last rendered card is previewed, Next stays enabled if more pages exist and loads the next page before advancing
 - previews are fetched by the Worker via `GET /api/preview?url=…`; only URLs already stored as feed items are accepted, and upstream HTML is never injected into the page
-- on screens wider than 900px the layout expands to the full viewport width, with the preview panel fixed on the right at about 65% of the width and 0.8rem top/bottom insets; the page keeps its normal scroll behavior
-- on screens 900px or narrower the borderless panel covers the full viewport width; in phone portrait the header keeps only the source/stats metadata, and the footer places `…` and Close after Previous/Next. The `…` button opens a settings-style dialog headed by the article title with its source icon/host and a close button, with the actions stacked as full-width rows over the standard backdrop (dismiss with the close button, backdrop, Escape, or by choosing an action). In phone landscape the `…` and Close controls stay in the header. Content respects left/right safe-area insets in iPhone landscape; while the panel covers the viewport the `theme-color` tint matches the panel surface so the status-bar strip blends with it
+- on screens wider than 900px the preview panel is an aside fixed on the right at about 65% of the width and 0.8rem top/bottom insets, with the bookmark, `…`, and Close controls in its header; the page keeps its normal scroll behavior
+- at 900px or narrower the borderless panel covers the full viewport and the footer places the bookmark, `…`, and Close after Previous/Next (in both portrait and landscape). Above 900px the aside header holds the bookmark, `…`, and Close. The `…` button opens a settings-style dialog headed by the article title with its source icon/host and a close button, with the actions stacked as full-width rows over the standard backdrop (dismiss with the close button, backdrop, Escape, or by choosing an action). Content respects left/right safe-area insets in iPhone landscape; while the panel covers the viewport the `theme-color` tint matches the panel surface so the status-bar strip blends with it
 - preview is available on every device; phones open the reader view full-screen, and the Reading option is always shown in Reader settings
 
 ### Bookmarks
 
 - bookmark controls are off by default and can be enabled in Reader settings
 - when enabled, every feed card has a bookmark toggle at the right of its host row; clicking it does not open the article
-- when enabled, the preview panel header has the same toggle for the article currently open
+- when enabled, the preview panel header (aside layout) or footer (fullscreen layout) has the same toggle for the article currently open
 - when enabled, a `Saved` filter at the end of the filter bar shows saved articles and their count; search filters the saved list locally
 - bookmarks store a display snapshot (title, source, brief, host) in `localStorage` under `feedreader.bookmarks`, so they survive source pruning and offline use without a server API
 - the list is capped at 500 entries; removing a bookmark updates the count and, while the Saved view is active, removes the card immediately
 - disabling bookmarks hides the card and preview toggles plus the Saved filter, leaves the Saved view if it was active, and keeps saved items in `localStorage` for when the feature is re-enabled
-- the per-card toggle is available on every device; the preview panel header also exposes it while reading
-- the bookmark toggle shares the card host-row action group with Share, the Hacker News comments, and preview-mode source shortcuts
+- the per-card toggle is available on every device; the preview panel also exposes it while reading
+- the bookmark toggle sits beside the card’s more-actions button; the preview panel header also exposes it while reading
 
 ---
 

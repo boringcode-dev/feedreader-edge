@@ -52,8 +52,6 @@
   );
   const previewStatus = document.querySelector("[data-preview-status]");
   const previewContent = document.querySelector("[data-preview-content]");
-  const previewOpenLink = document.querySelector("[data-preview-open]");
-  const previewCommentsLink = document.querySelector("[data-preview-comments]");
   const previewOverflowButton = document.querySelector(
     "[data-preview-overflow]",
   );
@@ -72,20 +70,31 @@
   const previewActionsSourceLabel = document.querySelector(
     "[data-preview-actions-source-label]",
   );
-  const previewMenuBookmarkButton = document.querySelector(
-    "[data-preview-menu-bookmark]",
-  );
-  const previewMenuBookmarkLabel = document.querySelector(
-    "[data-preview-menu-bookmark-label]",
-  );
   const previewMenuCommentsLink = document.querySelector(
     "[data-preview-menu-comments]",
   );
   const previewMenuShareButton = document.querySelector(
     "[data-preview-menu-share]",
   );
-  const previewShareButton = document.querySelector("[data-preview-share]");
   const previewMenuOpenLink = document.querySelector("[data-preview-menu-open]");
+  const cardActionsDialog = document.querySelector(
+    "[data-card-actions-dialog]",
+  );
+  const cardActionsTitle = document.querySelector("[data-card-actions-title]");
+  const cardActionsSourceIcon = document.querySelector(
+    "[data-card-actions-source-icon]",
+  );
+  const cardActionsSourceLabel = document.querySelector(
+    "[data-card-actions-source-label]",
+  );
+  const cardActionsCloseButton = document.querySelector(
+    "[data-card-actions-close]",
+  );
+  const cardMenuShareButton = document.querySelector("[data-card-menu-share]");
+  const cardMenuCommentsLink = document.querySelector(
+    "[data-card-menu-comments]",
+  );
+  const cardMenuOpenLink = document.querySelector("[data-card-menu-open]");
   const previewSourceIcon = document.querySelector("[data-preview-source-icon]");
   const previewSourceLabel = document.querySelector(
     "[data-preview-source-label]",
@@ -196,6 +205,8 @@
   let previewRequestSequence = 0;
   let previewAbortController = null;
   let currentPreviewItem = null;
+  let currentCardActionData = null;
+  let currentCardActionButton = null;
 
   function emptyMessageForState({ source, query }) {
     if (offlineViewUnavailable) {
@@ -219,17 +230,9 @@
   }
 
   const bookmarkIcons = `<svg class="bookmark-icon bookmark-icon--outline" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg><svg class="bookmark-icon bookmark-icon--filled" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="currentColor"/></svg>`;
-  const commentsIcon = `<svg class="item-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7l-4.5 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg>`;
-  const shareIcon = `<svg class="item-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/><path d="M8.5 7.5L12 4l3.5 3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/><path d="M6 11v7.5a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V11" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/></svg>`;
-  const sourceIcon = `<svg class="item-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/><path d="M19 5l-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/></svg>`;
+  const moreIcon = `<svg class="item-action-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="5" cy="12" r="1.6" fill="currentColor"/><circle cx="12" cy="12" r="1.6" fill="currentColor"/><circle cx="19" cy="12" r="1.6" fill="currentColor"/></svg>`;
 
   const cardTemplate = (item) => {
-    const commentsAction =
-      item.comments_url && isHttpUrl(item.comments_url)
-        ? `<a class="item-action item-action--comments" data-card-comments href="${escapeAttr(item.comments_url)}" target="_blank" rel="noreferrer noopener" aria-label="Comments" title="Comments">${commentsIcon}</a>`
-        : "";
-    const shareAction = `<button class="item-action item-action--share" type="button" data-card-share aria-label="Share article" title="Share article">${shareIcon}</button>`;
-    const sourceAction = `<a class="item-action item-action--source" data-card-source href="${escapeAttr(item.url || "#")}" target="_blank" rel="noreferrer noopener" aria-label="Open source" title="Open source">${sourceIcon}</a>`;
     return `
     <article class="item-card" data-source="${escapeHtml(item.source || "")}" data-comments-url="${escapeAttr(item.comments_url || "")}">
       <h2 class="item-title">
@@ -237,7 +240,7 @@
         <a href="${escapeAttr(item.url || "#")}" target="_blank" rel="noreferrer">${escapeHtml(item.title || "")}</a>
       </h2>
       ${item.brief ? `<p class="item-brief"${item.brief_prefix ? ` data-brief-prefix="${escapeAttr(item.brief_prefix)}"` : ""}${item.brief_suffix ? ` data-brief-suffix="${escapeAttr(item.brief_suffix)}"` : ""}${item.brief_date_iso ? ` data-brief-date-iso="${escapeAttr(item.brief_date_iso)}" data-brief-date-kind="${escapeAttr(item.brief_date_kind || "")}"` : ""}><span class="item-brief-text">${escapeHtml(item.brief)}</span></p>` : ""}
-      <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeAttr(item.source || "")}" src="${escapeAttr(sourceIconPaths[item.source] || "")}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(item.host || hostLabel(item.url || ""))}</span><span class="item-actions"><button class="item-bookmark" type="button" data-bookmark-toggle aria-label="Save for later" title="Save for later" aria-pressed="false">${bookmarkIcons}</button>${shareAction}${commentsAction}${sourceAction}</span></p>
+      <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeAttr(item.source || "")}" src="${escapeAttr(sourceIconPaths[item.source] || "")}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(item.host || hostLabel(item.url || ""))}</span><span class="item-actions"><button class="item-bookmark" type="button" data-bookmark-toggle aria-label="Save for later" title="Save for later" aria-pressed="false">${bookmarkIcons}</button><button class="item-action item-action--more" type="button" data-card-more aria-label="More article actions" title="More article actions" aria-haspopup="dialog" aria-expanded="false" aria-controls="card-actions-dialog">${moreIcon}</button></span></p>
     </article>
   `;
   };
@@ -566,20 +569,6 @@
       previewBookmarkButton.setAttribute("aria-label", previewBookmarkLabel);
       previewBookmarkButton.setAttribute("title", previewBookmarkLabel);
       previewBookmarkButton.disabled = !currentPreviewItem;
-    }
-    if (previewMenuBookmarkButton) {
-      previewMenuBookmarkButton.classList.toggle("is-hidden", !bookmarksEnabled);
-      previewMenuBookmarkButton.classList.toggle("is-saved", previewSaved);
-      previewMenuBookmarkButton.setAttribute(
-        "aria-pressed",
-        String(previewSaved),
-      );
-      previewMenuBookmarkButton.setAttribute("aria-label", previewBookmarkLabel);
-      previewMenuBookmarkButton.setAttribute("title", previewBookmarkLabel);
-      previewMenuBookmarkButton.disabled = !currentPreviewItem;
-      if (previewMenuBookmarkLabel) {
-        previewMenuBookmarkLabel.textContent = previewBookmarkLabel;
-      }
     }
   }
 
@@ -1184,33 +1173,25 @@
     setSourceIcon(previewSourceIcon, source);
   };
 
-  const setPreviewCommentsLink = (rawUrl) => {
+  const setActionLink = (link, rawUrl) => {
+    if (!link) return;
     const target =
       typeof rawUrl === "string" && isHttpUrl(rawUrl)
         ? normalizeVisitedHref(rawUrl)
         : "";
-    if (previewCommentsLink) {
-      previewCommentsLink.href = target || "#";
-      previewCommentsLink.classList.toggle("is-hidden", target === "");
-      if (target === "") {
-        previewCommentsLink.setAttribute("aria-hidden", "true");
-        previewCommentsLink.setAttribute("tabindex", "-1");
-      } else {
-        previewCommentsLink.removeAttribute("aria-hidden");
-        previewCommentsLink.removeAttribute("tabindex");
-      }
+    link.href = target || "#";
+    link.classList.toggle("is-hidden", target === "");
+    if (target === "") {
+      link.setAttribute("aria-hidden", "true");
+      link.setAttribute("tabindex", "-1");
+    } else {
+      link.removeAttribute("aria-hidden");
+      link.removeAttribute("tabindex");
     }
-    if (previewMenuCommentsLink) {
-      previewMenuCommentsLink.href = target || "#";
-      previewMenuCommentsLink.classList.toggle("is-hidden", target === "");
-      if (target === "") {
-        previewMenuCommentsLink.setAttribute("aria-hidden", "true");
-        previewMenuCommentsLink.setAttribute("tabindex", "-1");
-      } else {
-        previewMenuCommentsLink.removeAttribute("aria-hidden");
-        previewMenuCommentsLink.removeAttribute("tabindex");
-      }
-    }
+  };
+
+  const setPreviewCommentsLink = (rawUrl) => {
+    setActionLink(previewMenuCommentsLink, rawUrl);
   };
 
   const updatePreviewActionsHeader = () => {
@@ -1252,6 +1233,55 @@
     syncDialogOpenState(false);
     previewOverflowButton?.setAttribute("aria-expanded", "false");
     if (restoreFocus) previewOverflowButton?.focus();
+  };
+
+  const updateCardActionsHeader = (data) => {
+    if (cardActionsTitle) {
+      cardActionsTitle.textContent = data?.title || "Article actions";
+    }
+    if (cardActionsSourceLabel) {
+      const host = (data?.host || "").trim();
+      cardActionsSourceLabel.textContent =
+        host || sourceLabels[data?.source || ""] || "";
+    }
+    setSourceIcon(cardActionsSourceIcon, data?.source || "");
+  };
+
+  const openCardActionsDialog = (card, trigger) => {
+    if (!cardActionsDialog) return;
+    const data = cardDataFromCard(card);
+    if (!data) return;
+    currentCardActionData = data;
+    currentCardActionButton = trigger || null;
+    updateCardActionsHeader(data);
+    setActionLink(cardMenuCommentsLink, data.commentsUrl);
+    if (cardMenuOpenLink) {
+      cardMenuOpenLink.href = data.url || "#";
+    }
+    currentCardActionButton?.setAttribute("aria-expanded", "true");
+    if (typeof cardActionsDialog.showModal === "function") {
+      cardActionsDialog.showModal();
+    } else {
+      cardActionsDialog.setAttribute("open", "open");
+    }
+    syncDialogOpenState(true);
+  };
+
+  const closeCardActionsDialog = ({ restoreFocus = false } = {}) => {
+    if (!cardActionsDialog) return;
+    if (
+      cardActionsDialog.open &&
+      typeof cardActionsDialog.close === "function"
+    ) {
+      cardActionsDialog.close();
+    } else {
+      cardActionsDialog.removeAttribute("open");
+    }
+    syncDialogOpenState(false);
+    currentCardActionButton?.setAttribute("aria-expanded", "false");
+    if (restoreFocus) currentCardActionButton?.focus();
+    currentCardActionButton = null;
+    currentCardActionData = null;
   };
 
   const renderPreviewSegmentMarks = (segment) => {
@@ -1498,14 +1528,8 @@
     if (previewTitle) {
       previewTitle.textContent = "Article preview";
     }
-    if (previewOpenLink) {
-      previewOpenLink.href = "#";
-    }
     if (previewMenuOpenLink) {
       previewMenuOpenLink.href = "#";
-    }
-    if (previewShareButton) {
-      previewShareButton.disabled = true;
     }
     setPreviewCommentsLink("");
     if (previewMeta) {
@@ -1582,14 +1606,8 @@
       previewReadingMeta.textContent = "";
       previewReadingMeta.classList.add("is-hidden");
     }
-    if (previewOpenLink) {
-      previewOpenLink.href = url;
-    }
     if (previewMenuOpenLink) {
       previewMenuOpenLink.href = url;
-    }
-    if (previewShareButton) {
-      previewShareButton.disabled = false;
     }
     previewContent?.replaceChildren();
     setPreviewStatus("Loading preview…");
@@ -1689,24 +1707,11 @@
     );
   }
 
-  if (previewMenuBookmarkButton) {
-    previewMenuBookmarkButton.addEventListener("click", () => {
-      toggleCurrentPreviewBookmark();
-      closePreviewActionsDialog({ restoreFocus: true });
-    });
-  }
-
   if (previewMenuShareButton) {
     previewMenuShareButton.addEventListener("click", () => {
       const item = currentPreviewItem;
       closePreviewActionsDialog({ restoreFocus: true });
       if (item) shareArticle(item);
-    });
-  }
-
-  if (previewShareButton) {
-    previewShareButton.addEventListener("click", () => {
-      if (currentPreviewItem) shareArticle(currentPreviewItem);
     });
   }
 
@@ -1741,18 +1746,46 @@
     syncDialogOpenState(false);
   });
 
+  cardActionsCloseButton?.addEventListener("click", () => {
+    closeCardActionsDialog({ restoreFocus: true });
+  });
+
+  cardMenuShareButton?.addEventListener("click", () => {
+    const data = currentCardActionData;
+    closeCardActionsDialog({ restoreFocus: true });
+    if (data) shareArticle(data);
+  });
+
+  cardMenuCommentsLink?.addEventListener("click", () => {
+    closeCardActionsDialog();
+  });
+  cardMenuOpenLink?.addEventListener("click", () => {
+    closeCardActionsDialog();
+  });
+
+  cardActionsDialog?.addEventListener("click", (event) => {
+    if (event.target === cardActionsDialog) {
+      closeCardActionsDialog({ restoreFocus: true });
+    }
+  });
+  cardActionsDialog?.addEventListener("cancel", (event) => {
+    event.preventDefault();
+    closeCardActionsDialog({ restoreFocus: true });
+  });
+  cardActionsDialog?.addEventListener("close", () => {
+    currentCardActionButton?.setAttribute("aria-expanded", "false");
+    syncDialogOpenState(false);
+  });
+
   const desktopPreviewMedia = window.matchMedia("(min-width: 901px)");
   desktopPreviewMedia.addEventListener?.("change", (event) => {
     if (event.matches) closePreviewActionsDialog();
   });
 
-  const mobilePortraitMedia = window.matchMedia(
-    "(max-width: 560px) and (orientation: portrait)",
-  );
+  const fullscreenPreviewMedia = window.matchMedia("(max-width: 900px)");
 
-  // In phone portrait the header only carries article metadata; keep the
-  // overflow and close controls in the footer next to Prev/Next so they are
-  // reachable with one hand.
+  // Fullscreen preview keeps the bookmark, overflow, and close controls in the
+  // footer next to Prev/Next; the aside layout keeps them in the header.
   const syncPreviewActionPlacement = () => {
     if (
       !previewActionsContainer ||
@@ -1762,23 +1795,24 @@
     ) {
       return;
     }
-    const target = mobilePortraitMedia.matches
+    const target = fullscreenPreviewMedia.matches
       ? previewFooter
       : previewActionsContainer;
-    let moved = false;
-    if (previewOverflowButton.parentElement !== target) {
-      target.append(previewOverflowButton);
-      moved = true;
+    const actionButtons = [
+      previewBookmarkButton,
+      previewOverflowButton,
+      previewCloseButton,
+    ].filter(Boolean);
+    if (actionButtons.some((button) => button.parentElement !== target)) {
+      for (const button of actionButtons) {
+        target.append(button);
+      }
+      if (!previewActionsDialog?.open) refreshPreviewPanelLayer();
     }
-    if (previewCloseButton.parentElement !== target) {
-      target.append(previewCloseButton);
-      moved = true;
-    }
-    if (moved && !previewActionsDialog?.open) refreshPreviewPanelLayer();
   };
 
   syncPreviewActionPlacement();
-  mobilePortraitMedia.addEventListener?.("change", syncPreviewActionPlacement);
+  fullscreenPreviewMedia.addEventListener?.("change", syncPreviewActionPlacement);
 
   const syncPreviewScrollLock = () => {
     if (!previewPanel || previewPanel.classList.contains("is-hidden")) return;
@@ -2595,20 +2629,10 @@
         return;
       }
 
-      const shareButton = event.target.closest("[data-card-share]");
-      if (shareButton) {
+      const moreButton = event.target.closest("[data-card-more]");
+      if (moreButton) {
         event.preventDefault();
-        const data = cardDataFromCard(shareButton.closest(".item-card"));
-        if (data) shareArticle(data);
-        return;
-      }
-
-      const commentsAction = event.target.closest("[data-card-comments]");
-      if (commentsAction) return;
-
-      const sourceAction = event.target.closest("[data-card-source]");
-      if (sourceAction) {
-        rememberVisitedLink(sourceAction.getAttribute("href") || "");
+        openCardActionsDialog(moreButton.closest(".item-card"), moreButton);
         return;
       }
 

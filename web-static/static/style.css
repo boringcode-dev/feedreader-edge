@@ -960,7 +960,7 @@ body.is-dialog-open {
 }
 
 .preview-panel-overflow {
-  display: none;
+  display: inline-flex;
 }
 
 .preview-panel-overflow[aria-expanded='true'] {
@@ -1325,10 +1325,6 @@ body.is-dialog-open {
   color: var(--accent);
 }
 
-.preview-panel-open {
-  text-decoration: none;
-}
-
 .error-stack {
   display: flex;
   flex-direction: column;
@@ -1603,10 +1599,6 @@ body.is-dialog-open {
   display: block;
   width: 1.05rem;
   height: 1.05rem;
-}
-
-:root:not(.is-article-preview-enabled) .item-action--source {
-  display: none;
 }
 
 .item-bookmark.is-saved,
@@ -1891,15 +1883,8 @@ body.is-dialog-open {
     box-shadow: none;
   }
 
-  .preview-panel-actions .preview-panel-bookmark,
-  .preview-panel-actions .preview-panel-share,
-  .preview-panel-actions .preview-panel-comments,
-  .preview-panel-actions .preview-panel-open {
+  .preview-panel-actions .preview-panel-bookmark {
     display: none;
-  }
-
-  .preview-panel-overflow {
-    display: inline-flex;
   }
 
   .preview-panel-header {
@@ -1960,6 +1945,13 @@ body.is-dialog-open {
     z-index: 20;
     width: var(--preview-panel-width);
     max-height: none;
+  }
+}
+
+@media (max-width: 560px) and (orientation: portrait) and (display-mode: standalone) {
+  .page-header,
+  .preview-panel-header {
+    padding-top: calc(max(0.85rem, env(safe-area-inset-top)) + 0.75rem);
   }
 }
 
