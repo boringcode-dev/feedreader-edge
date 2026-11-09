@@ -65,6 +65,7 @@ npx lighthouse https://reader.boringcode.dev --view
   - dark/light mode
   - inline expanding search
   - reader settings dialog for theme, density, and source visibility
+  - iPhone landscape safe-area handling so content stays clear of the notch and Dynamic Island
 - **Configurable visible sources** stored in `localStorage`
   - choose which source buttons are shown
   - when 2+ sources are enabled, `All` stays visible and aggregates over the enabled set
@@ -366,7 +367,7 @@ Presentation-layer note:
 - previous/next buttons at the bottom of the panel move through the currently rendered feed or Saved list
 - previews are fetched by the Worker via `GET /api/preview?url=…`; only URLs already stored as feed items are accepted, and upstream HTML is never injected into the page
 - on screens wider than 900px the layout expands to the full viewport width, with the preview panel fixed on the right at about 65% of the width and 0.8rem top/bottom insets; the page keeps its normal scroll behavior
-- on screens 900px or narrower the borderless panel covers the full viewport width; the header keeps **Close** plus a `…` button that opens a compact settings-styled actions popup (50% width, action rows only; dismiss with the backdrop, Escape, or by choosing an action) containing the bookmark, Share, comments, and Open source actions
+- on screens 900px or narrower the borderless panel covers the full viewport width; the header keeps **Close** plus a `…` button that opens a compact settings-styled actions popup (50% width, action rows only; dismiss with the backdrop, Escape, or by choosing an action) containing the bookmark, Share, comments, and Open source actions; content respects left/right safe-area insets in iPhone landscape
 - preview is available on every device; phones open the reader view full-screen, and the Reading option is always shown in Reader settings
 
 ### Bookmarks

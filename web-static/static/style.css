@@ -11,6 +11,8 @@
   --accent-soft: rgba(88, 166, 255, 0.14);
   --shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
   --control-height: 2.2rem;
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
   font-family:
     Inter,
     ui-sans-serif,
@@ -58,6 +60,8 @@ body {
 
 body {
   min-height: 100vh;
+  padding-left: var(--safe-left);
+  padding-right: var(--safe-right);
 }
 
 button,
@@ -73,7 +77,7 @@ button {
 }
 
 .shell {
-  width: min(1060px, calc(100vw - 1.25rem));
+  width: min(1060px, calc(100% - 1.25rem));
   margin: 0 auto;
 }
 
@@ -1771,24 +1775,32 @@ body.is-dialog-open {
 
   .preview-panel-header {
     padding-top: max(0.55rem, env(safe-area-inset-top));
+    padding-left: max(0.75rem, var(--safe-left));
+    padding-right: max(0.6rem, var(--safe-right));
   }
 
   .preview-panel-scroll {
+    padding-left: max(0.85rem, var(--safe-left));
+    padding-right: max(0.85rem, var(--safe-right));
     padding-bottom: max(0.9rem, env(safe-area-inset-bottom));
   }
 
   .preview-panel-footer {
+    padding-left: max(0.7rem, var(--safe-left));
+    padding-right: max(0.7rem, var(--safe-right));
     padding-bottom: max(0.6rem, env(safe-area-inset-bottom));
   }
 }
 
 @media (min-width: 901px) {
   body.is-preview-open {
-    --preview-panel-width: calc((100vw - 1.25rem) * 0.65);
+    --preview-panel-width: calc(
+      (100vw - var(--safe-left) - var(--safe-right) - 1.25rem) * 0.65
+    );
   }
 
   body.is-preview-open .shell {
-    width: calc(100vw - 1.25rem);
+    width: calc(100% - 1.25rem);
     max-width: none;
   }
 
@@ -1801,7 +1813,7 @@ body.is-dialog-open {
   body.is-preview-open .preview-panel {
     position: fixed;
     top: 0.8rem;
-    right: 0.625rem;
+    right: calc(var(--safe-right) + 0.625rem);
     bottom: 0.8rem;
     z-index: 20;
     width: var(--preview-panel-width);
@@ -1815,7 +1827,7 @@ body.is-dialog-open {
   }
 
   .shell {
-    width: min(100vw - 0.8rem, 100%);
+    width: calc(100% - 0.8rem);
   }
 
   .controls-row {

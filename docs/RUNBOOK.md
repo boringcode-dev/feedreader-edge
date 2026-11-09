@@ -107,6 +107,7 @@ Before considering any `core/render.ts` change done:
    - card host-row shortcuts: Hacker News cards show Comments, Open source appears only while preview is enabled, and both open their targets without opening the preview
    - Share uses the native share sheet on supporting browsers and copies the article link otherwise; verify it from a card host row, the wide-screen preview header (immediately after Save), and the mobile preview actions popup
    - on a phone-width viewport, the preview panel has no outer border and its header shows only `…` and Close; the `…` button opens a compact settings-styled actions popup (50% width, rows only), which closes on backdrop click/Escape and leaves the preview open
+   - in iPhone landscape, the header, feed cards, filters, and full-screen preview content stay inside the left/right safe-area insets (no notch/Dynamic Island overlap)
    - enabling bookmarks in Reader settings, bookmarking a card, confirming the Saved count and view, then reloading to confirm the bookmark persists; disabling bookmarks hides the card/preview controls and Saved filter, leaves the Saved view, and re-enabling restores the saved item
 
 4. If the change also affects `/api/items`, hit the endpoint directly and verify the JSON shape still matches what `web-static/static/app.js` expects.
