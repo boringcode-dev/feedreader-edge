@@ -66,6 +66,7 @@ npx lighthouse https://reader.boringcode.dev --view
   - inline expanding search
   - reader settings dialog for theme, density, and source visibility
   - iPhone landscape safe-area handling so content stays clear of the notch and Dynamic Island
+  - compact icon-only Install/Update and For You controls when the preview is open in phone landscape
 - **Configurable visible sources** stored in `localStorage`
   - choose which source buttons are shown
   - when 2+ sources are enabled, `All` stays visible and aggregates over the enabled set
@@ -343,7 +344,7 @@ Presentation-layer note:
 - article preview is off by default and stored in `localStorage` under `feedreader.articlePreviewEnabled`
 - bookmark controls are off by default and stored in `localStorage` under `feedreader.bookmarksEnabled`; enabling them shows the bookmark controls and Saved filter, and disabling them hides those controls without deleting saved items
 - source-specific filters render as **real icon-only buttons**
-- `All` remains a text button
+- `For You` shows a sparkle icon with its label; in phone landscape while preview is open it collapses to the icon only
 - the source dialog renders **real source icons** before each source name
 - density options are:
   - `Comfortable` (default)

@@ -762,7 +762,7 @@
       .map((key) => {
         const isActive = key === activeFilter;
         if (key === "all") {
-          return `<button class="filter-button${isActive ? " is-active" : ""}" type="button" data-filter="${key}" aria-pressed="${String(isActive)}" aria-label="For You" title="For You">For You</button>`;
+          return `<button class="filter-button filter-button--for-you${isActive ? " is-active" : ""}" type="button" data-filter="${key}" aria-pressed="${String(isActive)}" aria-label="For You" title="For You"><svg class="filter-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.937A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L13.5 8.5a2 2 0 0 0 1.437 1.437l6.135 1.582a.5.5 0 0 1 0 .962L14.937 14.063A2 2 0 0 0 13.5 15.5l-1.582 6.135a.5.5 0 0 1-.963 0z" fill="currentColor"/></svg><span class="filter-label">For You</span></button>`;
         }
         if (key === "saved") {
           const count = bookmarks.length;
