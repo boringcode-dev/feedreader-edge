@@ -899,12 +899,12 @@ body.is-dialog-open {
 
 .preview-panel-header {
   position: relative;
+  z-index: 1;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.55rem 0.6rem 0.55rem 0.75rem;
-  border-bottom: 1px solid var(--border);
 }
 
 .preview-panel-header-info {
@@ -934,9 +934,15 @@ body.is-dialog-open {
   gap: 0.4rem;
   min-width: 0;
   margin: 0;
-  color: var(--muted);
-  font-size: 0.8rem;
+  color: var(--text);
+  font-size: 0.95rem;
+  font-weight: 600;
   line-height: 1.3;
+}
+
+.preview-panel-source .source-icon-image {
+  width: 1.05rem;
+  height: 1.05rem;
 }
 
 .preview-panel-source-label {
@@ -1110,10 +1116,64 @@ body.is-dialog-open {
 }
 
 .preview-panel-footer {
+  position: relative;
+  z-index: 1;
   display: flex;
   gap: 0.5rem;
   padding: 0.6rem 0.7rem;
-  border-top: 1px solid var(--border);
+}
+
+.preview-panel-header::after,
+.preview-panel-footer::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1.5rem;
+  background: var(--surface);
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.preview-panel-header::after {
+  top: calc(100% - 1px);
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    rgba(0, 0, 0, 0.82) 25%,
+    rgba(0, 0, 0, 0.52) 50%,
+    rgba(0, 0, 0, 0.22) 75%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    #000 0%,
+    rgba(0, 0, 0, 0.82) 25%,
+    rgba(0, 0, 0, 0.52) 50%,
+    rgba(0, 0, 0, 0.22) 75%,
+    transparent 100%
+  );
+}
+
+.preview-panel-footer::before {
+  bottom: calc(100% - 1px);
+  -webkit-mask-image: linear-gradient(
+    to top,
+    #000 0%,
+    rgba(0, 0, 0, 0.82) 25%,
+    rgba(0, 0, 0, 0.52) 50%,
+    rgba(0, 0, 0, 0.22) 75%,
+    transparent 100%
+  );
+  mask-image: linear-gradient(
+    to top,
+    #000 0%,
+    rgba(0, 0, 0, 0.82) 25%,
+    rgba(0, 0, 0, 0.52) 50%,
+    rgba(0, 0, 0, 0.22) 75%,
+    transparent 100%
+  );
 }
 
 .preview-panel-nav {

@@ -154,7 +154,7 @@ export function renderIndexPage(data: PageData): string {
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=92" />
+    <link rel="stylesheet" href="/static/style.css?v=98" />
     <script src="/static/app.js?v=85" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
