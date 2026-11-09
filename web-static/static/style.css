@@ -1704,6 +1704,7 @@ body.is-dialog-open {
   }
 
   .preview-panel-actions .preview-panel-bookmark,
+  .preview-panel-actions .preview-panel-share,
   .preview-panel-actions .preview-panel-comments,
   .preview-panel-actions .preview-panel-open {
     display: none;

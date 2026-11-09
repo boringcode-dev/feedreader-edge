@@ -66,6 +66,10 @@
   const previewMenuCommentsLink = document.querySelector(
     "[data-preview-menu-comments]",
   );
+  const previewMenuShareButton = document.querySelector(
+    "[data-preview-menu-share]",
+  );
+  const previewShareButton = document.querySelector("[data-preview-share]");
   const previewMenuOpenLink = document.querySelector("[data-preview-menu-open]");
   const previewSourceIcon = document.querySelector("[data-preview-source-icon]");
   const previewSourceLabel = document.querySelector(
@@ -196,6 +200,7 @@
 
   const bookmarkIcons = `<svg class="bookmark-icon bookmark-icon--outline" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg><svg class="bookmark-icon bookmark-icon--filled" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4.5h10A1.5 1.5 0 0 1 18.5 6v14l-6.5-4-6.5 4V6A1.5 1.5 0 0 1 7 4.5Z" fill="currentColor"/></svg>`;
   const commentsIcon = `<svg class="item-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-7l-4.5 3v-3H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" fill="none" stroke="currentColor" stroke-linejoin="round" stroke-width="1.8"/></svg>`;
+  const shareIcon = `<svg class="item-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/><path d="M8.5 7.5L12 4l3.5 3.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/><path d="M6 11v7.5a1.5 1.5 0 0 0 1.5 1.5h9a1.5 1.5 0 0 0 1.5-1.5V11" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/></svg>`;
   const sourceIcon = `<svg class="item-action-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 5h5v5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/><path d="M19 5l-8 8" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/><path d="M18 14v4.5a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 4 18.5v-11A1.5 1.5 0 0 1 5.5 6H10" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/></svg>`;
 
   const cardTemplate = (item) => {
@@ -203,6 +208,7 @@
       item.comments_url && isHttpUrl(item.comments_url)
         ? `<a class="item-action item-action--comments" data-card-comments href="${escapeAttr(item.comments_url)}" target="_blank" rel="noreferrer noopener" aria-label="Comments" title="Comments">${commentsIcon}</a>`
         : "";
+    const shareAction = `<button class="item-action item-action--share" type="button" data-card-share aria-label="Share article" title="Share article">${shareIcon}</button>`;
     const sourceAction = `<a class="item-action item-action--source" data-card-source href="${escapeAttr(item.url || "#")}" target="_blank" rel="noreferrer noopener" aria-label="Open source" title="Open source">${sourceIcon}</a>`;
     return `
     <article class="item-card" data-source="${escapeHtml(item.source || "")}" data-comments-url="${escapeAttr(item.comments_url || "")}">
@@ -211,7 +217,7 @@
         <a href="${escapeAttr(item.url || "#")}" target="_blank" rel="noreferrer">${escapeHtml(item.title || "")}</a>
       </h2>
       ${item.brief ? `<p class="item-brief"${item.brief_prefix ? ` data-brief-prefix="${escapeAttr(item.brief_prefix)}"` : ""}${item.brief_suffix ? ` data-brief-suffix="${escapeAttr(item.brief_suffix)}"` : ""}${item.brief_date_iso ? ` data-brief-date-iso="${escapeAttr(item.brief_date_iso)}" data-brief-date-kind="${escapeAttr(item.brief_date_kind || "")}"` : ""}><span class="item-brief-text">${escapeHtml(item.brief)}</span></p>` : ""}
-      <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeAttr(item.source || "")}" src="${escapeAttr(sourceIconPaths[item.source] || "")}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(item.host || hostLabel(item.url || ""))}</span><span class="item-actions"><button class="item-bookmark" type="button" data-bookmark-toggle aria-label="Save for later" title="Save for later" aria-pressed="false">${bookmarkIcons}</button>${commentsAction}${sourceAction}</span></p>
+      <p class="item-host"><img class="source-icon-image source-icon-image--host source-icon-image--${escapeAttr(item.source || "")}" src="${escapeAttr(sourceIconPaths[item.source] || "")}" alt="" aria-hidden="true" /><span class="item-host-text">${escapeHtml(item.host || hostLabel(item.url || ""))}</span><span class="item-actions"><button class="item-bookmark" type="button" data-bookmark-toggle aria-label="Save for later" title="Save for later" aria-pressed="false">${bookmarkIcons}</button>${shareAction}${commentsAction}${sourceAction}</span></p>
     </article>
   `;
   };
@@ -1009,6 +1015,54 @@
     }, 2200);
   };
 
+  async function copyArticleLink(url) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+        return true;
+      }
+    } catch {
+      // Fall through to the legacy clipboard path.
+    }
+    let textarea = null;
+    try {
+      textarea = document.createElement("textarea");
+      textarea.value = url;
+      textarea.setAttribute("readonly", "");
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      return document.execCommand("copy");
+    } catch {
+      return false;
+    } finally {
+      textarea?.remove();
+    }
+  }
+
+  async function shareArticle({ title, url }) {
+    const target = normalizeVisitedHref(url);
+    if (!target) return;
+    const shareData = { url: target };
+    const normalizedTitle = typeof title === "string" ? title.trim() : "";
+    if (normalizedTitle) shareData.title = normalizedTitle;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch (error) {
+        if (error?.name === "AbortError") return;
+      }
+    }
+    const copied = await copyArticleLink(target);
+    if (copied) {
+      showToast("Link copied");
+    } else {
+      showToast("Couldn't share this article", "error");
+    }
+  }
+
   function isHttpUrl(rawUrl) {
     try {
       const parsed = new URL(rawUrl, window.location.origin);
@@ -1294,6 +1348,9 @@
     if (previewMenuOpenLink) {
       previewMenuOpenLink.href = "#";
     }
+    if (previewShareButton) {
+      previewShareButton.disabled = true;
+    }
     setPreviewCommentsLink("");
     if (previewMeta) {
       previewMeta.textContent = "";
@@ -1371,6 +1428,9 @@
     }
     if (previewMenuOpenLink) {
       previewMenuOpenLink.href = url;
+    }
+    if (previewShareButton) {
+      previewShareButton.disabled = false;
     }
     previewContent?.replaceChildren();
     setPreviewStatus("Loading preview…");
@@ -1474,6 +1534,20 @@
     previewMenuBookmarkButton.addEventListener("click", () => {
       toggleCurrentPreviewBookmark();
       closePreviewActionsDialog({ restoreFocus: true });
+    });
+  }
+
+  if (previewMenuShareButton) {
+    previewMenuShareButton.addEventListener("click", () => {
+      const item = currentPreviewItem;
+      closePreviewActionsDialog({ restoreFocus: true });
+      if (item) shareArticle(item);
+    });
+  }
+
+  if (previewShareButton) {
+    previewShareButton.addEventListener("click", () => {
+      if (currentPreviewItem) shareArticle(currentPreviewItem);
     });
   }
 
@@ -2247,6 +2321,14 @@
       if (bookmarkButton) {
         event.preventDefault();
         toggleBookmarkFromCard(bookmarkButton.closest(".item-card"));
+        return;
+      }
+
+      const shareButton = event.target.closest("[data-card-share]");
+      if (shareButton) {
+        event.preventDefault();
+        const data = cardDataFromCard(shareButton.closest(".item-card"));
+        if (data) shareArticle(data);
         return;
       }
 
