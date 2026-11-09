@@ -328,13 +328,11 @@ Presentation-layer note:
 ### Reader settings dialog
 
 - the configure button opens a `Reader settings` dialog
-- the dialog sections are ordered as:
-  - `Theme`
-  - `UI density`
-  - `Reading`
-  - `Bookmarks`
-  - `AI personalization`
-  - `Sources`
+- settings are grouped into tabs:
+  - `Appearance` — Theme and UI density
+  - `Reading` — Article preview, bookmarks, and AI personalization
+  - `Sources` — visible sources
+- tabs support click, arrow keys, Home, and End; validation jumps to `Sources` or `Reading` when that tab needs attention
 - theme and density options are shown in a 2-column layout to reduce dialog height
 - clicking the dialog backdrop closes it
 - background page scrolling is locked while the dialog is open

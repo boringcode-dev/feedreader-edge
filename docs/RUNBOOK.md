@@ -100,9 +100,9 @@ Before considering any `core/render.ts` change done:
 3. Load `http://127.0.0.1:8788` and verify:
    - header actions render correctly
    - source filters and search controls render correctly
-   - the reader settings dialog opens and closes
+   - the reader settings dialog opens and closes, its Appearance/Reading/Sources tabs switch via click and arrow keys, and Cancel/Save show their icons
    - empty-state and error-banner markup still look sane
-   - `View more` visibility matches whether another page exists
+   - `View more` has its icon and its visibility matches whether another page exists
    - enabling article preview, clicking a card, and confirming the panel renders rich text links, images/captions (without contributor avatars), tables, reading metadata, and (for Hacker News) the Comments action; `Open source` points at the article; the active card is highlighted and previous/next move through the visible list
    - card host-row shortcuts: Hacker News cards show Comments, Open source appears only while preview is enabled, and both open their targets without opening the preview
    - Share uses the native share sheet on supporting browsers and copies the article link otherwise; verify it from a card host row, the wide-screen preview header (immediately after Save), and the mobile preview actions popup

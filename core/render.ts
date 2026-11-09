@@ -150,12 +150,12 @@ export function renderIndexPage(data: PageData): string {
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="reader" />
-    <link rel="manifest" href="/site.webmanifest?v=13" />
+    <link rel="manifest" href="/site.webmanifest?v=14" />
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=72" />
-    <script src="/static/app.js?v=68" defer></script>
+    <link rel="stylesheet" href="/static/style.css?v=73" />
+    <script src="/static/app.js?v=71" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -247,7 +247,14 @@ export function renderIndexPage(data: PageData): string {
             </svg>
           </button>
         </div>
-        <p class="config-dialog-copy">Adjust the reader appearance and choose which sources appear in the feed.</p>
+        <p class="config-dialog-copy">Adjust the reader's appearance, reading, personalization, and sources.</p>
+        <div class="config-tabs" role="tablist" aria-label="Reader settings sections">
+          <button class="config-tab" id="config-tab-appearance" type="button" role="tab" aria-selected="true" aria-controls="config-panel-appearance" data-config-tab="appearance">Appearance</button>
+          <button class="config-tab" id="config-tab-reading" type="button" role="tab" aria-selected="false" aria-controls="config-panel-reading" data-config-tab="reading" tabindex="-1">Reading</button>
+          <button class="config-tab" id="config-tab-sources" type="button" role="tab" aria-selected="false" aria-controls="config-panel-sources" data-config-tab="sources" tabindex="-1">Sources</button>
+        </div>
+        <div class="config-tab-panels">
+        <div class="config-tab-panel" id="config-panel-appearance" role="tabpanel" aria-labelledby="config-tab-appearance" data-config-panel="appearance">
         <div class="config-section-row">
         <section class="config-section" aria-labelledby="config-theme-title">
           <div class="config-section-header">
@@ -311,9 +318,11 @@ export function renderIndexPage(data: PageData): string {
           </div>
         </section>
         </div>
+        </div>
+        <div class="config-tab-panel" id="config-panel-reading" role="tabpanel" aria-labelledby="config-tab-reading" data-config-panel="reading" hidden>
         <section class="config-section" data-article-preview-section aria-labelledby="config-reading-title">
           <div class="config-section-header">
-            <h3 id="config-reading-title" class="config-section-title">Reading</h3>
+            <h3 id="config-reading-title" class="config-section-title">Article preview</h3>
             <p class="config-section-copy">Read articles in a reader view without leaving the feed.</p>
           </div>
           <div class="config-options">
@@ -370,6 +379,8 @@ export function renderIndexPage(data: PageData): string {
           </div>
           <textarea class="interests-input" data-interests-input rows="3" maxlength="300" placeholder="fullstack development, software engineering, computer science, AI, machine learning, LLMs"></textarea>
         </section>
+        </div>
+        <div class="config-tab-panel" id="config-panel-sources" role="tabpanel" aria-labelledby="config-tab-sources" data-config-panel="sources" hidden>
         <section class="config-section" aria-labelledby="config-sources-title">
           <div class="config-section-header">
             <h3 id="config-sources-title" class="config-section-title">Sources</h3>
@@ -399,11 +410,24 @@ export function renderIndexPage(data: PageData): string {
             </label>
           </div>
         </section>
+        </div>
+        </div>
         <div class="config-dialog-footer-row">
           <p class="config-dialog-meta">Build ${escapeHtml(data.appVersion)}</p>
           <div class="config-dialog-actions">
-            <button class="dialog-button" type="button" data-source-config-cancel>Cancel</button>
-            <button class="dialog-button dialog-button-primary" type="button" data-source-config-save>Save</button>
+            <button class="dialog-button" type="button" data-source-config-cancel>
+              <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M6 6l12 12" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+                <path d="M18 6L6 18" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+              </svg>
+              <span>Cancel</span>
+            </button>
+            <button class="dialog-button dialog-button-primary" type="button" data-source-config-save>
+              <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+              </svg>
+              <span>Save</span>
+            </button>
           </div>
         </div>
       </form>
@@ -420,9 +444,9 @@ export function renderIndexPage(data: PageData): string {
             </svg>
           </button>
         </div>
-        <img class="install-dialog-screenshot" data-install-screenshot-mobile src="/manifest-assets/screenshot-mobile.png?v=3" alt="reader running as an installed app on mobile" width="430" height="932" loading="lazy" />
-        <img class="install-dialog-screenshot install-dialog-screenshot-tablet is-hidden" data-install-screenshot-tablet src="/manifest-assets/screenshot-tablet.png?v=2" alt="reader running as an installed app on iPad" width="820" height="1180" loading="lazy" />
-        <img class="install-dialog-screenshot install-dialog-screenshot-desktop is-hidden" data-install-screenshot-desktop src="/manifest-assets/screenshot-wide.png?v=2" alt="reader running as an installed app on desktop" width="1440" height="1120" loading="lazy" />
+        <img class="install-dialog-screenshot" data-install-screenshot-mobile src="/manifest-assets/screenshot-mobile.png?v=4" alt="reader running as an installed app on mobile" width="430" height="932" loading="lazy" />
+        <img class="install-dialog-screenshot install-dialog-screenshot-tablet is-hidden" data-install-screenshot-tablet src="/manifest-assets/screenshot-tablet.png?v=3" alt="reader running as an installed app on iPad" width="820" height="1180" loading="lazy" />
+        <img class="install-dialog-screenshot install-dialog-screenshot-desktop is-hidden" data-install-screenshot-desktop src="/manifest-assets/screenshot-wide.png?v=3" alt="reader running as an installed app on desktop" width="1440" height="1120" loading="lazy" />
         <p class="config-dialog-copy">Add reader to your home screen for a faster, full-screen experience with offline access to your last feed.</p>
         <ol class="install-steps is-hidden" data-install-steps>
           <li>
@@ -469,7 +493,12 @@ ${errorsBlock}
       <div class="empty-state${emptyHiddenClass}" data-empty-state>${escapeHtml(data.emptyMessage)}</div>
 
       <div class="footer-actions${footerHiddenClass}" data-footer-actions>
-        <button class="view-more" type="button" data-view-more${viewMoreHidden}>View more</button>
+        <button class="view-more" type="button" data-view-more${viewMoreHidden}>
+          <span data-view-more-label>View more</span>
+          <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 9.5l6 6 6-6" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
+          </svg>
+        </button>
       </div>
       <footer class="site-footer">
         <p><span class="footer-copyright">© ${data.currentYear}</span><span class="footer-sep">·</span><a class="footer-link" href="https://github.com/boringcode-dev/feedreader-edge" target="_blank" rel="noreferrer"><img class="footer-github-mark" src="/static/source-icons/github.svg" alt="" aria-hidden="true" /><span>GitHub</span></a></p>

@@ -24,6 +24,9 @@
   const configOptions = Array.from(
     document.querySelectorAll("[data-source-option]"),
   );
+  const configTabs = Array.from(
+    document.querySelectorAll("[data-config-tab]"),
+  );
   const densityOptions = Array.from(
     document.querySelectorAll("[data-density-option]"),
   );
@@ -91,6 +94,7 @@
   const emptyState = document.querySelector("[data-empty-state]");
   const footerActions = document.querySelector("[data-footer-actions]");
   const viewMoreButton = document.querySelector("[data-view-more]");
+  const viewMoreLabel = document.querySelector("[data-view-more-label]");
   const searchToggle = document.querySelector("[data-search-toggle]");
   const searchForm = document.querySelector("[data-search-form]");
   const searchInput = document.querySelector("[data-search-input]");
@@ -782,6 +786,21 @@
     });
   }
 
+  function activateConfigTab(tabKey, { focus = false } = {}) {
+    const selectedTab = configTabs.find(
+      (tab) => tab.dataset.configTab === tabKey,
+    );
+    if (!selectedTab) return;
+    for (const tab of configTabs) {
+      const selected = tab === selectedTab;
+      tab.setAttribute("aria-selected", String(selected));
+      tab.tabIndex = selected ? 0 : -1;
+      const panel = document.getElementById(tab.getAttribute("aria-controls"));
+      if (panel) panel.hidden = !selected;
+    }
+    if (focus) selectedTab.focus();
+  }
+
   function syncPersonalizationOptions() {
     if (aiPersonalizationToggle) {
       aiPersonalizationToggle.checked = aiPersonalizationEnabled;
@@ -874,7 +893,9 @@
     const loadingMore = feedLoading && feedLoadingMode === "append";
     viewMoreButton.hidden = !showButton;
     viewMoreButton.disabled = !showButton || refreshInFlight || feedLoading;
-    viewMoreButton.textContent = loadingMore ? "Loading…" : "View more";
+    if (viewMoreLabel) {
+      viewMoreLabel.textContent = loadingMore ? "Loading…" : "View more";
+    }
   };
 
   const renderFeedBody = () => {
@@ -2020,6 +2041,7 @@
   ) {
     const normalizedSources = normalizeSelectedSources(nextSources);
     if (normalizedSources.length === 0) {
+      activateConfigTab("sources", { focus: true });
       showToast("Select at least one source", "error");
       return;
     }
@@ -2027,6 +2049,7 @@
       .trim()
       .slice(0, interestsMaxLength);
     if (nextPersonalizationEnabled && !normalizedInterests) {
+      activateConfigTab("reading", { focus: true });
       showToast("Add a few interests to enable For You", "error");
       return;
     }
@@ -2161,6 +2184,30 @@
       }
     });
   }
+
+  configTabs.forEach((tab, index) => {
+    tab.addEventListener("click", () => {
+      activateConfigTab(tab.dataset.configTab);
+    });
+    tab.addEventListener("keydown", (event) => {
+      let nextIndex;
+      if (event.key === "ArrowRight") {
+        nextIndex = (index + 1) % configTabs.length;
+      } else if (event.key === "ArrowLeft") {
+        nextIndex = (index - 1 + configTabs.length) % configTabs.length;
+      } else if (event.key === "Home") {
+        nextIndex = 0;
+      } else if (event.key === "End") {
+        nextIndex = configTabs.length - 1;
+      } else {
+        return;
+      }
+      event.preventDefault();
+      activateConfigTab(configTabs[nextIndex].dataset.configTab, {
+        focus: true,
+      });
+    });
+  });
 
   if (configDialog) {
     configDialog.addEventListener("cancel", (event) => {
@@ -2475,6 +2522,7 @@
   syncArticlePreviewOption();
   applyArticlePreviewEnabledState();
   syncBookmarksOption();
+  activateConfigTab("appearance");
   applyVisitedLinkState();
   applyBookmarkState();
   applyPreviewActiveCardState();
