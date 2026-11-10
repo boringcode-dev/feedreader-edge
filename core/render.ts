@@ -190,7 +190,7 @@ export function renderIndexPage(data: PageData): string {
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
     <script src="/static/theme-init.js?v=1"></script>
-    <link rel="stylesheet" href="/static/style.css?v=112" />
+    <link rel="stylesheet" href="/static/style.css?v=113" />
     <script src="/static/app.js?v=94" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">

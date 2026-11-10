@@ -1534,11 +1534,7 @@ body.is-dialog-open {
 .preview-panel-byline,
 .preview-panel-reading-meta,
 .preview-panel-status,
-.preview-panel-content > p,
-.preview-panel-content > blockquote,
-.preview-panel-content > h3,
-.preview-panel-content > pre,
-.preview-panel-content > .preview-panel-list-group {
+.preview-panel-content {
   max-width: var(--preview-reading-width);
   margin-left: auto;
   margin-right: auto;
