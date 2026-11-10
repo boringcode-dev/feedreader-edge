@@ -214,7 +214,7 @@ export function extractArticlePreview(
 ): ArticlePreview {
   const document = parseHtmlDocument(html);
 
-  const title = firstNonEmpty(
+  const rawTitle = firstNonEmpty(
     metaContent(document, [
       'meta[property="og:title"]',
       'meta[name="twitter:title"]',
@@ -222,6 +222,7 @@ export function extractArticlePreview(
     normalizeText(document.querySelector("h1")?.textContent),
     normalizeText(document.querySelector("title")?.textContent),
   );
+  const title = sanitizePreviewTitle(rawTitle, pageUrl);
   const siteName =
     metaContent(document, ['meta[property="og:site_name"]']) ||
     hostLabel(pageUrl);
@@ -243,7 +244,9 @@ export function extractArticlePreview(
     });
   }
 
-  const root = pickContentRoot(document);
+  const root = isHuggingFacePaperPage(pageUrl)
+    ? (pickHuggingFacePaperRoot(document) ?? pickContentRoot(document))
+    : pickContentRoot(document);
   const blocks = root ? extractBlocks(root, title, pageUrl) : [];
   if (blocks.length === 0) {
     const description = normalizeText(
@@ -569,6 +572,7 @@ function extractImageBlock(
   }
   if (resolved === "") return null;
   if (isAvatarImageSrc(resolved)) return null;
+  if (isDecorativeImageSrc(resolved)) return null;
 
   const caption = normalizeText(
     image.closest("figure")?.querySelector("figcaption")?.textContent,
@@ -652,6 +656,26 @@ function isAvatarImageSrc(rawUrl: string): boolean {
   return false;
 }
 
+/**
+ * README badges and wordmarks dominate a reader view when they are stretched
+ * to the panel width. They are interface chrome, not article figures.
+ */
+function isDecorativeImageSrc(rawUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (/\.svgz?$/i.test(url.pathname)) return true;
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  return (
+    host === "img.shields.io" ||
+    host === "badgen.net" ||
+    host === "badge.fury.io"
+  );
+}
+
 function resolveSrcsetUrl(srcset: string | null, pageUrl: string): string {
   const raw = (srcset ?? "").trim();
   if (raw === "") return "";
@@ -680,6 +704,58 @@ function parseImageDimension(raw: string | null): number | undefined {
     return undefined;
   }
   return parsed;
+}
+
+/**
+ * Source pages often prefix the article title with their own site chrome
+ * ("GitHub - ", "Paper page - "). Strip only on the matching host so a real
+ * article title that happens to start with those words is left alone.
+ */
+function sanitizePreviewTitle(rawTitle: string, pageUrl: string): string {
+  const title = rawTitle.trim();
+  let url: URL;
+  try {
+    url = new URL(pageUrl);
+  } catch {
+    return title;
+  }
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  let cleaned = title;
+  if (host === "github.com") {
+    cleaned = cleaned.replace(/^GitHub\s*[-–—]\s*/i, "");
+  } else if (host === "huggingface.co" && url.pathname.startsWith("/papers/")) {
+    cleaned = cleaned.replace(/^Paper page\s*[-–—]\s*/i, "");
+  }
+  return cleaned.trim() || title;
+}
+
+function isHuggingFacePaperPage(pageUrl: string): boolean {
+  try {
+    const url = new URL(pageUrl);
+    return (
+      url.hostname.toLowerCase().replace(/^www\./, "") === "huggingface.co" &&
+      url.pathname.startsWith("/papers/")
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Paper pages mix the abstract with a community thread and citation cards in
+ * one document. Start at the "Abstract" section so the reader view keeps the
+ * paper itself instead of the surrounding discussion chrome.
+ */
+function pickHuggingFacePaperRoot(document: Document): Element | null {
+  const heading = Array.from(document.querySelectorAll("h2")).find(
+    (element) =>
+      normalizeText(element.textContent).toLowerCase() === "abstract",
+  );
+  const parent = heading?.parentElement ?? null;
+  if (!parent || parent === document.body || parent.tagName === "MAIN") {
+    return null;
+  }
+  return parent;
 }
 
 function pickContentRoot(document: Document): Element | null {

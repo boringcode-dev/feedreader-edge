@@ -1405,10 +1405,28 @@
     return wrap;
   };
 
+  const appendPreviewListGroup = (items) => {
+    const list = document.createElement("ul");
+    list.className = "preview-panel-list-group";
+    for (const item of items) {
+      const element = document.createElement("li");
+      if (Array.isArray(item.segments)) {
+        renderPreviewSegments(element, item.segments);
+        if (element.childNodes.length === 0) continue;
+      } else {
+        if (typeof item.text !== "string" || item.text === "") continue;
+        element.textContent = item.text;
+      }
+      list.appendChild(element);
+    }
+    if (list.childNodes.length > 0) previewContent.appendChild(list);
+  };
+
   const renderPreviewBlocks = (blocks) => {
     if (!previewContent) return;
     previewContent.replaceChildren();
-    for (const block of blocks) {
+    for (let index = 0; index < blocks.length; index += 1) {
+      const block = blocks[index];
       if (!block || typeof block !== "object") continue;
       if (block.type === "image") {
         if (typeof block.src !== "string" || !isHttpUrl(block.src)) continue;
@@ -1461,6 +1479,19 @@
         continue;
       }
 
+      if (block.type === "list") {
+        const items = [block];
+        while (
+          index + 1 < blocks.length &&
+          blocks[index + 1]?.type === "list"
+        ) {
+          index += 1;
+          items.push(blocks[index]);
+        }
+        appendPreviewListGroup(items);
+        continue;
+      }
+
       const tagName =
         block.type === "heading"
           ? "h3"
@@ -1470,9 +1501,6 @@
               ? "pre"
               : "p";
       const element = document.createElement(tagName);
-      if (block.type === "list") {
-        element.classList.add("preview-panel-list");
-      }
       if (Array.isArray(block.segments)) {
         renderPreviewSegments(element, block.segments);
         if (element.childNodes.length === 0) continue;

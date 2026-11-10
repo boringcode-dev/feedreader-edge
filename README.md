@@ -363,6 +363,8 @@ Presentation-layer note:
 - when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
 - `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
 - the panel shows the extracted title, byline, publication date/reading time, rich text with validated inline links/emphasis/inline code, image blocks with captions and intrinsic dimensions, and semantic tables; images load directly from the source with lazy loading and no referrer; `Open source` opens the original page
+- consecutive list items render as one list, and prose is capped to a readable measure on wide screens; figures are capped in height so a single image cannot dominate the panel
+- previews are source-aware: GitHub README previews drop the `GitHub - ` title prefix and decorative SVG/badge images, while Hugging Face paper previews render the abstract section instead of community, comment, and citation chrome
 - Hacker News items also show a **Comments** action inside the preview and card `…` dialogs; other sources omit it
 - each card’s `…` dialog includes an **Open source** action that opens the article directly without opening the preview
 - **Share** uses the device/browser share sheet when available and falls back to copying the article link; it is available in both the card and preview `…` dialogs

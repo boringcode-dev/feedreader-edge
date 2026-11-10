@@ -313,6 +313,84 @@ describe("extractArticlePreview", () => {
     ]);
   });
 
+  it("strips source prefixes from GitHub and Hugging Face paper titles", () => {
+    const github = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="GitHub - owner/repo: A useful repository" />
+      </head><body><article>
+        <p>${"A long enough README paragraph about the repository. ".repeat(10)}</p>
+      </article></body></html>`,
+      "https://github.com/owner/repo",
+    );
+    expect(github.title).toBe("owner/repo: A useful repository");
+
+    const paper = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - A Great Paper" />
+      </head><body><main>
+        <div><h2>Abstract</h2><p>${"This paper explains an important result clearly. ".repeat(10)}</p></div>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00001",
+    );
+    expect(paper.title).toBe("A Great Paper");
+  });
+
+  it("uses the Hugging Face abstract section instead of community chrome", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - A Great Paper" />
+      </head><body><main>
+        <h1>A Great Paper</h1>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <div>
+            <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+          </div>
+        </div>
+        <div class="community">
+          <h2>Community</h2>
+          <p>Librarian Bot recommends unrelated papers and comment noise here.</p>
+          <ul><li>+8</li><li>Unrelated recommendation</li></ul>
+        </div>
+        <section>
+          <h2>Models citing this paper</h2>
+          <p>Citation cards that should stay out of the reader view.</p>
+        </section>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00001",
+    );
+
+    expect(preview.title).toBe("A Great Paper");
+    expect(preview.blocks.map(blockText)).toEqual([
+      "Abstract",
+      "This paper explains an important result clearly. ".repeat(10).trim(),
+    ]);
+  });
+
+  it("drops decorative SVG and badge images", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Decorative images" />
+      </head><body><article>
+        <p>${"A long enough paragraph about the story. ".repeat(10)}</p>
+        <img src="/images/wordmark.svg" alt="Project wordmark" height="52" />
+        <img src="https://img.shields.io/badge/build-passing.svg" alt="Build badge" />
+        <img src="/images/chart.png" alt="Chart" width="800" height="450" />
+      </article></body></html>`,
+      "https://example.com/posts/decorative-images",
+    );
+
+    expect(preview.blocks.filter((block) => block.type === "image")).toEqual([
+      {
+        type: "image",
+        src: "https://example.com/images/chart.png",
+        alt: "Chart",
+        width: 800,
+        height: 450,
+      },
+    ]);
+  });
+
   it("extracts tables as structured blocks without duplicating cell text", () => {
     const preview = extractArticlePreview(
       `<html><head>
