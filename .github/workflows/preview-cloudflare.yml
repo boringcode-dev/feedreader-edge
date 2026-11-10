@@ -33,8 +33,13 @@ jobs:
 
       - name: Compute preview alias
         id: alias
+        env:
+          PR_BRANCH: ${{ github.head_ref }}
         run: |
-          alias=$(echo "${{ github.head_ref }}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9-]+/-/g; s/^-+|-+$//g')
+          alias=$(printf '%s' "$PR_BRANCH" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9-]+/-/g; s/^-+|-+$//g' \
+            | cut -c1-40)
           echo "value=$alias" >> "$GITHUB_OUTPUT"
 
       - name: Upload preview version
@@ -43,7 +48,7 @@ jobs:
           npx wrangler versions upload \
             --config platforms/cloudflare/wrangler.toml \
             --preview-alias "${{ steps.alias.outputs.value }}" \
-            --var APP_VERSION:pr-${{ github.event.pull_request.number }}-$(git rev-parse --short HEAD) \
+            --var "APP_VERSION:pr-${{ github.event.pull_request.number }}-$(git rev-parse --short HEAD)" \
             --message "PR #${{ github.event.pull_request.number }}" \
             | tee wrangler-upload.log
           url=$(grep -oE 'https://[^[:space:]]*workers\.dev[^[:space:]]*' wrangler-upload.log | head -1)

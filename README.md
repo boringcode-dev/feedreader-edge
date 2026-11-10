@@ -426,6 +426,8 @@ npm run db:migrate:local
 
 - CI runs on pull requests and `main` pushes.
 - CI checks type safety, unit tests, and a local D1 migration smoke run.
+- Pull requests get a Cloudflare version preview commented on the PR.
+- Non-`main` branch pushes get an automatic per-branch preview alias in the Actions run summary; branches with an open PR defer to the PR preview.
 - Deploy runs on `main` pushes and manual dispatch.
 - Deploy validates Cloudflare credentials, re-runs verification, applies remote D1 migrations, and deploys the Worker.
 

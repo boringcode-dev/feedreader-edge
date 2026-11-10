@@ -47,8 +47,12 @@ See the configuration table in [README.md](../README.md#configuration) — this 
 ## CI/CD flow
 
 1. Pull requests and `main` pushes run [CI](../.github/workflows/ci.yml): typecheck, unit tests, and a local D1 migration smoke run.
-2. `main` pushes and manual dispatch run [Deploy (Cloudflare)](../.github/workflows/deploy-cloudflare.yml).
-3. Deploy validates Cloudflare credentials, re-runs verification, applies remote D1 migrations, and deploys the Worker.
+2. Pull requests run [Preview (Cloudflare)](../.github/workflows/preview-cloudflare.yml), which uploads a Worker version and comments its preview URL on the PR.
+3. Non-`main` branch pushes run [Preview branch (Cloudflare)](../.github/workflows/preview-branch-cloudflare.yml). It type-checks, tests, and uploads a stable per-branch preview alias, then writes the URL to the Actions run summary. If the branch already has an open PR, it defers to the PR preview workflow instead of uploading twice.
+4. `main` pushes and manual dispatch run [Deploy (Cloudflare)](../.github/workflows/deploy-cloudflare.yml).
+5. Deploy validates Cloudflare credentials, re-runs verification, applies remote D1 migrations, and deploys the Worker.
+
+Preview versions share the production D1 database and do not receive cron-triggered refreshes. A branch that changes the schema needs its migration applied before its preview will work correctly.
 
 ## Custom domains
 
