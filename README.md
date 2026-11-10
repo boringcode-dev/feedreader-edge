@@ -1,6 +1,6 @@
 <h1>
   <img alt="feedreader logo" src="web-static/favicon.svg" width="70" valign="middle">
-  &nbsp;reader
+  &nbsp;reader&thinsp;<img alt="" src="docs/assets/orange-dot.svg" width="8" height="8" valign="baseline" />
 </h1>
 
 <p>
