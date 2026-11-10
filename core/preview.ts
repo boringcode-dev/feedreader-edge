@@ -250,6 +250,15 @@ export function extractArticlePreview(
     ? (pickHuggingFacePaperRoot(document) ?? pickContentRoot(document))
     : pickContentRoot(document);
   const blocks = root ? extractBlocks(root, title, pageUrl) : [];
+  if (isPaperPage) {
+    const paperLinks = extractHuggingFacePaperLinks(document, pageUrl);
+    if (paperLinks.length > 0) {
+      blocks.push({
+        type: "paragraph",
+        segments: [{ text: "Read the full paper: " }, ...paperLinks],
+      });
+    }
+  }
   if (blocks.length === 0) {
     const description = normalizeText(
       metaContent(document, [
@@ -766,6 +775,43 @@ function extractHuggingFacePaperByline(document: Document): string {
   return names.length <= 3
     ? names.join(", ")
     : `${names.slice(0, 3).join(", ")}, et al.`;
+}
+
+function extractHuggingFacePaperLinks(
+  document: Document,
+  pageUrl: string,
+): PreviewSegment[] {
+  const arxivAbstract = findResolvedHref(
+    document,
+    pageUrl,
+    /^https?:\/\/arxiv\.org\/abs\//i,
+  );
+  const arxivPdf = findResolvedHref(
+    document,
+    pageUrl,
+    /^https?:\/\/arxiv\.org\/pdf\//i,
+  );
+  const parts: PreviewSegment[] = [];
+  if (arxivAbstract !== "") {
+    parts.push({ text: "arXiv abstract", href: arxivAbstract });
+  }
+  if (arxivPdf !== "") {
+    if (parts.length > 0) parts.push({ text: " · " });
+    parts.push({ text: "PDF", href: arxivPdf });
+  }
+  return parts;
+}
+
+function findResolvedHref(
+  document: Document,
+  pageUrl: string,
+  pattern: RegExp,
+): string {
+  for (const anchor of Array.from(document.querySelectorAll("a[href]"))) {
+    const resolved = resolveInlineHref(anchor.getAttribute("href"), pageUrl);
+    if (resolved !== "" && pattern.test(resolved)) return resolved;
+  }
+  return "";
 }
 
 function pickHuggingFacePaperRoot(document: Document): Element | null {

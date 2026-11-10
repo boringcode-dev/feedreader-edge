@@ -191,7 +191,7 @@ export function renderIndexPage(data: PageData): string {
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
     <script src="/static/theme-init.js?v=1"></script>
     <link rel="stylesheet" href="/static/style.css?v=113" />
-    <script src="/static/app.js?v=94" defer></script>
+    <script src="/static/app.js?v=95" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">

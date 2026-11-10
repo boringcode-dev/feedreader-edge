@@ -416,6 +416,37 @@ describe("extractArticlePreview", () => {
     expect(manyAuthors.byline).toBe("Alice Smith, Bob Jones, Carol Lee, et al.");
   });
 
+  it("adds the Hugging Face paper's arXiv links", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - Linked Paper" />
+      </head><body><main>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+        </div>
+        <div>
+          <a href="https://arxiv.org/abs/2611.00004">View arXiv page</a>
+          <a href="https://arxiv.org/pdf/2611.00004">PDF</a>
+        </div>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00004",
+    );
+
+    expect(preview.blocks[preview.blocks.length - 1]).toEqual({
+      type: "paragraph",
+      segments: [
+        { text: "Read the full paper: " },
+        {
+          text: "arXiv abstract",
+          href: "https://arxiv.org/abs/2611.00004",
+        },
+        { text: " · " },
+        { text: "PDF", href: "https://arxiv.org/pdf/2611.00004" },
+      ],
+    });
+  });
+
   it("drops decorative SVG and badge images", () => {
     const preview = extractArticlePreview(
       `<html><head>

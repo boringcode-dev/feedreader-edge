@@ -260,9 +260,9 @@ async function handlePreview(
  * `.invalid` is reserved by RFC 2606 for exactly this kind of placeholder
  * use, so it's guaranteed not to collide with a real host. */
 function previewCacheRequest(target: string): Request {
-  // v7 invalidates previews cached before Hugging Face author byline cleanup;
-  // v6 added author bylines and v5 covered source-aware extraction.
-  const raw = `preview:v7:${target}`;
+  // v8 adds the paper's arXiv links; v7 covered author byline cleanup and v6
+  // added author bylines.
+  const raw = `preview:v8:${target}`;
   const url = `https://feedreader-internal.invalid/preview-cache?k=${encodeURIComponent(raw)}`;
   return new Request(url, { method: "GET" });
 }
