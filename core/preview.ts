@@ -464,6 +464,11 @@ function collectInlineSegments(
   }
 }
 
+/**
+ * Resolves relative links and returns only public http(s) URLs.
+ * `normalizePreviewUrl` rejects javascript:, data:, credentials, non-standard
+ * ports, and private/link-local hosts, so callers never see unsafe schemes.
+ */
 function resolveInlineHref(raw: string | null, pageUrl: string): string {
   const trimmed = (raw ?? "").trim();
   if (trimmed === "") return "";
@@ -795,6 +800,7 @@ function extractHuggingFacePaperLinks(
   const parts: PreviewSegment[] = [];
   for (const anchor of anchors) {
     const label = normalizeText(anchor.textContent);
+    // resolveInlineHref only emits public http(s) URLs.
     const href = resolveInlineHref(anchor.getAttribute("href"), pageUrl);
     if (href === "") continue;
     let text = "";
@@ -829,6 +835,7 @@ function extractHuggingFacePaperCitations(
     if (!container) continue;
     const items: PreviewSegment[] = [];
     for (const anchor of Array.from(container.querySelectorAll("a[href]"))) {
+      // resolveInlineHref only emits public http(s) URLs.
       const href = resolveInlineHref(anchor.getAttribute("href"), pageUrl);
       if (href === "") continue;
       const label = normalizeText(

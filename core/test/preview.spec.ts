@@ -534,6 +534,57 @@ describe("extractArticlePreview", () => {
     ]);
   });
 
+  it("drops unsafe links from paper resources and citations", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - Unsafe Links" />
+      </head><body><main>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+        </div>
+        <div>
+          <a href="javascript:alert(1)">View arXiv page</a>
+          <a href="https://arxiv.org/abs/2611.00006">View arXiv page</a>
+          <a href="data:text/html,alert(1)">View PDF</a>
+        </div>
+        <section>
+          <h2>Models citing this paper 1</h2>
+          <nav>
+            <a href="javascript:alert(1)"><h4>bad/model</h4></a>
+            <a href="/good/model"><h4>good/model</h4></a>
+          </nav>
+        </section>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00006",
+    );
+
+    const paperLinks = preview.blocks.find(
+      (block) =>
+        block.type === "paragraph" &&
+        "segments" in block &&
+        block.segments.some((segment) => segment.text === "Read the full paper: "),
+    );
+    expect(paperLinks).toEqual({
+      type: "paragraph",
+      segments: [
+        { text: "Read the full paper: " },
+        {
+          text: "arXiv abstract",
+          href: "https://arxiv.org/abs/2611.00006",
+        },
+      ],
+    });
+
+    const lists = preview.blocks.filter((block) => block.type === "list");
+    expect(lists[lists.length - 1]).toEqual({
+      type: "list",
+      segments: [
+        { text: "good/model", href: "https://huggingface.co/good/model" },
+      ],
+    });
+  });
+
   it("drops decorative SVG and badge images", () => {
     const preview = extractArticlePreview(
       `<html><head>
