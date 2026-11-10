@@ -65,6 +65,45 @@ function renderErrorBanner(error: ErrorView): string {
   return `<div class="error-banner">${escapeHtml(error.label)}: ${escapeHtml(error.error)}</div>`;
 }
 
+interface ThemeChoice {
+  value: string;
+  label: string;
+  description: string;
+}
+
+const themeChoices: ThemeChoice[] = [
+  { value: "system", label: "Auto", description: "Follows device" },
+  { value: "dark", label: "Ink", description: "Dark" },
+  { value: "light", label: "Paper", description: "Light" },
+  { value: "sepia", label: "Sepia", description: "Warm" },
+  { value: "terminal", label: "Terminal", description: "High contrast" },
+  { value: "glacier", label: "Glacier", description: "Cool light" },
+  { value: "ember", label: "Ember", description: "Warm dark" },
+];
+
+function renderThemeOption(choice: ThemeChoice, checked: boolean): string {
+  const swatchClass = `theme-swatch theme-swatch--${choice.value}`;
+  return `<label class="theme-option">
+              <input type="radio" name="ui-theme" value="${escapeHtml(choice.value)}" data-theme-option${checked ? " checked" : ""} />
+              <span class="theme-option-body">
+                <span class="${swatchClass}" aria-hidden="true">
+                  <span class="theme-swatch-line theme-swatch-line--title"></span>
+                  <span class="theme-swatch-line theme-swatch-line--meta"></span>
+                  <span class="theme-swatch-dot"></span>
+                </span>
+                <span class="theme-option-label">
+                  <span class="theme-option-title">${escapeHtml(choice.label)}</span>
+                  <span class="theme-option-copy">${escapeHtml(choice.description)}</span>
+                </span>
+                <span class="theme-option-check" aria-hidden="true">
+                  <svg viewBox="0 0 24 24">
+                    <path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"/>
+                  </svg>
+                </span>
+              </span>
+            </label>`;
+}
+
 function renderCard(card: CardView): string {
   const briefAttrs = [
     card.briefPrefix
@@ -139,19 +178,20 @@ export function renderIndexPage(data: PageData): string {
     <meta name="twitter:image" content="${escapeHtml(data.socialImageUrl)}" />
     <meta name="twitter:image:alt" content="reader social preview showing branded feed cards for engineering and research sources" />
     <meta name="color-scheme" content="dark light" />
-    <meta name="theme-color" content="#111e2c" />
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#111e2c" />
-    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#e1ebf7" />
+    <meta name="theme-color" content="#0e141b" />
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0e141b" />
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#f7f3ec" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="reader" />
-    <link rel="manifest" href="/site.webmanifest?v=15" />
+    <link rel="manifest" href="/site.webmanifest?v=16" />
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <link rel="stylesheet" href="/static/style.css?v=102" />
-    <script src="/static/app.js?v=87" defer></script>
+    <script src="/static/theme-init.js?v=1"></script>
+    <link rel="stylesheet" href="/static/style.css?v=106" />
+    <script src="/static/app.js?v=90" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
@@ -233,7 +273,7 @@ export function renderIndexPage(data: PageData): string {
     </header>
 
     <dialog class="config-dialog" data-source-config-dialog>
-      <form class="config-dialog-form" method="dialog">
+      <form class="config-dialog-form config-dialog-form--settings" method="dialog">
         <div class="config-dialog-header">
           <h2>Reader settings</h2>
           <button class="icon-button config-close" type="button" data-source-config-close aria-label="Close reader settings" title="Close reader settings">
@@ -251,42 +291,20 @@ export function renderIndexPage(data: PageData): string {
         </div>
         <div class="config-tab-panels">
         <div class="config-tab-panel" id="config-panel-appearance" role="tabpanel" aria-labelledby="config-tab-appearance" data-config-panel="appearance">
-        <div class="config-section-row">
         <section class="config-section" aria-labelledby="config-theme-title">
           <div class="config-section-header">
             <h3 id="config-theme-title" class="config-section-title">Theme</h3>
+            <p class="config-section-copy">Auto follows your device's light or dark setting.</p>
           </div>
-          <div class="config-options config-options--choice-grid">
-            <label class="config-option config-option--choice">
-              <input type="radio" name="ui-theme" value="dark" data-theme-option checked />
-              <span class="config-option-body config-option-body--choice">
-                <span class="config-option-icon" aria-hidden="true">
-                  <svg class="choice-icon" viewBox="0 0 24 24">
-                    <path d="M21 12.8A9 9 0 1 1 11.2 3a7.2 7.2 0 0 0 9.8 9.8Z" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8"/>
-                  </svg>
-                </span>
-                <span class="config-option-title">Dark</span>
-              </span>
-            </label>
-            <label class="config-option config-option--choice">
-              <input type="radio" name="ui-theme" value="light" data-theme-option />
-              <span class="config-option-body config-option-body--choice">
-                <span class="config-option-icon" aria-hidden="true">
-                  <svg class="choice-icon" viewBox="0 0 24 24">
-                    <circle cx="12" cy="12" r="4.2" fill="none" stroke="currentColor" stroke-width="1.8"/>
-                    <path d="M12 2.5v2.2M12 19.3v2.2M21.5 12h-2.2M4.7 12H2.5M18.7 5.3l-1.6 1.6M6.9 17.1l-1.6 1.6M18.7 18.7l-1.6-1.6M6.9 6.9 5.3 5.3" fill="none" stroke="currentColor" stroke-linecap="round" stroke-width="1.8"/>
-                  </svg>
-                </span>
-                <span class="config-option-title">Light</span>
-              </span>
-            </label>
+          <div class="config-options config-options--theme-grid">
+            ${themeChoices.map((choice, index) => renderThemeOption(choice, index === 1)).join("\n            ")}
           </div>
         </section>
         <section class="config-section" aria-labelledby="config-density-title">
           <div class="config-section-header">
             <h3 id="config-density-title" class="config-section-title">UI density</h3>
           </div>
-          <div class="config-options config-options--choice-grid">
+          <div class="config-options config-options--two-column">
             <label class="config-option config-option--choice">
               <input type="radio" name="ui-density" value="current" data-density-option checked />
               <span class="config-option-body config-option-body--choice">
@@ -313,7 +331,6 @@ export function renderIndexPage(data: PageData): string {
             </label>
           </div>
         </section>
-        </div>
         </div>
         <div class="config-tab-panel" id="config-panel-reading" role="tabpanel" aria-labelledby="config-tab-reading" data-config-panel="reading" hidden>
         <section class="config-section" data-article-preview-section aria-labelledby="config-reading-title">

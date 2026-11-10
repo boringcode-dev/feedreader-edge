@@ -125,7 +125,6 @@
   const searchInput = document.querySelector("[data-search-input]");
   const searchSourceInput = document.querySelector("[data-search-source]");
   const refreshButton = document.querySelector("[data-refresh-button]");
-  const themeToggle = document.querySelector("[data-theme-toggle]");
   const installButton = document.querySelector("[data-install-button]");
   const installDialog = document.querySelector("[data-install-dialog]");
   const installDialogCloseButtons = Array.from(
@@ -159,6 +158,15 @@
   const bookmarksEnabledStorageKey = "feedreader.bookmarksEnabled";
   const bookmarksLimit = 500;
   const themeStorageKey = "feedreader.theme";
+  const themePreferences = [
+    "system",
+    "dark",
+    "light",
+    "sepia",
+    "terminal",
+    "glacier",
+    "ember",
+  ];
   const interestsStorageKey = "feedreader.interests";
   const aiPersonalizationStorageKey = "feedreader.aiPersonalizationEnabled";
   const articlePreviewStorageKey = "feedreader.articlePreviewEnabled";
@@ -176,6 +184,7 @@
       : cardsGrid?.dataset.currentSource || "all";
   let selectedSources = loadSelectedSources();
   let uiDensity = loadUIDensity();
+  let themePreference = loadThemePreference();
   let visitedLinks = loadVisitedLinks();
   let bookmarks = loadBookmarks();
   let bookmarksEnabled = loadBookmarksEnabled();
@@ -698,6 +707,25 @@
     }
   }
 
+  function normalizeThemePreference(rawValue) {
+    return themePreferences.includes(rawValue) ? rawValue : "system";
+  }
+
+  function resolveTheme(preference) {
+    if (preference !== "system") return preference;
+    return window.matchMedia?.("(prefers-color-scheme: light)")?.matches
+      ? "light"
+      : "dark";
+  }
+
+  function loadThemePreference() {
+    try {
+      return normalizeThemePreference(localStorage.getItem(themeStorageKey));
+    } catch {
+      return "system";
+    }
+  }
+
   function persistSelectedSources() {
     localStorage.setItem(
       sourceConfigStorageKey,
@@ -760,12 +788,14 @@
 
   function syncThemeOptions() {
     themeOptions.forEach((option) => {
-      option.checked = option.value === root.dataset.theme;
+      option.checked = option.value === themePreference;
     });
   }
 
   function currentThemeSelection() {
-    return themeOptions.find((option) => option.checked)?.value || "dark";
+    return (
+      themeOptions.find((option) => option.checked)?.value || themePreference
+    );
   }
 
   function syncDialogOpenState(isOpen) {
@@ -854,6 +884,8 @@
       const panel = document.getElementById(tab.getAttribute("aria-controls"));
       if (panel) panel.hidden = !selected;
     }
+    const panels = selectedTab.closest(".config-tab-panels");
+    if (panels) panels.scrollTop = 0;
     if (focus) selectedTab.focus();
   }
 
@@ -1884,21 +1916,23 @@
     });
   }
 
-  const applyTheme = (theme) => {
-    root.dataset.theme = theme;
-    localStorage.setItem(themeStorageKey, theme);
-    syncThemeColor();
-    if (themeToggle) {
-      themeToggle.setAttribute(
-        "aria-label",
-        `Switch to ${theme === "dark" ? "light" : "dark"} mode`,
-      );
-      themeToggle.setAttribute(
-        "title",
-        theme === "dark" ? "Switch to light mode" : "Switch to dark mode",
-      );
+  const applyTheme = (preference, { persist = true } = {}) => {
+    themePreference = normalizeThemePreference(preference);
+    root.dataset.theme = resolveTheme(themePreference);
+    if (persist) {
+      localStorage.setItem(themeStorageKey, themePreference);
     }
+    syncThemeOptions();
+    syncThemeColor();
   };
+
+  window
+    .matchMedia?.("(prefers-color-scheme: light)")
+    ?.addEventListener?.("change", () => {
+      if (themePreference === "system") {
+        applyTheme("system", { persist: false });
+      }
+    });
 
   const setRefreshButtonLoading = (active) => {
     if (!refreshButton) return;
@@ -2206,6 +2240,7 @@
     syncThemeOptions();
     syncPersonalizationOptions();
     syncArticlePreviewOption();
+    configDialog?.querySelector(".config-tab-panels")?.scrollTo({ top: 0 });
     if (typeof configDialog?.showModal === "function" && !configDialog.open) {
       configDialog.showModal();
       syncDialogOpenState(true);
@@ -2312,14 +2347,14 @@
       return;
     }
     const normalizedDensity = normalizeUIDensity(nextDensity);
-    const normalizedTheme = nextTheme === "light" ? "light" : "dark";
+    const normalizedTheme = normalizeThemePreference(nextTheme);
     const sourcesChanged =
       normalizedSources.length !== selectedSources.length ||
       normalizedSources.some(
         (value, index) => value !== selectedSources[index],
       );
     const densityChanged = normalizedDensity !== uiDensity;
-    const themeChanged = normalizedTheme !== root.dataset.theme;
+    const themeChanged = normalizedTheme !== themePreference;
     const interestsChanged = normalizedInterests !== interests;
     const personalizationEnabledChanged =
       nextPersonalizationEnabled !== aiPersonalizationEnabled;
@@ -2666,12 +2701,6 @@
     });
   }
 
-  if (themeToggle) {
-    themeToggle.addEventListener("click", () => {
-      applyTheme(root.dataset.theme === "dark" ? "light" : "dark");
-    });
-  }
-
   const installScreenshotVariant = isIPadDevice()
     ? "tablet"
     : isMobileDevice()
@@ -2761,8 +2790,7 @@
     if (document.visibilityState === "visible") checkForUpdate();
   }, updateCheckIntervalMs);
 
-  const savedTheme = localStorage.getItem(themeStorageKey);
-  applyTheme(savedTheme === "light" ? "light" : "dark");
+  applyTheme(themePreference, { persist: false });
   applyUIDensity(uiDensity, { persist: false });
 
   syncConfigOptions();

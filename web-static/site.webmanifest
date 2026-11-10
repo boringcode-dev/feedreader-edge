@@ -11,8 +11,8 @@
   "display_override": ["window-controls-overlay", "standalone"],
   "orientation": "any",
   "launch_handler": { "client_mode": "focus-existing" },
-  "background_color": "#111e2c",
-  "theme_color": "#111e2c",
+  "background_color": "#0e141b",
+  "theme_color": "#0e141b",
   "categories": ["news", "productivity", "developer"],
   "prefer_related_applications": false,
   "icons": [

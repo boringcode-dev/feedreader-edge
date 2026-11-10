@@ -62,7 +62,7 @@ npx lighthouse https://reader.boringcode.dev --view
   - source filters
   - real source icons in filters, dialog rows, and card metadata
   - RSS-based app icon/favicon branding
-  - dark/light mode
+  - seven themes — Auto (follows the device), Ink, Paper, Sepia, Terminal, Glacier, and Ember — with a visual swatch picker
   - inline expanding search
   - reader settings dialog for theme, density, and source visibility
   - iPhone landscape safe-area handling so content stays clear of the notch and Dynamic Island
@@ -335,12 +335,15 @@ Presentation-layer note:
   - `Reading` — Article preview, bookmarks, and AI personalization
   - `Sources` — visible sources
 - tabs support click, arrow keys, Home, and End; validation jumps to `Sources` or `Reading` when that tab needs attention
-- theme and density options are shown in a 2-column layout to reduce dialog height
+- themes are shown as a 2-column swatch grid; density options sit below in a 2-column row
+- the selected theme is applied when the dialog is saved, and the settings form scrolls internally on short screens
 - clicking the dialog backdrop closes it
 - background page scrolling is locked while the dialog is open
 - selected sources are stored in `localStorage` under `feedreader.sources`
 - selected density is stored in `localStorage` under `feedreader.uiDensity`
-- selected theme is stored in `localStorage` under `feedreader.theme`
+- selected theme is stored in `localStorage` under `feedreader.theme`; valid values are `system` (default), `dark`, `light`, `sepia`, `terminal`, `glacier`, and `ember`
+- `system` resolves to the device's current light/dark preference and follows changes live; existing `dark`/`light` preferences keep working
+- an inline pre-paint theme init script applies the stored preference before the stylesheet loads, avoiding a light/dark flash
 - article preview is off by default and stored in `localStorage` under `feedreader.articlePreviewEnabled`
 - bookmark controls are off by default and stored in `localStorage` under `feedreader.bookmarksEnabled`; enabling them shows the bookmark controls and Saved filter, and disabling them hides those controls without deleting saved items
 - source-specific filters render as **real icon-only buttons**

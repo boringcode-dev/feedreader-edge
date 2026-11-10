@@ -31,7 +31,7 @@
 
 ## Client state
 
-Browser-only preferences and reading state live in `localStorage`: theme, density, visible sources, the article-preview and bookmark-visibility settings, visited links, and saved articles. Bookmarks store a display snapshot and never leave the device, so they survive source pruning and offline use without a server API.
+Browser-only preferences and reading state live in `localStorage`: theme preference (including Auto, which follows the device), density, visible sources, the article-preview and bookmark-visibility settings, visited links, and saved articles. Bookmarks store a display snapshot and never leave the device, so they survive source pruning and offline use without a server API.
 
 ## Data model and refresh behavior
 
