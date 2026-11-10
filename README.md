@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" />
 </p>
 
-![feedreader social card](web-static/og-image.png)
+![feedreader social card](web-static/og-image.png?v=3)
 
 ---
 
