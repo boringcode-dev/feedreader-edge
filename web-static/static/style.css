@@ -2297,19 +2297,23 @@ body.is-dialog-open {
 }
 
 @media (max-width: 560px) and (orientation: portrait) and (display-mode: standalone) {
-  .page-header {
-    padding-top: calc(max(0.85rem, env(safe-area-inset-top)) + 0.75rem);
-  }
-
-  .preview-panel-header {
-    padding-top: calc(
-      max(var(--preview-panel-padding), env(safe-area-inset-top)) + 0.75rem
+  :root {
+    /* Keeps the top row clear of the iOS status-bar blur. */
+    --standalone-header-top: calc(
+      max(0.85rem, env(safe-area-inset-top)) + 0.75rem
     );
   }
 
-  /* Compact density sets its own page-header padding with higher specificity. */
+  .page-header,
   :root[data-ui-density='compact'] .page-header {
-    padding-top: calc(max(0.85rem, env(safe-area-inset-top)) + 0.75rem);
+    padding-top: var(--standalone-header-top);
+  }
+
+  /* The brand mark's taller line box sits a few pixels below the page-header
+     padding. Match that offset so the preview source icon clears the same
+     status-bar blur instead of sitting under it. */
+  .preview-panel-header {
+    padding-top: calc(var(--standalone-header-top) + 0.25rem);
   }
 }
 
