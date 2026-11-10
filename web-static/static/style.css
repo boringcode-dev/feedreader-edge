@@ -27,7 +27,7 @@
     ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
   --control-height: 2.2rem;
   --preview-panel-padding: 0.75rem;
-  --preview-reading-width: 80ch;
+  --preview-reading-width: 44rem;
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   font-family: var(--font-ui);

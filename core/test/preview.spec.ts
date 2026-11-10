@@ -395,6 +395,25 @@ describe("extractArticlePreview", () => {
       "Abstract",
       "This paper explains an important result clearly. ".repeat(10).trim(),
     ]);
+
+    const manyAuthors = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - Many Authors" />
+      </head><body><main>
+        <div>
+          <span class="author">Alice Smith ,</span>
+          <span class="author">Bob Jones ,</span>
+          <span class="author">Carol Lee ,</span>
+          <span class="author">Dan Park</span>
+        </div>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+        </div>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00003",
+    );
+    expect(manyAuthors.byline).toBe("Alice Smith, Bob Jones, Carol Lee, et al.");
   });
 
   it("drops decorative SVG and badge images", () => {

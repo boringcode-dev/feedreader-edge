@@ -759,13 +759,13 @@ function extractHuggingFacePaperByline(document: Document): string {
   const names: string[] = [];
   for (const node of nodes.slice(0, stop)) {
     if (!node.classList.contains("author")) continue;
-    const name = normalizeText(node.textContent).replace(/,\s*$/, "");
+    const name = normalizeText(node.textContent).replace(/\s*,\s*$/, "");
     if (name !== "" && !names.includes(name)) names.push(name);
   }
   if (names.length === 0) return "";
-  return names.length <= 5
+  return names.length <= 3
     ? names.join(", ")
-    : `${names.slice(0, 5).join(", ")}, et al.`;
+    : `${names.slice(0, 3).join(", ")}, et al.`;
 }
 
 function pickHuggingFacePaperRoot(document: Document): Element | null {
