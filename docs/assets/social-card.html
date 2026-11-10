@@ -6,24 +6,24 @@
     <title>reader social card</title>
     <style>
       :root {
-        --bg-1: #0b1220;
-        --bg-2: #111e2c;
-        --panel: rgba(18, 31, 46, 0.92);
-        --panel-2: rgba(24, 41, 61, 0.96);
-        --line: rgba(148, 163, 184, 0.18);
-        --text: #f8fafc;
-        --muted: #b7c3d1;
-        --soft: #8ea2b7;
-        --accent: #f97316;
-        --accent-2: #fb923c;
-        --glow: rgba(249, 115, 22, 0.28);
-        --chip: rgba(255, 255, 255, 0.06);
-        --green: #84cc16;
-        --yellow: #facc15;
-        --radius-xl: 28px;
-        --radius-lg: 20px;
-        --radius-md: 14px;
-        --shadow: 0 28px 80px rgba(0, 0, 0, 0.35);
+        --bg: #0e141b;
+        --surface: #121b24;
+        --surface-raised: #17212c;
+        --border: #293746;
+        --text: #e9eef4;
+        --muted: #93a3b4;
+        --soft: #6f8092;
+        --accent: #fb923c;
+        --accent-strong: #f97316;
+        --accent-soft: rgba(251, 146, 60, 0.13);
+        --font-ui:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+          'Segoe UI', sans-serif;
+        --font-display:
+          'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua',
+          Georgia, ui-serif, serif;
+        --font-mono:
+          ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
       }
       * {
         box-sizing: border-box;
@@ -34,34 +34,29 @@
         width: 1200px;
         height: 630px;
         overflow: hidden;
-        font-family:
-          Inter,
-          system-ui,
-          -apple-system,
-          BlinkMacSystemFont,
-          'Segoe UI',
-          sans-serif;
+        position: relative;
+        font-family: var(--font-ui);
         color: var(--text);
         background:
           radial-gradient(
-            circle at top left,
-            rgba(249, 115, 22, 0.2),
-            transparent 28%
+            760px 420px at 8% -8%,
+            rgba(251, 146, 60, 0.18),
+            transparent 62%
           ),
           radial-gradient(
-            circle at bottom right,
-            rgba(56, 189, 248, 0.1),
-            transparent 25%
+            620px 460px at 100% 108%,
+            rgba(251, 146, 60, 0.07),
+            transparent 60%
           ),
-          linear-gradient(135deg, var(--bg-1), var(--bg-2));
-        position: relative;
+          var(--bg);
+        -webkit-font-smoothing: antialiased;
       }
       body::before {
         content: '';
         position: absolute;
-        inset: 28px;
-        border-radius: 32px;
-        border: 1px solid rgba(255, 255, 255, 0.08);
+        inset: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.07);
+        border-radius: 26px;
         pointer-events: none;
       }
       .grid {
@@ -69,267 +64,367 @@
         width: 1200px;
         height: 630px;
         display: grid;
-        grid-template-columns: 1.18fr 0.82fr;
-        gap: 26px;
-        padding: 46px;
+        grid-template-columns: 1.1fr 0.9fr;
+        gap: 48px;
+        padding: 54px 60px 46px;
       }
       .left {
         display: flex;
         flex-direction: column;
+        min-width: 0;
       }
       .eyebrow {
         display: inline-flex;
         align-items: center;
         gap: 10px;
         width: fit-content;
-        padding: 8px 14px;
-        border-radius: 999px;
-        background: rgba(249, 115, 22, 0.12);
-        border: 1px solid rgba(249, 115, 22, 0.28);
-        color: #ffd7c2;
-        font-size: 15px;
-        font-weight: 700;
-        letter-spacing: 0.08em;
+        font-family: var(--font-mono);
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 0.13em;
         text-transform: uppercase;
-        margin-bottom: 24px;
+        color: var(--accent);
+      }
+      .eyebrow-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 14px rgba(251, 146, 60, 0.55);
       }
       .brand {
         display: flex;
         align-items: center;
-        gap: 18px;
-        margin-bottom: 22px;
+        gap: 16px;
+        margin-top: 26px;
       }
       .brand img {
-        width: 72px;
-        height: 72px;
-        border-radius: 18px;
-        box-shadow: 0 18px 40px var(--glow);
+        width: 64px;
+        height: 64px;
+        border-radius: 15px;
+        box-shadow: 0 18px 42px rgba(249, 115, 22, 0.22);
       }
       .brand-name {
-        font-size: 66px;
-        line-height: 0.94;
-        font-weight: 800;
+        font-family: var(--font-display);
+        font-size: 74px;
+        line-height: 0.95;
+        font-weight: 600;
         letter-spacing: -0.045em;
       }
+      .brand-dot {
+        color: var(--accent);
+      }
+      .headline {
+        margin-top: 30px;
+        max-width: 560px;
+        font-family: var(--font-display);
+        font-size: 44px;
+        line-height: 1.06;
+        font-weight: 600;
+        letter-spacing: -0.035em;
+      }
       .subtitle {
-        max-width: 620px;
+        margin-top: 18px;
+        max-width: 520px;
         color: var(--muted);
-        font-size: 31px;
-        line-height: 1.18;
-        letter-spacing: -0.03em;
-        margin-bottom: 28px;
+        font-size: 20px;
+        line-height: 1.4;
+        letter-spacing: -0.01em;
       }
       .sources {
         display: flex;
         flex-wrap: wrap;
-        gap: 12px;
-        margin-bottom: 28px;
+        gap: 10px;
+        margin-top: 28px;
       }
       .chip {
         display: inline-flex;
         align-items: center;
-        gap: 10px;
-        padding: 12px 16px;
+        gap: 9px;
+        padding: 10px 14px;
+        border: 1px solid var(--border);
         border-radius: 999px;
-        background: var(--chip);
-        border: 1px solid var(--line);
+        background: rgba(18, 27, 36, 0.7);
         color: var(--text);
-        font-size: 18px;
+        font-size: 15px;
         font-weight: 600;
-        backdrop-filter: blur(10px);
       }
       .chip img {
-        width: 20px;
-        height: 20px;
+        width: 18px;
+        height: 18px;
         object-fit: contain;
       }
-      .url {
+      .chip img[src$='github.svg'],
+      .row-meta img[src$='github.svg'] {
+        filter: invert(1) brightness(1.15);
+      }
+      .left-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
         margin-top: auto;
+      }
+      .url {
         display: inline-flex;
         align-items: center;
         gap: 9px;
         width: fit-content;
-        max-width: 100%;
-        padding: 11px 15px;
-        border-radius: 16px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #e5edf7;
-        font-size: 19px;
-        font-weight: 600;
-        letter-spacing: -0.02em;
+        font-family: var(--font-mono);
+        font-size: 15px;
+        letter-spacing: -0.01em;
+        color: var(--text);
       }
       .url-dot {
-        width: 10px;
-        height: 10px;
+        width: 8px;
+        height: 8px;
         border-radius: 50%;
-        background: var(--green);
-        box-shadow: 0 0 18px rgba(132, 204, 22, 0.5);
+        background: var(--accent);
+        box-shadow: 0 0 14px rgba(251, 146, 60, 0.5);
       }
       .right {
         display: flex;
-        flex-direction: column;
-        gap: 14px;
-        justify-content: center;
+        min-width: 0;
       }
-      .card {
+      .feed {
+        display: flex;
+        flex-direction: column;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 20px;
         background: linear-gradient(
           180deg,
-          rgba(22, 38, 56, 0.98),
-          rgba(15, 28, 42, 0.96)
+          rgba(23, 33, 44, 0.92),
+          rgba(18, 27, 36, 0.96)
         );
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        border-radius: var(--radius-lg);
-        padding: 18px 20px;
-        box-shadow: var(--shadow);
+        box-shadow: 0 28px 70px rgba(0, 0, 0, 0.35);
       }
-      .card-top {
+      .feed-head {
         display: flex;
-        align-items: flex-start;
+        align-items: center;
         justify-content: space-between;
-        gap: 14px;
-        margin-bottom: 10px;
+        flex: 0 0 auto;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
       }
-      .source {
+      .feed-label {
         display: inline-flex;
         align-items: center;
         gap: 8px;
-        min-width: 0;
-        color: var(--muted);
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.03em;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
         text-transform: uppercase;
+        color: var(--accent);
       }
-      .source img {
-        width: 16px;
-        height: 16px;
-        object-fit: contain;
+      .feed-label-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: var(--accent);
       }
-      .stat {
-        color: var(--yellow);
-        font-size: 12px;
-        font-weight: 700;
-        flex-shrink: 0;
-      }
-      .card h3 {
-        font-size: 25px;
-        line-height: 1.08;
-        letter-spacing: -0.04em;
-        margin-bottom: 7px;
-      }
-      .card p {
-        color: var(--soft);
-        font-size: 15px;
-        line-height: 1.33;
-      }
-      .footer-note {
-        position: absolute;
-        right: 52px;
-        bottom: 42px;
-        color: rgba(255, 255, 255, 0.38);
-        font-size: 14px;
+      .feed-meta {
+        font-family: var(--font-mono);
+        font-size: 10px;
         letter-spacing: 0.08em;
         text-transform: uppercase;
+        color: var(--soft);
+      }
+      .row {
+        position: relative;
+        display: grid;
+        grid-template-columns: 32px minmax(0, 1fr);
+        gap: 12px;
+        flex: 1 1 0;
+        align-content: start;
+        padding: 18px 20px 19px;
+        border-bottom: 1px solid var(--border);
+      }
+      .row:last-of-type {
+        border-bottom: 0;
+      }
+      .row.is-active {
+        background: linear-gradient(90deg, var(--accent-soft), transparent 78%);
+        box-shadow: inset 2px 0 0 var(--accent);
+      }
+      .index {
+        padding-top: 4px;
+        font-family: var(--font-mono);
+        font-size: 11px;
+        font-weight: 500;
+        color: var(--accent);
+      }
+      .row-title {
+        font-family: var(--font-display);
+        font-size: 23px;
+        line-height: 1.16;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+      }
+      .row-brief {
+        margin-top: 7px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.38;
+      }
+      .row-meta {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        margin-top: 10px;
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        color: var(--soft);
+      }
+      .row-meta img {
+        width: 14px;
+        height: 14px;
+        object-fit: contain;
+      }
+      .row-meta .source {
+        color: var(--muted);
+      }
+      .row-meta .sep {
+        color: var(--border);
+      }
+      .feed-foot {
+        flex: 0 0 auto;
+        padding: 14px 20px;
+        border-top: 1px solid var(--border);
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        text-align: center;
+        color: var(--muted);
+      }
+      .footer-note {
+        font-family: var(--font-mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        text-align: right;
+        color: var(--soft);
       }
     </style>
   </head>
   <body>
     <div class="grid">
       <section class="left">
-        <div class="eyebrow">Engineering + Research Signals</div>
-        <div class="brand">
-          <img
-            src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCIgcm9sZT0iaW1nIiBhcmlhLWxhYmVsPSJyZWFkZXIiPgogIDxyZWN0IHdpZHRoPSI2NCIgaGVpZ2h0PSI2NCIgcng9IjE0IiBmaWxsPSIjZjk3MzE2Ii8+CiAgPGNpcmNsZSBjeD0iMTgiIGN5PSI0NiIgcj0iNSIgZmlsbD0iI2ZmZmZmZiIvPgogIDxwYXRoIGQ9Ik0xNCAyOGEyMiAyMiAwIDAgMSAyMiAyMiIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNyIvPgogIDxwYXRoIGQ9Ik0xNCAxNmEzNCAzNCAwIDAgMSAzNCAzNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS13aWR0aD0iNyIvPgo8L3N2Zz4K"
-            alt="reader"
-          />
-          <div class="brand-name">reader</div>
+        <div class="eyebrow">
+          <span class="eyebrow-dot"></span>Engineering + research signals
         </div>
+        <div class="brand">
+          <img src="../../web-static/favicon.svg" alt="reader" />
+          <div class="brand-name">reader<span class="brand-dot">.</span></div>
+        </div>
+        <div class="headline">Read the signal,<br />not the noise.</div>
         <div class="subtitle">
-          Tiny feed reader for Hacker News, GitHub Trending, and Hugging Face
-          Trending Papers.
+          Hacker News, GitHub Trending, and Hugging Face papers in one fast,
+          quiet reader.
         </div>
         <div class="sources">
           <div class="chip">
             <img
-              src="data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjE4IiB2aWV3Qm94PSI0IDQgMTg4IDE4OCIgd2lkdGg9IjE4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Im00IDRoMTg4djE4OGgtMTg4eiIgZmlsbD0iI2Y2MCIvPjxwYXRoIGQ9Im03My4yNTIxNzU2IDQ1LjAxIDIyLjc0NzgyNDQgNDcuMzkxMzAwODMgMjIuNzQ3ODI0NC00Ny4zOTEzMDA4M2gxOS41NjU2OTYzMWwtMzQuMzIzNTIwNzEgNjQuNDg2NjE0Njh2NDEuNDkzMzg1MzJoLTE1Ljk4di00MS40OTMzODUzMmwtMzQuMzIzNTIwNzEtNjQuNDg2NjE0Njh6IiBmaWxsPSIjZmZmIi8+PC9zdmc+"
+              src="../../web-static/static/source-icons/hackernews.svg"
               alt=""
-            />
-            Hacker News
+            />Hacker News
           </div>
           <div class="chip">
             <img
-              src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xNiAwQzcuMTYgMCAwIDcuMTYgMCAxNkMwIDIzLjA4IDQuNTggMjkuMDYgMTAuOTQgMzEuMThDMTEuNzQgMzEuMzIgMTIuMDQgMzAuODQgMTIuMDQgMzAuNDJDMTIuMDQgMzAuMDQgMTIuMDIgMjguNzggMTIuMDIgMjcuNDRDOCAyOC4xOCA2Ljk2IDI2LjQ2IDYuNjQgMjUuNTZDNi40NiAyNS4xIDUuNjggMjMuNjggNSAyMy4zQzQuNDQgMjMgMy42NCAyMi4yNiA0Ljk4IDIyLjI0QzYuMjQgMjIuMjIgNy4xNCAyMy40IDcuNDQgMjMuODhDOC44OCAyNi4zIDExLjE4IDI1LjYyIDEyLjEgMjUuMkMxMi4yNCAyNC4xNiAxMi42NiAyMy40NiAxMy4xMiAyMy4wNkM5LjU2IDIyLjY2IDUuODQgMjEuMjggNS44NCAxNS4xNkM1Ljg0IDEzLjQyIDYuNDYgMTEuOTggNy40OCAxMC44NkM3LjMyIDEwLjQ2IDYuNzYgOC44MiA3LjY0IDYuNjJDNy42NCA2LjYyIDguOTggNi4yIDEyLjA0IDguMjZDMTMuMzIgNy45IDE0LjY4IDcuNzIgMTYuMDQgNy43MkMxNy40IDcuNzIgMTguNzYgNy45IDIwLjA0IDguMjZDMjMuMSA2LjE4IDI0LjQ0IDYuNjIgMjQuNDQgNi42MkMyNS4zMiA4LjgyIDI0Ljc2IDEwLjQ2IDI0LjYgMTAuODZDMjUuNjIgMTEuOTggMjYuMjQgMTMuNCAyNi4yNCAxNS4xNkMyNi4yNCAyMS4zIDIyLjUgMjIuNjYgMTguOTQgMjMuMDZDMTkuNTIgMjMuNTYgMjAuMDIgMjQuNTIgMjAuMDIgMjYuMDJDMjAuMDIgMjguMTYgMjAgMjkuODggMjAgMzAuNDJDMjAgMzAuODQgMjAuMyAzMS4zNCAyMS4xIDMxLjE4QzI3LjQyIDI5LjA2IDMyIDIzLjA2IDMyIDE2QzMyIDcuMTYgMjQuODQgMCAxNiAwVjBaIiBmaWxsPSIjRkZGRkZGIi8+Cjwvc3ZnPgo="
+              src="../../web-static/static/source-icons/github.svg"
               alt=""
-            />
-            GitHub Trending
+            />GitHub Trending
           </div>
           <div class="chip">
             <img
-              src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NSIgaGVpZ2h0PSI4OCIgZmlsbD0ibm9uZSI+Cgk8cGF0aCBmaWxsPSIjRkZEMjFFIiBkPSJNNDcuMjEgNzYuNWEzNC43NSAzNC43NSAwIDEgMCAwLTY5LjUgMzQuNzUgMzQuNzUgMCAwIDAgMCA2OS41WiIgLz4KCTxwYXRoCgkJZmlsbD0iI0ZGOUQwQiIKCQlkPSJNODEuOTYgNDEuNzVhMzQuNzUgMzQuNzUgMCAxIDAtNjkuNSAwIDM0Ljc1IDM0Ljc1IDAgMCAwIDY5LjUgMFptLTczLjUgMGEzOC43NSAzOC43NSAwIDEgMSA3Ny41IDAgMzguNzUgMzguNzUgMCAwIDEtNzcuNSAwWiIKCS8+Cgk8cGF0aAoJCWZpbGw9IiMzQTNCNDUiCgkJZD0iTTU4LjUgMzIuM2MxLjI4LjQ0IDEuNzggMy4wNiAzLjA3IDIuMzhhNSA1IDAgMSAwLTYuNzYtMi4wN2MuNjEgMS4xNSAyLjU1LS43MiAzLjctLjMyWk0zNC45NSAzMi4zYy0xLjI4LjQ0LTEuNzkgMy4wNi0zLjA3IDIuMzhhNSA1IDAgMSAxIDYuNzYtMi4wN2MtLjYxIDEuMTUtMi41Ni0uNzItMy43LS4zMloiCgkvPgoJPHBhdGgKCQlmaWxsPSIjRkYzMjNEIgoJCWQ9Ik00Ni45NiA1Ni4yOWM5LjgzIDAgMTMtOC43NiAxMy0xMy4yNiAwLTIuMzQtMS41Ny0xLjYtNC4wOS0uMzYtMi4zMyAxLjE1LTUuNDYgMi43NC04LjkgMi43NC03LjE5IDAtMTMtNi44OC0xMy0yLjM4czMuMTYgMTMuMjYgMTMgMTMuMjZaIgoJLz4KCTxwYXRoCgkJZmlsbD0iIzNBM0I0NSIKCQlmaWxsLXJ1bGU9ImV2ZW5vZGQiCgkJZD0iTTM5LjQzIDU0YTguNyA4LjcgMCAwIDEgNS4zLTQuNDljLjQtLjEyLjgxLjU3IDEuMjQgMS4yOC40LjY4LjgyIDEuMzcgMS4yNCAxLjM3LjQ1IDAgLjktLjY4IDEuMzMtMS4zNS40NS0uNy44OS0xLjM4IDEuMzItMS4yNWE4LjYxIDguNjEgMCAwIDEgNSA0LjE3YzMuNzMtMi45NCA1LjEtNy43NCA1LjEtMTAuNyAwLTIuMzQtMS41Ny0xLjYtNC4wOS0uMzZsLS4xNC4wN2MtMi4zMSAxLjE1LTUuMzkgMi42Ny04Ljc3IDIuNjdzLTYuNDUtMS41Mi04Ljc3LTIuNjdjLTIuNi0xLjI5LTQuMjMtMi4xLTQuMjMuMjkgMCAzLjA1IDEuNDYgOC4wNiA1LjQ3IDEwLjk3WiIKCQljbGlwLXJ1bGU9ImV2ZW5vZGQiCgkvPgoJPHBhdGgKCQlmaWxsPSIjRkY5RDBCIgoJCWQ9Ik03MC43MSAzN2EzLjI1IDMuMjUgMCAxIDAgMC02LjUgMy4yNSAzLjI1IDAgMCAwIDAgNi41Wk0yNC4yMSAzN2EzLjI1IDMuMjUgMCAxIDAgMC02LjUgMy4yNSAzLjI1IDAgMCAwIDAgNi41Wk0xNy41MiA0OGMtMS42MiAwLTMuMDYuNjYtNC4wNyAxLjg3YTUuOTcgNS45NyAwIDAgMC0xLjMzIDMuNzYgNy4xIDcuMSAwIDAgMC0xLjk0LS4zYy0xLjU1IDAtMi45NS41OS0zLjk0IDEuNjZhNS44IDUuOCAwIDAgMC0uOCA3IDUuMyA1LjMgMCAwIDAtMS43OSAyLjgyYy0uMjQuOS0uNDggMi44LjggNC43NGE1LjIyIDUuMjIgMCAwIDAtLjM3IDUuMDJjMS4wMiAyLjMyIDMuNTcgNC4xNCA4LjUyIDYuMSAzLjA3IDEuMjIgNS44OSAyIDUuOTEgMi4wMWE0NC4zMyA0NC4zMyAwIDAgMCAxMC45MyAxLjZjNS44NiAwIDEwLjA1LTEuOCAxMi40Ni01LjM0IDMuODgtNS42OSAzLjMzLTEwLjktMS43LTE1LjkyLTIuNzctMi43OC00LjYyLTYuODctNS03Ljc3LS43OC0yLjY2LTIuODQtNS42Mi02LjI1LTUuNjJhNS43IDUuNyAwIDAgMC00LjYgMi40NmMtMS0xLjI2LTEuOTgtMi4yNS0yLjg2LTIuODJBNy40IDcuNCAwIDAgMCAxNy41MiA0OFptMCA0Yy41MSAwIDEuMTQuMjIgMS44Mi42NSAyLjE0IDEuMzYgNi4yNSA4LjQzIDcuNzYgMTEuMTguNS45MiAxLjM3IDEuMzEgMi4xNCAxLjMxIDEuNTUgMCAyLjc1LTEuNTMuMTUtMy40OC0zLjkyLTIuOTMtMi41NS03LjcyLS42OC04LjAxLjA4LS4wMi4xNy0uMDIuMjQtLjAyIDEuNyAwIDIuNDUgMi45MyAyLjQ1IDIuOTNzMi4yIDUuNTIgNS45OCA5LjNjMy43NyAzLjc3IDMuOTcgNi44IDEuMjIgMTAuODMtMS44OCAyLjc1LTUuNDcgMy41OC05LjE2IDMuNTgtMy44MSAwLTcuNzMtLjktOS45Mi0xLjQ2LS4xMS0uMDMtMTMuNDUtMy44LTExLjc2LTcgLjI4LS41NC43NS0uNzYgMS4zNC0uNzYgMi4zOCAwIDYuNyAzLjU0IDguNTcgMy41NC40MSAwIC43LS4xNy44My0uNi43OS0yLjg1LTEyLjA2LTQuMDUtMTAuOTgtOC4xNy4yLS43My43MS0xLjAyIDEuNDQtMS4wMiAzLjE0IDAgMTAuMiA1LjUzIDExLjY4IDUuNTMuMTEgMCAuMi0uMDMuMjQtLjEuNzQtMS4yLjMzLTIuMDQtNC45LTUuMi01LjIxLTMuMTYtOC44OC01LjA2LTYuOC03LjMzLjI0LS4yNi41OC0uMzggMS0uMzggMy4xNyAwIDEwLjY2IDYuODIgMTAuNjYgNi44MnMyLjAyIDIuMSAzLjI1IDIuMWMuMjggMCAuNTItLjEuNjgtLjM4Ljg2LTEuNDYtOC4wNi04LjIyLTguNTYtMTEuMDEtLjM0LTEuOS4yNC0yLjg1IDEuMzEtMi44NVoiCgkvPgoJPHBhdGgKCQlmaWxsPSIjRkZEMjFFIgoJCWQ9Ik0zOC42IDc2LjY5YzIuNzUtNC4wNCAyLjU1LTcuMDctMS4yMi0xMC44NC0zLjc4LTMuNzctNS45OC05LjMtNS45OC05LjNzLS44Mi0zLjItMi42OS0yLjljLTEuODcuMy0zLjI0IDUuMDguNjggOC4wMSAzLjkxIDIuOTMtLjc4IDQuOTItMi4yOSAyLjE3LTEuNS0yLjc1LTUuNjItOS44Mi03Ljc2LTExLjE4LTIuMTMtMS4zNS0zLjYzLS42LTMuMTMgMi4yLjUgMi43OSA5LjQzIDkuNTUgOC41NiAxMS0uODcgMS40Ny0zLjkzLTEuNzEtMy45My0xLjcxcy05LjU3LTguNzEtMTEuNjYtNi40NGMtMi4wOCAyLjI3IDEuNTkgNC4xNyA2LjggNy4zMyA1LjIzIDMuMTYgNS42NCA0IDQuOSA1LjItLjc1IDEuMi0xMi4yOC04LjUzLTEzLjM2LTQuNC0xLjA4IDQuMTEgMTEuNzcgNS4zIDEwLjk4IDguMTUtLjggMi44NS05LjA2LTUuMzgtMTAuNzQtMi4xOC0xLjcgMy4yMSAxMS42NSA2Ljk4IDExLjc2IDcuMDEgNC4zIDEuMTIgMTUuMjUgMy40OSAxOS4wOC0yLjEyWiIKCS8+Cgk8cGF0aAoJCWZpbGw9IiNGRjlEMEIiCgkJZD0iTTc3LjQgNDhjMS42MiAwIDMuMDcuNjYgNC4wNyAxLjg3YTUuOTcgNS45NyAwIDAgMSAxLjMzIDMuNzYgNy4xIDcuMSAwIDAgMSAxLjk1LS4zYzEuNTUgMCAyLjk1LjU5IDMuOTQgMS42NmE1LjggNS44IDAgMCAxIC44IDcgNS4zIDUuMyAwIDAgMSAxLjc4IDIuODJjLjI0LjkuNDggMi44LS44IDQuNzRhNS4yMiA1LjIyIDAgMCAxIC4zNyA1LjAyYy0xLjAyIDIuMzItMy41NyA0LjE0LTguNTEgNi4xLTMuMDggMS4yMi01LjkgMi01LjkyIDIuMDFhNDQuMzMgNDQuMzMgMCAwIDEtMTAuOTMgMS42Yy01Ljg2IDAtMTAuMDUtMS44LTEyLjQ2LTUuMzQtMy44OC01LjY5LTMuMzMtMTAuOSAxLjctMTUuOTIgMi43OC0yLjc4IDQuNjMtNi44NyA1LjAxLTcuNzcuNzgtMi42NiAyLjgzLTUuNjIgNi4yNC01LjYyYTUuNyA1LjcgMCAwIDEgNC42IDIuNDZjMS0xLjI2IDEuOTgtMi4yNSAyLjg3LTIuODJBNy40IDcuNCAwIDAgMSA3Ny40IDQ4Wm0wIDRjLS41MSAwLTEuMTMuMjItMS44Mi42NS0yLjEzIDEuMzYtNi4yNSA4LjQzLTcuNzYgMTEuMThhMi40MyAyLjQzIDAgMCAxLTIuMTQgMS4zMWMtMS41NCAwLTIuNzUtMS41My0uMTQtMy40OCAzLjkxLTIuOTMgMi41NC03LjcyLjY3LTguMDFhMS41NCAxLjU0IDAgMCAwLS4yNC0uMDJjLTEuNyAwLTIuNDUgMi45My0yLjQ1IDIuOTNzLTIuMiA1LjUyLTUuOTcgOS4zYy0zLjc4IDMuNzctMy45OCA2LjgtMS4yMiAxMC44MyAxLjg3IDIuNzUgNS40NyAzLjU4IDkuMTUgMy41OCAzLjgyIDAgNy43My0uOSA5LjkzLTEuNDYuMS0uMDMgMTMuNDUtMy44IDExLjc2LTctLjI5LS41NC0uNzUtLjc2LTEuMzQtLjc2LTIuMzggMC02LjcxIDMuNTQtOC41NyAzLjU0LS40MiAwLS43MS0uMTctLjgzLS42LS44LTIuODUgMTIuMDUtNC4wNSAxMC45Ny04LjE3LS4xOS0uNzMtLjctMS4wMi0xLjQ0LTEuMDItMy4xNCAwLTEwLjIgNS41My0xMS42OCA1LjUzLS4xIDAtLjE5LS4wMy0uMjMtLjEtLjc0LTEuMi0uMzQtMi4wNCA0Ljg4LTUuMiA1LjIzLTMuMTYgOC45LTUuMDYgNi44LTcuMzMtLjIzLS4yNi0uNTctLjM4LS45OC0uMzgtMy4xOCAwLTEwLjY3IDYuODItMTAuNjcgNi44MnMtMi4wMiAyLjEtMy4yNCAyLjFhLjc0Ljc0IDAgMCAxLS42OC0uMzhjLS44Ny0xLjQ2IDguMDUtOC4yMiA4LjU1LTExLjAxLjM0LTEuOS0uMjQtMi44NS0xLjMxLTIuODVaIgoJLz4KCTxwYXRoCgkJZmlsbD0iI0ZGRDIxRSIKCQlkPSJNNTYuMzMgNzYuNjljLTIuNzUtNC4wNC0yLjU2LTcuMDcgMS4yMi0xMC44NCAzLjc3LTMuNzcgNS45Ny05LjMgNS45Ny05LjNzLjgyLTMuMiAyLjctMi45YzEuODYuMyAzLjIzIDUuMDgtLjY4IDguMDEtMy45MiAyLjkzLjc4IDQuOTIgMi4yOCAyLjE3IDEuNTEtMi43NSA1LjYzLTkuODIgNy43Ni0xMS4xOCAyLjEzLTEuMzUgMy42NC0uNiAzLjEzIDIuMi0uNSAyLjc5LTkuNDIgOS41NS04LjU1IDExIC44NiAxLjQ3IDMuOTItMS43MSAzLjkyLTEuNzFzOS41OC04LjcxIDExLjY2LTYuNDRjMi4wOCAyLjI3LTEuNTggNC4xNy02LjggNy4zMy01LjIzIDMuMTYtNS42MyA0LTQuOSA1LjIuNzUgMS4yIDEyLjI4LTguNTMgMTMuMzYtNC40IDEuMDggNC4xMS0xMS43NiA1LjMtMTAuOTcgOC4xNS44IDIuODUgOS4wNS01LjM4IDEwLjc0LTIuMTggMS42OSAzLjIxLTExLjY1IDYuOTgtMTEuNzYgNy4wMS00LjMxIDEuMTItMTUuMjYgMy40OS0xOS4wOC0yLjEyWiIKCS8+Cjwvc3ZnPgo="
+              src="../../web-static/static/source-icons/huggingface.svg"
               alt=""
-            />
-            Hugging Face Trending Papers
+            />Hugging Face Papers
           </div>
         </div>
-        <div class="url">
-          <span class="url-dot"></span> reader.boringcode.dev
+        <div class="left-footer">
+          <div class="url">
+            <span class="url-dot"></span>reader.boringcode.dev
+          </div>
+          <div class="footer-note">Cloudflare Workers · D1 · PWA</div>
         </div>
       </section>
       <section class="right">
-        <article class="card">
-          <div class="card-top">
-            <div class="source">
-              <img
-                src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik0xNiAwQzcuMTYgMCAwIDcuMTYgMCAxNkMwIDIzLjA4IDQuNTggMjkuMDYgMTAuOTQgMzEuMThDMTEuNzQgMzEuMzIgMTIuMDQgMzAuODQgMTIuMDQgMzAuNDJDMTIuMDQgMzAuMDQgMTIuMDIgMjguNzggMTIuMDIgMjcuNDRDOCAyOC4xOCA2Ljk2IDI2LjQ2IDYuNjQgMjUuNTZDNi40NiAyNS4xIDUuNjggMjMuNjggNSAyMy4zQzQuNDQgMjMgMy42NCAyMi4yNiA0Ljk4IDIyLjI0QzYuMjQgMjIuMjIgNy4xNCAyMy40IDcuNDQgMjMuODhDOC44OCAyNi4zIDExLjE4IDI1LjYyIDEyLjEgMjUuMkMxMi4yNCAyNC4xNiAxMi42NiAyMy40NiAxMy4xMiAyMy4wNkM5LjU2IDIyLjY2IDUuODQgMjEuMjggNS44NCAxNS4xNkM1Ljg0IDEzLjQyIDYuNDYgMTEuOTggNy40OCAxMC44NkM3LjMyIDEwLjQ2IDYuNzYgOC44MiA3LjY0IDYuNjJDNy42NCA2LjYyIDguOTggNi4yIDEyLjA0IDguMjZDMTMuMzIgNy45IDE0LjY4IDcuNzIgMTYuMDQgNy43MkMxNy40IDcuNzIgMTguNzYgNy45IDIwLjA0IDguMjZDMjMuMSA2LjE4IDI0LjQ0IDYuNjIgMjQuNDQgNi42MkMyNS4zMiA4LjgyIDI0Ljc2IDEwLjQ2IDI0LjYgMTAuODZDMjUuNjIgMTEuOTggMjYuMjQgMTMuNCAyNi4yNCAxNS4xNkMyNi4yNCAyMS4zIDIyLjUgMjIuNjYgMTguOTQgMjMuMDZDMTkuNTIgMjMuNTYgMjAuMDIgMjQuNTIgMjAuMDIgMjYuMDJDMjAuMDIgMjguMTYgMjAgMjkuODggMjAgMzAuNDJDMjAgMzAuODQgMjAuMyAzMS4zNCAyMS4xIDMxLjE4QzI3LjQyIDI5LjA2IDMyIDIzLjA2IDMyIDE2QzMyIDcuMTYgMjQuODQgMCAxNiAwVjBaIiBmaWxsPSIjRkZGRkZGIi8+Cjwvc3ZnPgo="
-                alt=""
-              />
-              GitHub Trending
+        <div class="feed">
+          <div class="feed-head">
+            <div class="feed-label">
+              <span class="feed-label-dot"></span>For You
             </div>
-            <div class="stat">Stars · Forks · Today</div>
+            <div class="feed-meta">Updated hourly</div>
           </div>
-          <h3>Catch fast-moving engineering repos</h3>
-          <p>
-            Scan high-signal projects without jumping between dashboards,
-            bookmarks, or feeds.
-          </p>
-        </article>
-        <article class="card">
-          <div class="card-top">
-            <div class="source">
-              <img
-                src="data:image/svg+xml;base64,PHN2ZyBoZWlnaHQ9IjE4IiB2aWV3Qm94PSI0IDQgMTg4IDE4OCIgd2lkdGg9IjE4IiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciPjxwYXRoIGQ9Im00IDRoMTg4djE4OGgtMTg4eiIgZmlsbD0iI2Y2MCIvPjxwYXRoIGQ9Im03My4yNTIxNzU2IDQ1LjAxIDIyLjc0NzgyNDQgNDcuMzkxMzAwODMgMjIuNzQ3ODI0NC00Ny4zOTEzMDA4M2gxOS41NjU2OTYzMWwtMzQuMzIzNTIwNzEgNjQuNDg2NjE0Njh2NDEuNDkzMzg1MzJoLTE1Ljk4di00MS40OTMzODUzMmwtMzQuMzIzNTIwNzEtNjQuNDg2NjE0Njh6IiBmaWxsPSIjZmZmIi8+PC9zdmc+"
-                alt=""
-              />
-              Hacker News
+          <article class="row is-active">
+            <div class="index">01</div>
+            <div>
+              <div class="row-title">garrytan/gbrain</div>
+              <div class="row-brief">
+                Garry's Opinionated OpenClaw/Hermes Agent Brain.
+              </div>
+              <div class="row-meta">
+                <img
+                  src="../../web-static/static/source-icons/github.svg"
+                  alt=""
+                />
+                <span class="source">GitHub Trending</span>
+                <span class="sep">·</span>
+                <span>32k stars · 216 today</span>
+              </div>
             </div>
-            <div class="stat">Points · Comments</div>
-          </div>
-          <h3>Surface the discussions that matter</h3>
-          <p>
-            Track the stories worth reading with lightweight ranking, metadata,
-            and quick source filtering.
-          </p>
-        </article>
-        <article class="card">
-          <div class="card-top">
-            <div class="source">
-              <img
-                src="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI5NSIgaGVpZ2h0PSI4OCIgZmlsbD0ibm9uZSI+Cgk8cGF0aCBmaWxsPSIjRkZEMjFFIiBkPSJNNDcuMjEgNzYuNWEzNC43NSAzNC43NSAwIDEgMCAwLTY5LjUgMzQuNzUgMzQuNzUgMCAwIDAgMCA2OS41WiIgLz4KCTxwYXRoCgkJZmlsbD0iI0ZGOUQwQiIKCQlkPSJNODEuOTYgNDEuNzVhMzQuNzUgMzQuNzUgMCAxIDAtNjkuNSAwIDM0Ljc1IDM0Ljc1IDAgMCAwIDY5LjUgMFptLTczLjUgMGEzOC43NSAzOC43NSAwIDEgMSA3Ny41IDAgMzguNzUgMzguNzUgMCAwIDEtNzcuNSAwWiIKCS8+Cgk8cGF0aAoJCWZpbGw9IiMzQTNCNDUiCgkJZD0iTTU4LjUgMzIuM2MxLjI4LjQ0IDEuNzggMy4wNiAzLjA3IDIuMzhhNSA1IDAgMSAwLTYuNzYtMi4wN2MuNjEgMS4xNSAyLjU1LS43MiAzLjctLjMyWk0zNC45NSAzMi4zYy0xLjI4LjQ0LTEuNzkgMy4wNi0zLjA3IDIuMzhhNSA1IDAgMSAxIDYuNzYtMi4wN2MtLjYxIDEuMTUtMi41Ni0uNzItMy43LS4zMloiCgkvPgoJPHBhdGgKCQlmaWxsPSIjRkYzMjNEIgoJCWQ9Ik00Ni45NiA1Ni4yOWM5LjgzIDAgMTMtOC43NiAxMy0xMy4yNiAwLTIuMzQtMS41Ny0xLjYtNC4wOS0uMzYtMi4zMyAxLjE1LTUuNDYgMi43NC04LjkgMi43NC03LjE5IDAtMTMtNi44OC0xMy0yLjM4czMuMTYgMTMuMjYgMTMgMTMuMjZaIgoJLz4KCTxwYXRoCgkJZmlsbD0iIzNBM0I0NSIKCQlmaWxsLXJ1bGU9ImV2ZW5vZGQiCgkJZD0iTTM5LjQzIDU0YTguNyA4LjcgMCAwIDEgNS4zLTQuNDljLjQtLjEyLjgxLjU3IDEuMjQgMS4yOC40LjY4LjgyIDEuMzcgMS4yNCAxLjM3LjQ1IDAgLjktLjY4IDEuMzMtMS4zNS40NS0uNy44OS0xLjM4IDEuMzItMS4yNWE4LjYxIDguNjEgMCAwIDEgNSA0LjE3YzMuNzMtMi45NCA1LjEtNy43NCA1LjEtMTAuNyAwLTIuMzQtMS41Ny0xLjYtNC4wOS0uMzZsLS4xNC4wN2MtMi4zMSAxLjE1LTUuMzkgMi42Ny04Ljc3IDIuNjdzLTYuNDUtMS41Mi04Ljc3LTIuNjdjLTIuNi0xLjI5LTQuMjMtMi4xLTQuMjMuMjkgMCAzLjA1IDEuNDYgOC4wNiA1LjQ3IDEwLjk3WiIKCQljbGlwLXJ1bGU9ImV2ZW5vZGQiCgkvPgoJPHBhdGgKCQlmaWxsPSIjRkY5RDBCIgoJCWQ9Ik03MC43MSAzN2EzLjI1IDMuMjUgMCAxIDAgMC02LjUgMy4yNSAzLjI1IDAgMCAwIDAgNi41Wk0yNC4yMSAzN2EzLjI1IDMuMjUgMCAxIDAgMC02LjUgMy4yNSAzLjI1IDAgMCAwIDAgNi41Wk0xNy41MiA0OGMtMS42MiAwLTMuMDYuNjYtNC4wNyAxLjg3YTUuOTcgNS45NyAwIDAgMC0xLjMzIDMuNzYgNy4xIDcuMSAwIDAgMC0xLjk0LS4zYy0xLjU1IDAtMi45NS41OS0zLjk0IDEuNjZhNS44IDUuOCAwIDAgMC0uOCA3IDUuMyA1LjMgMCAwIDAtMS43OSAyLjgyYy0uMjQuOS0uNDggMi44LjggNC43NGE1LjIyIDUuMjIgMCAwIDAtLjM3IDUuMDJjMS4wMiAyLjMyIDMuNTcgNC4xNCA4LjUyIDYuMSAzLjA3IDEuMjIgNS44OSAyIDUuOTEgMi4wMWE0NC4zMyA0NC4zMyAwIDAgMCAxMC45MyAxLjZjNS44NiAwIDEwLjA1LTEuOCAxMi40Ni01LjM0IDMuODgtNS42OSAzLjMzLTEwLjktMS43LTE1LjkyLTIuNzctMi43OC00LjYyLTYuODctNS03Ljc3LS43OC0yLjY2LTIuODQtNS42Mi02LjI1LTUuNjJhNS43IDUuNyAwIDAgMC00LjYgMi40NmMtMS0xLjI2LTEuOTgtMi4yNS0yLjg2LTIuODJBNy40IDcuNCAwIDAgMCAxNy41MiA0OFptMCA0Yy41MSAwIDEuMTQuMjIgMS44Mi42NSAyLjE0IDEuMzYgNi4yNSA4LjQzIDcuNzYgMTEuMTguNS45MiAxLjM3IDEuMzEgMi4xNCAxLjMxIDEuNTUgMCAyLjc1LTEuNTMuMTUtMy40OC0zLjkyLTIuOTMtMi41NS03LjcyLS42OC04LjAxLjA4LS4wMi4xNy0uMDIuMjQtLjAyIDEuNyAwIDIuNDUgMi45MyAyLjQ1IDIuOTNzMi4yIDUuNTIgNS45OCA5LjNjMy43NyAzLjc3IDMuOTcgNi44IDEuMjIgMTAuODMtMS44OCAyLjc1LTUuNDcgMy41OC05LjE2IDMuNTgtMy44MSAwLTcuNzMtLjktOS45Mi0xLjQ2LS4xMS0uMDMtMTMuNDUtMy44LTExLjc2LTcgLjI4LS41NC43NS0uNzYgMS4zNC0uNzYgMi4zOCAwIDYuNyAzLjU0IDguNTcgMy41NC40MSAwIC43LS4xNy44My0uNi43OS0yLjg1LTEyLjA2LTQuMDUtMTAuOTgtOC4xNy4yLS43My43MS0xLjAyIDEuNDQtMS4wMiAzLjE0IDAgMTAuMiA1LjUzIDExLjY4IDUuNTMuMTEgMCAuMi0uMDMuMjQtLjEuNzQtMS4yLjMzLTIuMDQtNC45LTUuMi01LjIxLTMuMTYtOC44OC01LjA2LTYuOC03LjMzLjI0LS4yNi41OC0uMzggMS0uMzggMy4xNyAwIDEwLjY2IDYuODIgMTAuNjYgNi44MnMyLjAyIDIuMSAzLjI1IDIuMWMuMjggMCAuNTItLjEuNjgtLjM4Ljg2LTEuNDYtOC4wNi04LjIyLTguNTYtMTEuMDEtLjM0LTEuOS4yNC0yLjg1IDEuMzEtMi44NVoiCgkvPgoJPHBhdGgKCQlmaWxsPSIjRkZEMjFFIgoJCWQ9Ik0zOC42IDc2LjY5YzIuNzUtNC4wNCAyLjU1LTcuMDctMS4yMi0xMC44NC0zLjc4LTMuNzctNS45OC05LjMtNS45OC05LjNzLS44Mi0zLjItMi42OS0yLjljLTEuODcuMy0zLjI0IDUuMDguNjggOC4wMSAzLjkxIDIuOTMtLjc4IDQuOTItMi4yOSAyLjE3LTEuNS0yLjc1LTUuNjItOS44Mi03Ljc2LTExLjE4LTIuMTMtMS4zNS0zLjYzLS42LTMuMTMgMi4yLjUgMi43OSA5LjQzIDkuNTUgOC41NiAxMS0uODcgMS40Ny0zLjkzLTEuNzEtMy45My0xLjcxcy05LjU3LTguNzEtMTEuNjYtNi40NGMtMi4wOCAyLjI3IDEuNTkgNC4xNyA2LjggNy4zMyA1LjIzIDMuMTYgNS42NCA0IDQuOSA1LjItLjc1IDEuMi0xMi4yOC04LjUzLTEzLjM2LTQuNC0xLjA4IDQuMTEgMTEuNzcgNS4zIDEwLjk4IDguMTUtLjggMi44NS05LjA2LTUuMzgtMTAuNzQtMi4xOC0xLjcgMy4yMSAxMS42NSA2Ljk4IDExLjc2IDcuMDEgNC4zIDEuMTIgMTUuMjUgMy40OSAxOS4wOC0yLjEyWiIKCS8+Cgk8cGF0aAoJCWZpbGw9IiNGRjlEMEIiCgkJZD0iTTc3LjQgNDhjMS42MiAwIDMuMDcuNjYgNC4wNyAxLjg3YTUuOTcgNS45NyAwIDAgMSAxLjMzIDMuNzYgNy4xIDcuMSAwIDAgMSAxLjk1LS4zYzEuNTUgMCAyLjk1LjU5IDMuOTQgMS42NmE1LjggNS44IDAgMCAxIC44IDcgNS4zIDUuMyAwIDAgMSAxLjc4IDIuODJjLjI0LjkuNDggMi44LS44IDQuNzRhNS4yMiA1LjIyIDAgMCAxIC4zNyA1LjAyYy0xLjAyIDIuMzItMy41NyA0LjE0LTguNTEgNi4xLTMuMDggMS4yMi01LjkgMi01LjkyIDIuMDFhNDQuMzMgNDQuMzMgMCAwIDEtMTAuOTMgMS42Yy01Ljg2IDAtMTAuMDUtMS44LTEyLjQ2LTUuMzQtMy44OC01LjY5LTMuMzMtMTAuOSAxLjctMTUuOTIgMi43OC0yLjc4IDQuNjMtNi44NyA1LjAxLTcuNzcuNzgtMi42NiAyLjgzLTUuNjIgNi4yNC01LjYyYTUuNyA1LjcgMCAwIDEgNC42IDIuNDZjMS0xLjI2IDEuOTgtMi4yNSAyLjg3LTIuODJBNy40IDcuNCAwIDAgMSA3Ny40IDQ4Wm0wIDRjLS41MSAwLTEuMTMuMjItMS44Mi42NS0yLjEzIDEuMzYtNi4yNSA4LjQzLTcuNzYgMTEuMThhMi40MyAyLjQzIDAgMCAxLTIuMTQgMS4zMWMtMS41NCAwLTIuNzUtMS41My0uMTQtMy40OCAzLjkxLTIuOTMgMi41NC03LjcyLjY3LTguMDFhMS41NCAxLjU0IDAgMCAwLS4yNC0uMDJjLTEuNyAwLTIuNDUgMi45My0yLjQ1IDIuOTNzLTIuMiA1LjUyLTUuOTcgOS4zYy0zLjc4IDMuNzctMy45OCA2LjgtMS4yMiAxMC44MyAxLjg3IDIuNzUgNS40NyAzLjU4IDkuMTUgMy41OCAzLjgyIDAgNy43My0uOSA5LjkzLTEuNDYuMS0uMDMgMTMuNDUtMy44IDExLjc2LTctLjI5LS41NC0uNzUtLjc2LTEuMzQtLjc2LTIuMzggMC02LjcxIDMuNTQtOC41NyAzLjU0LS40MiAwLS43MS0uMTctLjgzLS42LS44LTIuODUgMTIuMDUtNC4wNSAxMC45Ny04LjE3LS4xOS0uNzMtLjctMS4wMi0xLjQ0LTEuMDItMy4xNCAwLTEwLjIgNS41My0xMS42OCA1LjUzLS4xIDAtLjE5LS4wMy0uMjMtLjEtLjc0LTEuMi0uMzQtMi4wNCA0Ljg4LTUuMiA1LjIzLTMuMTYgOC45LTUuMDYgNi44LTcuMzMtLjIzLS4yNi0uNTctLjM4LS45OC0uMzgtMy4xOCAwLTEwLjY3IDYuODItMTAuNjcgNi44MnMtMi4wMiAyLjEtMy4yNCAyLjFhLjc0Ljc0IDAgMCAxLS42OC0uMzhjLS44Ny0xLjQ2IDguMDUtOC4yMiA4LjU1LTExLjAxLjM0LTEuOS0uMjQtMi44NS0xLjMxLTIuODVaIgoJLz4KCTxwYXRoCgkJZmlsbD0iI0ZGRDIxRSIKCQlkPSJNNTYuMzMgNzYuNjljLTIuNzUtNC4wNC0yLjU2LTcuMDcgMS4yMi0xMC44NCAzLjc3LTMuNzcgNS45Ny05LjMgNS45Ny05LjNzLjgyLTMuMiAyLjctMi45YzEuODYuMyAzLjIzIDUuMDgtLjY4IDguMDEtMy45MiAyLjkzLjc4IDQuOTIgMi4yOCAyLjE3IDEuNTEtMi43NSA1LjYzLTkuODIgNy43Ni0xMS4xOCAyLjEzLTEuMzUgMy42NC0uNiAzLjEzIDIuMi0uNSAyLjc5LTkuNDIgOS41NS04LjU1IDExIC44NiAxLjQ3IDMuOTItMS43MSAzLjkyLTEuNzFzOS41OC04LjcxIDExLjY2LTYuNDRjMi4wOCAyLjI3LTEuNTggNC4xNy02LjggNy4zMy01LjIzIDMuMTYtNS42MyA0LTQuOSA1LjIuNzUgMS4yIDEyLjI4LTguNTMgMTMuMzYtNC40IDEuMDggNC4xMS0xMS43NiA1LjMtMTAuOTcgOC4xNS44IDIuODUgOS4wNS01LjM4IDEwLjc0LTIuMTggMS42OSAzLjIxLTExLjY1IDYuOTgtMTEuNzYgNy4wMS00LjMxIDEuMTItMTUuMjYgMy40OS0xOS4wOC0yLjEyWiIKCS8+Cjwvc3ZnPgo="
-                alt=""
-              />
-              Research Papers
+          </article>
+          <article class="row">
+            <div class="index">02</div>
+            <div>
+              <div class="row-title">
+                Amazon saves millions by replacing Sonnet 4.6
+              </div>
+              <div class="row-brief">
+                A decision model took over ticket labeling at massive scale.
+              </div>
+              <div class="row-meta">
+                <img
+                  src="../../web-static/static/source-icons/hackernews.svg"
+                  alt=""
+                />
+                <span class="source">Hacker News</span>
+                <span class="sep">·</span>
+                <span>211 points · 68 comments</span>
+              </div>
             </div>
-            <div class="stat">Upvotes · Likes</div>
-          </div>
-          <h3>Follow research momentum in one place</h3>
-          <p>
-            Keep trending papers and research signals in the same compact
-            reader instead of separate tabs.
-          </p>
-        </article>
+          </article>
+          <article class="row">
+            <div class="index">03</div>
+            <div>
+              <div class="row-title">
+                Video-Coder: Reinforcing Agentic Coding for Video Generation
+              </div>
+              <div class="row-brief">
+                Code-driven video generation with execution and reward
+                feedback.
+              </div>
+              <div class="row-meta">
+                <img
+                  src="../../web-static/static/source-icons/huggingface.svg"
+                  alt=""
+                />
+                <span class="source">Hugging Face Papers</span>
+                <span class="sep">·</span>
+                <span>27 upvotes · 5 min read</span>
+              </div>
+            </div>
+          </article>
+          <div class="feed-foot">View more ↓</div>
+        </div>
       </section>
     </div>
-    <div class="footer-note">Cloudflare Workers · D1 · PWA</div>
   </body>
 </html>

@@ -313,6 +313,302 @@ describe("extractArticlePreview", () => {
     ]);
   });
 
+  it("strips source prefixes from GitHub and Hugging Face paper titles", () => {
+    const github = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="GitHub - owner/repo: A useful repository" />
+      </head><body><article>
+        <p>${"A long enough README paragraph about the repository. ".repeat(10)}</p>
+      </article></body></html>`,
+      "https://github.com/owner/repo",
+    );
+    expect(github.title).toBe("owner/repo: A useful repository");
+
+    const paper = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - A Great Paper" />
+      </head><body><main>
+        <div><h2>Abstract</h2><p>${"This paper explains an important result clearly. ".repeat(10)}</p></div>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00001",
+    );
+    expect(paper.title).toBe("A Great Paper");
+  });
+
+  it("uses the Hugging Face abstract section instead of community chrome", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - A Great Paper" />
+      </head><body><main>
+        <h1>A Great Paper</h1>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <div>
+            <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+          </div>
+        </div>
+        <div class="community">
+          <h2>Community</h2>
+          <p>Librarian Bot recommends unrelated papers and comment noise here.</p>
+          <ul><li>+8</li><li>Unrelated recommendation</li></ul>
+        </div>
+        <section>
+          <h2>Models citing this paper</h2>
+          <p>Citation cards that should stay out of the reader view.</p>
+        </section>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00001",
+    );
+
+    expect(preview.title).toBe("A Great Paper");
+    expect(preview.blocks.map(blockText)).toEqual([
+      "Abstract",
+      "This paper explains an important result clearly. ".repeat(10).trim(),
+    ]);
+  });
+
+  it("uses the Hugging Face paper author list as the byline", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - Authored Paper" />
+      </head><body><main>
+        <h1>Authored Paper</h1>
+        <div>
+          <span class="author">Alice Smith,</span>
+          <span class="author">Bob Jones</span>
+        </div>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+        </div>
+        <div class="community">
+          <h2>Community</h2>
+          <span class="author">Commenter One</span>
+          <p>Community comment noise that should not become the byline.</p>
+        </div>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00001",
+    );
+
+    expect(preview.byline).toBe("Alice Smith, Bob Jones");
+    expect(preview.blocks.map(blockText)).toEqual([
+      "Abstract",
+      "This paper explains an important result clearly. ".repeat(10).trim(),
+    ]);
+
+    const manyAuthors = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - Many Authors" />
+      </head><body><main>
+        <div>
+          <span class="author">Alice Smith ,</span>
+          <span class="author">Bob Jones ,</span>
+          <span class="author">Carol Lee ,</span>
+          <span class="author">Dan Park</span>
+        </div>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+        </div>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00003",
+    );
+    expect(manyAuthors.byline).toBe("Alice Smith, Bob Jones, Carol Lee, et al.");
+  });
+
+  it("adds the Hugging Face paper's arXiv links", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - Linked Paper" />
+      </head><body><main>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+        </div>
+        <div>
+          <a href="https://arxiv.org/abs/2611.00004">View arXiv page</a>
+          <a href="https://arxiv.org/pdf/2611.00004">View PDF</a>
+          <a href="https://example.com/project">Project page</a>
+          <a href="https://github.com/owner/repo">GitHub 40</a>
+        </div>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00004",
+    );
+
+    expect(preview.blocks[preview.blocks.length - 1]).toEqual({
+      type: "paragraph",
+      segments: [
+        { text: "Read the full paper: " },
+        {
+          text: "arXiv abstract",
+          href: "https://arxiv.org/abs/2611.00004",
+        },
+        { text: " · " },
+        { text: "PDF", href: "https://arxiv.org/pdf/2611.00004" },
+        { text: " · " },
+        { text: "Project page", href: "https://example.com/project" },
+        { text: " · " },
+        { text: "GitHub", href: "https://github.com/owner/repo" },
+      ],
+    });
+  });
+
+  it("adds Hugging Face paper citation lists", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - Cited Paper" />
+      </head><body><main>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+        </div>
+        <section>
+          <h2>Models citing this paper 2</h2>
+          <nav>
+            <a href="/owner/model-one"><h4>owner/model-one</h4></a>
+            <a href="/owner/model-two"><h4>owner/model-two</h4></a>
+          </nav>
+          <h2>Datasets citing this paper 1</h2>
+          <nav><a href="/datasets/owner/data"><h4>owner/data</h4></a></nav>
+          <h3>Spaces citing this paper 1</h3>
+          <div><a href="/spaces/owner/demo">🎬 owner/demo</a></div>
+          <h2>Collections including this paper 1</h2>
+          <nav>
+            <a href="/collections/user/vision"><h4>Computer Vision</h4></a>
+          </nav>
+        </section>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00005",
+    );
+
+    expect(preview.blocks.slice(-9)).toEqual([
+      { type: "heading", text: "Models citing this paper 2" },
+      {
+        type: "list",
+        segments: [
+          {
+            text: "owner/model-one",
+            href: "https://huggingface.co/owner/model-one",
+          },
+        ],
+      },
+      {
+        type: "list",
+        segments: [
+          {
+            text: "owner/model-two",
+            href: "https://huggingface.co/owner/model-two",
+          },
+        ],
+      },
+      { type: "heading", text: "Datasets citing this paper 1" },
+      {
+        type: "list",
+        segments: [
+          {
+            text: "owner/data",
+            href: "https://huggingface.co/datasets/owner/data",
+          },
+        ],
+      },
+      { type: "heading", text: "Spaces citing this paper 1" },
+      {
+        type: "list",
+        segments: [
+          {
+            text: "🎬 owner/demo",
+            href: "https://huggingface.co/spaces/owner/demo",
+          },
+        ],
+      },
+      { type: "heading", text: "Collections including this paper 1" },
+      {
+        type: "list",
+        segments: [
+          {
+            text: "Computer Vision",
+            href: "https://huggingface.co/collections/user/vision",
+          },
+        ],
+      },
+    ]);
+  });
+
+  it("drops unsafe links from paper resources and citations", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - Unsafe Links" />
+      </head><body><main>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+        </div>
+        <div>
+          <a href="javascript:alert(1)">View arXiv page</a>
+          <a href="https://arxiv.org/abs/2611.00006">View arXiv page</a>
+          <a href="data:text/html,alert(1)">View PDF</a>
+        </div>
+        <section>
+          <h2>Models citing this paper 1</h2>
+          <nav>
+            <a href="javascript:alert(1)"><h4>bad/model</h4></a>
+            <a href="/good/model"><h4>good/model</h4></a>
+          </nav>
+        </section>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00006",
+    );
+
+    const paperLinks = preview.blocks.find(
+      (block) =>
+        block.type === "paragraph" &&
+        "segments" in block &&
+        block.segments.some((segment) => segment.text === "Read the full paper: "),
+    );
+    expect(paperLinks).toEqual({
+      type: "paragraph",
+      segments: [
+        { text: "Read the full paper: " },
+        {
+          text: "arXiv abstract",
+          href: "https://arxiv.org/abs/2611.00006",
+        },
+      ],
+    });
+
+    const lists = preview.blocks.filter((block) => block.type === "list");
+    expect(lists[lists.length - 1]).toEqual({
+      type: "list",
+      segments: [
+        { text: "good/model", href: "https://huggingface.co/good/model" },
+      ],
+    });
+  });
+
+  it("drops decorative SVG and badge images", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Decorative images" />
+      </head><body><article>
+        <p>${"A long enough paragraph about the story. ".repeat(10)}</p>
+        <img src="/images/wordmark.svg" alt="Project wordmark" height="52" />
+        <img src="https://img.shields.io/badge/build-passing.svg" alt="Build badge" />
+        <img src="/images/chart.png" alt="Chart" width="800" height="450" />
+      </article></body></html>`,
+      "https://example.com/posts/decorative-images",
+    );
+
+    expect(preview.blocks.filter((block) => block.type === "image")).toEqual([
+      {
+        type: "image",
+        src: "https://example.com/images/chart.png",
+        alt: "Chart",
+        width: 800,
+        height: 450,
+      },
+    ]);
+  });
+
   it("extracts tables as structured blocks without duplicating cell text", () => {
     const preview = extractArticlePreview(
       `<html><head>

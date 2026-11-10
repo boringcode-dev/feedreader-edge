@@ -1,6 +1,6 @@
 <h1>
   <img alt="feedreader logo" src="web-static/favicon.svg" width="70" valign="middle">
-  &nbsp;reader
+  &nbsp;reader&thinsp;<img alt="" src="docs/assets/orange-dot.svg" width="8" height="8" valign="baseline" />
 </h1>
 
 <p>
@@ -16,7 +16,7 @@
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT" />
 </p>
 
-![feedreader social card](web-static/og-image.png)
+![feedreader social card](web-static/og-image.png?v=3)
 
 ---
 
@@ -62,7 +62,7 @@ npx lighthouse https://reader.boringcode.dev --view
   - source filters
   - real source icons in filters, dialog rows, and card metadata
   - RSS-based app icon/favicon branding
-  - dark/light mode
+  - seven themes — Auto (follows the device), Ink, Paper, Sepia, Terminal, Glacier, and Ember — with a visual swatch picker
   - inline expanding search
   - reader settings dialog for theme, density, and source visibility
   - iPhone landscape safe-area handling so content stays clear of the notch and Dynamic Island
@@ -335,12 +335,15 @@ Presentation-layer note:
   - `Reading` — Article preview, bookmarks, and AI personalization
   - `Sources` — visible sources
 - tabs support click, arrow keys, Home, and End; validation jumps to `Sources` or `Reading` when that tab needs attention
-- theme and density options are shown in a 2-column layout to reduce dialog height
+- themes are shown as a 2-column swatch grid; density options sit below in a 2-column row
+- the selected theme is applied when the dialog is saved, and the settings form scrolls internally on short screens
 - clicking the dialog backdrop closes it
 - background page scrolling is locked while the dialog is open
 - selected sources are stored in `localStorage` under `feedreader.sources`
 - selected density is stored in `localStorage` under `feedreader.uiDensity`
-- selected theme is stored in `localStorage` under `feedreader.theme`
+- selected theme is stored in `localStorage` under `feedreader.theme`; valid values are `system` (default), `dark`, `light`, `sepia`, `terminal`, `glacier`, and `ember`
+- `system` resolves to the device's current light/dark preference and follows changes live; existing `dark`/`light` preferences keep working
+- an inline pre-paint theme init script applies the stored preference before the stylesheet loads, avoiding a light/dark flash
 - article preview is off by default and stored in `localStorage` under `feedreader.articlePreviewEnabled`
 - bookmark controls are off by default and stored in `localStorage` under `feedreader.bookmarksEnabled`; enabling them shows the bookmark controls and Saved filter, and disabling them hides those controls without deleting saved items
 - source-specific filters render as **real icon-only buttons**
@@ -360,6 +363,8 @@ Presentation-layer note:
 - when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
 - `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
 - the panel shows the extracted title, byline, publication date/reading time, rich text with validated inline links/emphasis/inline code, image blocks with captions and intrinsic dimensions, and semantic tables; images load directly from the source with lazy loading and no referrer; `Open source` opens the original page
+- consecutive list items render as one list and prose uses the full preview width; figures are capped in height so a single image cannot dominate the panel
+- previews are source-aware: GitHub README previews drop the `GitHub - ` title prefix and decorative SVG/badge images, while Hugging Face paper previews render the abstract, authors, arXiv/PDF/project/GitHub links, and citing model, dataset, space, and collection lists instead of community comment chrome
 - Hacker News items also show a **Comments** action inside the preview and card `…` dialogs; other sources omit it
 - each card’s `…` dialog includes an **Open source** action that opens the article directly without opening the preview
 - **Share** uses the device/browser share sheet when available and falls back to copying the article link; it is available in both the card and preview `…` dialogs
@@ -421,6 +426,8 @@ npm run db:migrate:local
 
 - CI runs on pull requests and `main` pushes.
 - CI checks type safety, unit tests, and a local D1 migration smoke run.
+- Pull requests get a Cloudflare version preview commented on the PR.
+- Non-`main` branch pushes get an automatic per-branch preview alias in the Actions run summary; branches with an open PR defer to the PR preview.
 - Deploy runs on `main` pushes and manual dispatch.
 - Deploy validates Cloudflare credentials, re-runs verification, applies remote D1 migrations, and deploys the Worker.
 

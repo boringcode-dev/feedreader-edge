@@ -140,7 +140,7 @@ async function handleHome(
   );
   const querySource = source === "all" ? "" : source;
   const canonicalUrl = `${url.origin}${url.pathname}${url.search}`;
-  const socialImageUrl = `${url.origin}/og-image.png?v=2`;
+  const socialImageUrl = `${url.origin}/og-image.png?v=3`;
   const appVersion = currentAppVersion(env);
 
   const { items, hasNext } = await feedItems(
@@ -260,8 +260,9 @@ async function handlePreview(
  * `.invalid` is reserved by RFC 2606 for exactly this kind of placeholder
  * use, so it's guaranteed not to collide with a real host. */
 function previewCacheRequest(target: string): Request {
-  // v4 invalidates previews cached before contributor avatars were filtered.
-  const raw = `preview:v4:${target}`;
+  // v9 adds paper resource/citation sections; v8 added arXiv links and v7
+  // covered author bylines.
+  const raw = `preview:v9:${target}`;
   const url = `https://feedreader-internal.invalid/preview-cache?k=${encodeURIComponent(raw)}`;
   return new Request(url, { method: "GET" });
 }

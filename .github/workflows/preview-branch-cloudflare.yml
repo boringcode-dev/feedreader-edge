@@ -1,0 +1,110 @@
+name: Preview branch (Cloudflare)
+
+on:
+  push:
+    branches-ignore:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: preview-branch-cloudflare-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    env:
+      BRANCH: ${{ github.ref_name }}
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v5
+
+      - name: Check for an open pull request
+        id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          number=$(gh pr list \
+            --head "$BRANCH" \
+            --state open \
+            --json number \
+            --jq '.[0].number // empty')
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Skip branch preview when a PR preview owns it
+        if: steps.pr.outputs.number != ''
+        run: |
+          echo "Open PR #${{ steps.pr.outputs.number }} already deploys this branch's preview."
+
+      - name: Set up Node.js
+        if: steps.pr.outputs.number == ''
+        uses: actions/setup-node@v5
+        with:
+          node-version: "24"
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.pr.outputs.number == ''
+        run: npm ci
+
+      - name: Type check
+        if: steps.pr.outputs.number == ''
+        run: npm run typecheck
+
+      - name: Run tests
+        if: steps.pr.outputs.number == ''
+        run: npm test
+
+      - name: Compute preview alias
+        if: steps.pr.outputs.number == ''
+        id: alias
+        run: |
+          alias=$(printf '%s' "$BRANCH" \
+            | tr '[:upper:]' '[:lower:]' \
+            | sed -E 's/[^a-z0-9-]+/-/g; s/^-+|-+$//g' \
+            | cut -c1-40)
+          if [ -z "$alias" ]; then
+            alias="branch-$(git rev-parse --short HEAD)"
+          fi
+          echo "value=$alias" >> "$GITHUB_OUTPUT"
+
+      - name: Upload preview version
+        if: steps.pr.outputs.number == ''
+        id: upload
+        run: |
+          npx wrangler versions upload \
+            --config platforms/cloudflare/wrangler.toml \
+            --preview-alias "${{ steps.alias.outputs.value }}" \
+            --var "APP_VERSION:branch-$(git rev-parse --short HEAD)" \
+            --message "Branch $BRANCH @ $(git rev-parse --short HEAD)" \
+            | tee wrangler-upload.log
+          url=$(sed -n 's/.*Version Preview Alias URL: \(https:[^[:space:]]*\).*/\1/p' wrangler-upload.log | head -1)
+          if [ -z "$url" ]; then
+            url=$(grep -oE 'https://[^[:space:]]*workers\.dev[^[:space:]]*' wrangler-upload.log | head -1)
+          fi
+          if [ -z "$url" ]; then
+            echo "::error::Could not find a preview URL in wrangler output."
+            exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Write preview summary
+        if: steps.pr.outputs.number == ''
+        run: |
+          {
+            echo "### Cloudflare branch preview"
+            echo ""
+            echo "- **Branch:** \`$BRANCH\`"
+            echo "- **Commit:** \`${{ github.sha }}\`"
+            echo "- **Preview:** ${{ steps.upload.outputs.url }}"
+            echo ""
+            echo "This is a Worker *version* preview — it shares the production D1 database, so it reads/writes real data; it does not receive cron-triggered refreshes."
+          } >> "$GITHUB_STEP_SUMMARY"

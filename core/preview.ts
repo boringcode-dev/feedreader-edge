@@ -214,7 +214,7 @@ export function extractArticlePreview(
 ): ArticlePreview {
   const document = parseHtmlDocument(html);
 
-  const title = firstNonEmpty(
+  const rawTitle = firstNonEmpty(
     metaContent(document, [
       'meta[property="og:title"]',
       'meta[name="twitter:title"]',
@@ -222,6 +222,8 @@ export function extractArticlePreview(
     normalizeText(document.querySelector("h1")?.textContent),
     normalizeText(document.querySelector("title")?.textContent),
   );
+  const title = sanitizePreviewTitle(rawTitle, pageUrl);
+  const isPaperPage = isHuggingFacePaperPage(pageUrl);
   const siteName =
     metaContent(document, ['meta[property="og:site_name"]']) ||
     hostLabel(pageUrl);
@@ -233,9 +235,18 @@ export function extractArticlePreview(
       ]),
       normalizeText(document.querySelector('[rel="author"]')?.textContent),
       normalizeText(document.querySelector('[class*="byline"]')?.textContent),
+      isPaperPage ? extractHuggingFacePaperByline(document) : "",
     ),
   );
   const publishedAt = extractPublishedAt(document);
+  // Read paper resources and citation lists before nav/header cleanup drops
+  // the containers they live in.
+  const paperLinks = isPaperPage
+    ? extractHuggingFacePaperLinks(document, pageUrl)
+    : [];
+  const paperCitations = isPaperPage
+    ? extractHuggingFacePaperCitations(document, pageUrl)
+    : [];
 
   for (const selector of NOISE_SELECTORS) {
     document.querySelectorAll(selector).forEach((element) => {
@@ -243,8 +254,17 @@ export function extractArticlePreview(
     });
   }
 
-  const root = pickContentRoot(document);
+  const root = isPaperPage
+    ? (pickHuggingFacePaperRoot(document) ?? pickContentRoot(document))
+    : pickContentRoot(document);
   const blocks = root ? extractBlocks(root, title, pageUrl) : [];
+  if (paperLinks.length > 0) {
+    blocks.push({
+      type: "paragraph",
+      segments: [{ text: "Read the full paper: " }, ...paperLinks],
+    });
+  }
+  blocks.push(...paperCitations);
   if (blocks.length === 0) {
     const description = normalizeText(
       metaContent(document, [
@@ -444,6 +464,11 @@ function collectInlineSegments(
   }
 }
 
+/**
+ * Resolves relative links and returns only public http(s) URLs.
+ * `normalizePreviewUrl` rejects javascript:, data:, credentials, non-standard
+ * ports, and private/link-local hosts, so callers never see unsafe schemes.
+ */
 function resolveInlineHref(raw: string | null, pageUrl: string): string {
   const trimmed = (raw ?? "").trim();
   if (trimmed === "") return "";
@@ -569,6 +594,7 @@ function extractImageBlock(
   }
   if (resolved === "") return null;
   if (isAvatarImageSrc(resolved)) return null;
+  if (isDecorativeImageSrc(resolved)) return null;
 
   const caption = normalizeText(
     image.closest("figure")?.querySelector("figcaption")?.textContent,
@@ -652,6 +678,26 @@ function isAvatarImageSrc(rawUrl: string): boolean {
   return false;
 }
 
+/**
+ * README badges and wordmarks dominate a reader view when they are stretched
+ * to the panel width. They are interface chrome, not article figures.
+ */
+function isDecorativeImageSrc(rawUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return false;
+  }
+  if (/\.svgz?$/i.test(url.pathname)) return true;
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  return (
+    host === "img.shields.io" ||
+    host === "badgen.net" ||
+    host === "badge.fury.io"
+  );
+}
+
 function resolveSrcsetUrl(srcset: string | null, pageUrl: string): string {
   const raw = (srcset ?? "").trim();
   if (raw === "") return "";
@@ -680,6 +726,149 @@ function parseImageDimension(raw: string | null): number | undefined {
     return undefined;
   }
   return parsed;
+}
+
+/**
+ * Source pages often prefix the article title with their own site chrome
+ * ("GitHub - ", "Paper page - "). Strip only on the matching host so a real
+ * article title that happens to start with those words is left alone.
+ */
+function sanitizePreviewTitle(rawTitle: string, pageUrl: string): string {
+  const title = rawTitle.trim();
+  let url: URL;
+  try {
+    url = new URL(pageUrl);
+  } catch {
+    return title;
+  }
+  const host = url.hostname.toLowerCase().replace(/^www\./, "");
+  let cleaned = title;
+  if (host === "github.com") {
+    cleaned = cleaned.replace(/^GitHub\s*[-–—]\s*/i, "");
+  } else if (host === "huggingface.co" && url.pathname.startsWith("/papers/")) {
+    cleaned = cleaned.replace(/^Paper page\s*[-–—]\s*/i, "");
+  }
+  return cleaned.trim() || title;
+}
+
+function isHuggingFacePaperPage(pageUrl: string): boolean {
+  try {
+    const url = new URL(pageUrl);
+    return (
+      url.hostname.toLowerCase().replace(/^www\./, "") === "huggingface.co" &&
+      url.pathname.startsWith("/papers/")
+    );
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Paper pages mix the abstract with a community thread and citation cards in
+ * one document. Start at the "Abstract" section so the reader view keeps the
+ * paper itself instead of the surrounding discussion chrome.
+ */
+function extractHuggingFacePaperByline(document: Document): string {
+  const nodes = Array.from(document.querySelectorAll(".author, h2"));
+  const abstractIndex = nodes.findIndex(
+    (element) =>
+      element.tagName === "H2" &&
+      normalizeText(element.textContent).toLowerCase() === "abstract",
+  );
+  const stop = abstractIndex === -1 ? nodes.length : abstractIndex;
+  const names: string[] = [];
+  for (const node of nodes.slice(0, stop)) {
+    if (!node.classList.contains("author")) continue;
+    const name = normalizeText(node.textContent).replace(/\s*,\s*$/, "");
+    if (name !== "" && !names.includes(name)) names.push(name);
+  }
+  if (names.length === 0) return "";
+  return names.length <= 3
+    ? names.join(", ")
+    : `${names.slice(0, 3).join(", ")}, et al.`;
+}
+
+function extractHuggingFacePaperLinks(
+  document: Document,
+  pageUrl: string,
+): PreviewSegment[] {
+  const heading = findHuggingFaceAbstractHeading(document);
+  const container = heading?.parentElement?.nextElementSibling;
+  const anchors = container
+    ? Array.from(container.querySelectorAll("a[href]"))
+    : [];
+  const parts: PreviewSegment[] = [];
+  for (const anchor of anchors) {
+    const label = normalizeText(anchor.textContent);
+    // resolveInlineHref only emits public http(s) URLs.
+    const href = resolveInlineHref(anchor.getAttribute("href"), pageUrl);
+    if (href === "") continue;
+    let text = "";
+    if (/^View arXiv page/i.test(label)) text = "arXiv abstract";
+    else if (/^View PDF/i.test(label)) text = "PDF";
+    else if (/^Project page/i.test(label)) text = "Project page";
+    else if (/^GitHub\b/i.test(label)) text = "GitHub";
+    if (text === "") continue;
+    if (parts.length > 0) parts.push({ text: " · " });
+    parts.push({ text, href });
+  }
+  return parts;
+}
+
+function extractHuggingFacePaperCitations(
+  document: Document,
+  pageUrl: string,
+): PreviewBlock[] {
+  const blocks: PreviewBlock[] = [];
+  const headings = Array.from(document.querySelectorAll("h2, h3")).filter(
+    (element) => {
+      const text = normalizeText(element.textContent);
+      return (
+        /^(Models|Datasets|Spaces) citing this paper/i.test(text) ||
+        /^Collections including this paper/i.test(text)
+      );
+    },
+  );
+  for (const heading of headings) {
+    const title = normalizeText(heading.textContent);
+    const container = heading.nextElementSibling;
+    if (!container) continue;
+    const items: PreviewSegment[] = [];
+    for (const anchor of Array.from(container.querySelectorAll("a[href]"))) {
+      // resolveInlineHref only emits public http(s) URLs.
+      const href = resolveInlineHref(anchor.getAttribute("href"), pageUrl);
+      if (href === "") continue;
+      const label = normalizeText(
+        anchor.querySelector("h4")?.textContent ?? anchor.textContent,
+      );
+      if (label === "") continue;
+      items.push({ text: label, href });
+    }
+    if (items.length === 0) continue;
+    blocks.push({ type: "heading", text: title });
+    for (const item of items) {
+      blocks.push({ type: "list", segments: [item] });
+    }
+  }
+  return blocks;
+}
+
+function findHuggingFaceAbstractHeading(document: Document): Element | null {
+  return (
+    Array.from(document.querySelectorAll("h2")).find(
+      (element) =>
+        normalizeText(element.textContent).toLowerCase() === "abstract",
+    ) ?? null
+  );
+}
+
+function pickHuggingFacePaperRoot(document: Document): Element | null {
+  const heading = findHuggingFaceAbstractHeading(document);
+  const parent = heading?.parentElement ?? null;
+  if (!parent || parent === document.body || parent.tagName === "MAIN") {
+    return null;
+  }
+  return parent;
 }
 
 function pickContentRoot(document: Document): Element | null {
