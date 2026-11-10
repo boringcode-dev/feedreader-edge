@@ -27,6 +27,7 @@
     ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
   --control-height: 2.2rem;
   --preview-panel-padding: 0.75rem;
+  --preview-reading-width: 80ch;
   --safe-left: env(safe-area-inset-left, 0px);
   --safe-right: env(safe-area-inset-right, 0px);
   font-family: var(--font-ui);
@@ -1529,11 +1530,18 @@ body.is-dialog-open {
   margin: 0;
 }
 
+.preview-panel-title,
+.preview-panel-byline,
+.preview-panel-reading-meta,
+.preview-panel-status,
 .preview-panel-content > p,
 .preview-panel-content > blockquote,
 .preview-panel-content > h3,
+.preview-panel-content > pre,
 .preview-panel-content > .preview-panel-list-group {
-  max-width: 68ch;
+  max-width: var(--preview-reading-width);
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .preview-panel-content p,

@@ -367,6 +367,36 @@ describe("extractArticlePreview", () => {
     ]);
   });
 
+  it("uses the Hugging Face paper author list as the byline", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - Authored Paper" />
+      </head><body><main>
+        <h1>Authored Paper</h1>
+        <div>
+          <span class="author">Alice Smith,</span>
+          <span class="author">Bob Jones</span>
+        </div>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+        </div>
+        <div class="community">
+          <h2>Community</h2>
+          <span class="author">Commenter One</span>
+          <p>Community comment noise that should not become the byline.</p>
+        </div>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00001",
+    );
+
+    expect(preview.byline).toBe("Alice Smith, Bob Jones");
+    expect(preview.blocks.map(blockText)).toEqual([
+      "Abstract",
+      "This paper explains an important result clearly. ".repeat(10).trim(),
+    ]);
+  });
+
   it("drops decorative SVG and badge images", () => {
     const preview = extractArticlePreview(
       `<html><head>

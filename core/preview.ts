@@ -223,6 +223,7 @@ export function extractArticlePreview(
     normalizeText(document.querySelector("title")?.textContent),
   );
   const title = sanitizePreviewTitle(rawTitle, pageUrl);
+  const isPaperPage = isHuggingFacePaperPage(pageUrl);
   const siteName =
     metaContent(document, ['meta[property="og:site_name"]']) ||
     hostLabel(pageUrl);
@@ -234,6 +235,7 @@ export function extractArticlePreview(
       ]),
       normalizeText(document.querySelector('[rel="author"]')?.textContent),
       normalizeText(document.querySelector('[class*="byline"]')?.textContent),
+      isPaperPage ? extractHuggingFacePaperByline(document) : "",
     ),
   );
   const publishedAt = extractPublishedAt(document);
@@ -244,7 +246,7 @@ export function extractArticlePreview(
     });
   }
 
-  const root = isHuggingFacePaperPage(pageUrl)
+  const root = isPaperPage
     ? (pickHuggingFacePaperRoot(document) ?? pickContentRoot(document))
     : pickContentRoot(document);
   const blocks = root ? extractBlocks(root, title, pageUrl) : [];
@@ -746,6 +748,26 @@ function isHuggingFacePaperPage(pageUrl: string): boolean {
  * one document. Start at the "Abstract" section so the reader view keeps the
  * paper itself instead of the surrounding discussion chrome.
  */
+function extractHuggingFacePaperByline(document: Document): string {
+  const nodes = Array.from(document.querySelectorAll(".author, h2"));
+  const abstractIndex = nodes.findIndex(
+    (element) =>
+      element.tagName === "H2" &&
+      normalizeText(element.textContent).toLowerCase() === "abstract",
+  );
+  const stop = abstractIndex === -1 ? nodes.length : abstractIndex;
+  const names: string[] = [];
+  for (const node of nodes.slice(0, stop)) {
+    if (!node.classList.contains("author")) continue;
+    const name = normalizeText(node.textContent).replace(/,\s*$/, "");
+    if (name !== "" && !names.includes(name)) names.push(name);
+  }
+  if (names.length === 0) return "";
+  return names.length <= 5
+    ? names.join(", ")
+    : `${names.slice(0, 5).join(", ")}, et al.`;
+}
+
 function pickHuggingFacePaperRoot(document: Document): Element | null {
   const heading = Array.from(document.querySelectorAll("h2")).find(
     (element) =>

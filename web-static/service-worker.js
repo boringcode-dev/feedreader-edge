@@ -1,9 +1,9 @@
-const SHELL_CACHE = "reader-shell-v117";
+const SHELL_CACHE = "reader-shell-v118";
 const ITEMS_CACHE = "reader-items-v24";
 const CORE_ASSETS = [
   "/",
-  "/static/style.css?v=110",
-  "/static/app.js?v=92",
+  "/static/style.css?v=111",
+  "/static/app.js?v=93",
   "/static/theme-init.js?v=1",
   "/static/source-icons/hackernews.svg",
   "/static/source-icons/github.svg",
