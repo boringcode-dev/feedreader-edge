@@ -427,7 +427,9 @@ describe("extractArticlePreview", () => {
         </div>
         <div>
           <a href="https://arxiv.org/abs/2611.00004">View arXiv page</a>
-          <a href="https://arxiv.org/pdf/2611.00004">PDF</a>
+          <a href="https://arxiv.org/pdf/2611.00004">View PDF</a>
+          <a href="https://example.com/project">Project page</a>
+          <a href="https://github.com/owner/repo">GitHub 40</a>
         </div>
       </main></body></html>`,
       "https://huggingface.co/papers/2611.00004",
@@ -443,8 +445,93 @@ describe("extractArticlePreview", () => {
         },
         { text: " · " },
         { text: "PDF", href: "https://arxiv.org/pdf/2611.00004" },
+        { text: " · " },
+        { text: "Project page", href: "https://example.com/project" },
+        { text: " · " },
+        { text: "GitHub", href: "https://github.com/owner/repo" },
       ],
     });
+  });
+
+  it("adds Hugging Face paper citation lists", () => {
+    const preview = extractArticlePreview(
+      `<html><head>
+        <meta property="og:title" content="Paper page - Cited Paper" />
+      </head><body><main>
+        <div class="paper-abstract">
+          <h2>Abstract</h2>
+          <p>${"This paper explains an important result clearly. ".repeat(10)}</p>
+        </div>
+        <section>
+          <h2>Models citing this paper 2</h2>
+          <nav>
+            <a href="/owner/model-one"><h4>owner/model-one</h4></a>
+            <a href="/owner/model-two"><h4>owner/model-two</h4></a>
+          </nav>
+          <h2>Datasets citing this paper 1</h2>
+          <nav><a href="/datasets/owner/data"><h4>owner/data</h4></a></nav>
+          <h3>Spaces citing this paper 1</h3>
+          <div><a href="/spaces/owner/demo">🎬 owner/demo</a></div>
+          <h2>Collections including this paper 1</h2>
+          <nav>
+            <a href="/collections/user/vision"><h4>Computer Vision</h4></a>
+          </nav>
+        </section>
+      </main></body></html>`,
+      "https://huggingface.co/papers/2611.00005",
+    );
+
+    expect(preview.blocks.slice(-9)).toEqual([
+      { type: "heading", text: "Models citing this paper 2" },
+      {
+        type: "list",
+        segments: [
+          {
+            text: "owner/model-one",
+            href: "https://huggingface.co/owner/model-one",
+          },
+        ],
+      },
+      {
+        type: "list",
+        segments: [
+          {
+            text: "owner/model-two",
+            href: "https://huggingface.co/owner/model-two",
+          },
+        ],
+      },
+      { type: "heading", text: "Datasets citing this paper 1" },
+      {
+        type: "list",
+        segments: [
+          {
+            text: "owner/data",
+            href: "https://huggingface.co/datasets/owner/data",
+          },
+        ],
+      },
+      { type: "heading", text: "Spaces citing this paper 1" },
+      {
+        type: "list",
+        segments: [
+          {
+            text: "🎬 owner/demo",
+            href: "https://huggingface.co/spaces/owner/demo",
+          },
+        ],
+      },
+      { type: "heading", text: "Collections including this paper 1" },
+      {
+        type: "list",
+        segments: [
+          {
+            text: "Computer Vision",
+            href: "https://huggingface.co/collections/user/vision",
+          },
+        ],
+      },
+    ]);
   });
 
   it("drops decorative SVG and badge images", () => {

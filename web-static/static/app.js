@@ -1673,7 +1673,7 @@
     setPreviewStatus("Loading preview…");
     previewScroll?.scrollTo({ top: 0 });
 
-    fetch(`/api/preview?url=${encodeURIComponent(url)}&v=8`, {
+    fetch(`/api/preview?url=${encodeURIComponent(url)}&v=9`, {
       headers: { Accept: "application/json" },
       signal: controller.signal,
     })

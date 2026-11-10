@@ -239,6 +239,14 @@ export function extractArticlePreview(
     ),
   );
   const publishedAt = extractPublishedAt(document);
+  // Read paper resources and citation lists before nav/header cleanup drops
+  // the containers they live in.
+  const paperLinks = isPaperPage
+    ? extractHuggingFacePaperLinks(document, pageUrl)
+    : [];
+  const paperCitations = isPaperPage
+    ? extractHuggingFacePaperCitations(document, pageUrl)
+    : [];
 
   for (const selector of NOISE_SELECTORS) {
     document.querySelectorAll(selector).forEach((element) => {
@@ -250,15 +258,13 @@ export function extractArticlePreview(
     ? (pickHuggingFacePaperRoot(document) ?? pickContentRoot(document))
     : pickContentRoot(document);
   const blocks = root ? extractBlocks(root, title, pageUrl) : [];
-  if (isPaperPage) {
-    const paperLinks = extractHuggingFacePaperLinks(document, pageUrl);
-    if (paperLinks.length > 0) {
-      blocks.push({
-        type: "paragraph",
-        segments: [{ text: "Read the full paper: " }, ...paperLinks],
-      });
-    }
+  if (paperLinks.length > 0) {
+    blocks.push({
+      type: "paragraph",
+      segments: [{ text: "Read the full paper: " }, ...paperLinks],
+    });
   }
+  blocks.push(...paperCitations);
   if (blocks.length === 0) {
     const description = normalizeText(
       metaContent(document, [
@@ -781,44 +787,76 @@ function extractHuggingFacePaperLinks(
   document: Document,
   pageUrl: string,
 ): PreviewSegment[] {
-  const arxivAbstract = findResolvedHref(
-    document,
-    pageUrl,
-    /^https?:\/\/arxiv\.org\/abs\//i,
-  );
-  const arxivPdf = findResolvedHref(
-    document,
-    pageUrl,
-    /^https?:\/\/arxiv\.org\/pdf\//i,
-  );
+  const heading = findHuggingFaceAbstractHeading(document);
+  const container = heading?.parentElement?.nextElementSibling;
+  const anchors = container
+    ? Array.from(container.querySelectorAll("a[href]"))
+    : [];
   const parts: PreviewSegment[] = [];
-  if (arxivAbstract !== "") {
-    parts.push({ text: "arXiv abstract", href: arxivAbstract });
-  }
-  if (arxivPdf !== "") {
+  for (const anchor of anchors) {
+    const label = normalizeText(anchor.textContent);
+    const href = resolveInlineHref(anchor.getAttribute("href"), pageUrl);
+    if (href === "") continue;
+    let text = "";
+    if (/^View arXiv page/i.test(label)) text = "arXiv abstract";
+    else if (/^View PDF/i.test(label)) text = "PDF";
+    else if (/^Project page/i.test(label)) text = "Project page";
+    else if (/^GitHub\b/i.test(label)) text = "GitHub";
+    if (text === "") continue;
     if (parts.length > 0) parts.push({ text: " · " });
-    parts.push({ text: "PDF", href: arxivPdf });
+    parts.push({ text, href });
   }
   return parts;
 }
 
-function findResolvedHref(
+function extractHuggingFacePaperCitations(
   document: Document,
   pageUrl: string,
-  pattern: RegExp,
-): string {
-  for (const anchor of Array.from(document.querySelectorAll("a[href]"))) {
-    const resolved = resolveInlineHref(anchor.getAttribute("href"), pageUrl);
-    if (resolved !== "" && pattern.test(resolved)) return resolved;
+): PreviewBlock[] {
+  const blocks: PreviewBlock[] = [];
+  const headings = Array.from(document.querySelectorAll("h2, h3")).filter(
+    (element) => {
+      const text = normalizeText(element.textContent);
+      return (
+        /^(Models|Datasets|Spaces) citing this paper/i.test(text) ||
+        /^Collections including this paper/i.test(text)
+      );
+    },
+  );
+  for (const heading of headings) {
+    const title = normalizeText(heading.textContent);
+    const container = heading.nextElementSibling;
+    if (!container) continue;
+    const items: PreviewSegment[] = [];
+    for (const anchor of Array.from(container.querySelectorAll("a[href]"))) {
+      const href = resolveInlineHref(anchor.getAttribute("href"), pageUrl);
+      if (href === "") continue;
+      const label = normalizeText(
+        anchor.querySelector("h4")?.textContent ?? anchor.textContent,
+      );
+      if (label === "") continue;
+      items.push({ text: label, href });
+    }
+    if (items.length === 0) continue;
+    blocks.push({ type: "heading", text: title });
+    for (const item of items) {
+      blocks.push({ type: "list", segments: [item] });
+    }
   }
-  return "";
+  return blocks;
+}
+
+function findHuggingFaceAbstractHeading(document: Document): Element | null {
+  return (
+    Array.from(document.querySelectorAll("h2")).find(
+      (element) =>
+        normalizeText(element.textContent).toLowerCase() === "abstract",
+    ) ?? null
+  );
 }
 
 function pickHuggingFacePaperRoot(document: Document): Element | null {
-  const heading = Array.from(document.querySelectorAll("h2")).find(
-    (element) =>
-      normalizeText(element.textContent).toLowerCase() === "abstract",
-  );
+  const heading = findHuggingFaceAbstractHeading(document);
   const parent = heading?.parentElement ?? null;
   if (!parent || parent === document.body || parent.tagName === "MAIN") {
     return null;
