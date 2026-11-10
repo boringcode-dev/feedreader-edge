@@ -2456,6 +2456,7 @@ body.is-dialog-open {
 
   .config-dialog {
     width: min(100vw - 1.5rem, 100%);
+    max-width: calc(100vw - 1.5rem);
   }
 
   .cards-grid {

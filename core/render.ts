@@ -185,12 +185,12 @@ export function renderIndexPage(data: PageData): string {
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="reader" />
-    <link rel="manifest" href="/site.webmanifest?v=16" />
+    <link rel="manifest" href="/site.webmanifest?v=17" />
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
     <script src="/static/theme-init.js?v=1"></script>
-    <link rel="stylesheet" href="/static/style.css?v=109" />
+    <link rel="stylesheet" href="/static/style.css?v=110" />
     <script src="/static/app.js?v=92" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
@@ -457,9 +457,9 @@ export function renderIndexPage(data: PageData): string {
             </svg>
           </button>
         </div>
-        <img class="install-dialog-screenshot" data-install-screenshot-mobile src="/manifest-assets/screenshot-mobile.png?v=5" alt="reader running as an installed app on mobile" width="430" height="932" loading="lazy" />
-        <img class="install-dialog-screenshot install-dialog-screenshot-tablet is-hidden" data-install-screenshot-tablet src="/manifest-assets/screenshot-tablet.png?v=4" alt="reader running as an installed app on iPad" width="820" height="1180" loading="lazy" />
-        <img class="install-dialog-screenshot install-dialog-screenshot-desktop is-hidden" data-install-screenshot-desktop src="/manifest-assets/screenshot-wide.png?v=4" alt="reader running as an installed app on desktop" width="1440" height="1120" loading="lazy" />
+        <img class="install-dialog-screenshot" data-install-screenshot-mobile src="/manifest-assets/screenshot-mobile.png?v=6" alt="reader running as an installed app on mobile" width="430" height="932" loading="lazy" />
+        <img class="install-dialog-screenshot install-dialog-screenshot-tablet is-hidden" data-install-screenshot-tablet src="/manifest-assets/screenshot-tablet.png?v=5" alt="reader running as an installed app on iPad" width="820" height="1180" loading="lazy" />
+        <img class="install-dialog-screenshot install-dialog-screenshot-desktop is-hidden" data-install-screenshot-desktop src="/manifest-assets/screenshot-wide.png?v=5" alt="reader running as an installed app on desktop" width="1440" height="1120" loading="lazy" />
         <p class="config-dialog-copy">Add reader to your home screen for a faster, full-screen experience with offline access to your last feed.</p>
         <ol class="install-steps is-hidden" data-install-steps>
           <li>
