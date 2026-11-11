@@ -150,12 +150,66 @@ body {
   min-height: 100vh;
   padding-left: var(--safe-left);
   padding-right: var(--safe-right);
+  scrollbar-width: auto;
   background-image: radial-gradient(
     72rem 34rem at 50% -12rem,
     var(--bg-glow),
     transparent 70%
   );
   background-repeat: no-repeat;
+}
+
+@media (pointer: fine) {
+  html {
+    scrollbar-width: none;
+  }
+
+  html::-webkit-scrollbar {
+    display: none;
+  }
+
+  .preview-panel-scroll {
+    scrollbar-width: none;
+  }
+
+  .preview-panel-scroll::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .overlay-scrollbar {
+    display: none;
+  }
+}
+
+.overlay-scrollbar {
+  position: fixed;
+  right: max(3px, var(--safe-right));
+  width: 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 65%, transparent);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 180ms ease;
+  z-index: 60;
+}
+
+.overlay-scrollbar.is-visible {
+  opacity: 1;
+}
+
+.overlay-scrollbar--preview {
+  position: absolute;
+  z-index: 1;
+}
+
+@media (min-width: 901px) {
+  body.is-preview-open .overlay-scrollbar--page {
+    right: calc(
+      var(--safe-right) + var(--preview-panel-width) + 0.625rem + 3px
+    );
+  }
 }
 
 ::selection {

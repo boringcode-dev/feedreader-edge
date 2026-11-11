@@ -1586,6 +1586,116 @@
   mobilePreviewMedia.addEventListener?.("change", resetPreviewChrome);
   window.addEventListener("orientationchange", resetPreviewChrome);
 
+  // Native scrollbars are hidden in CSS; these overlay thumbs appear only
+  // while their scroller moves.
+  const createOverlayScrollbar = (modifier) => {
+    const element = document.createElement("div");
+    element.className = `overlay-scrollbar ${modifier}`;
+    element.setAttribute("aria-hidden", "true");
+    return element;
+  };
+
+  const pageOverlayScrollbar = createOverlayScrollbar(
+    "overlay-scrollbar--page",
+  );
+  const previewOverlayScrollbar = createOverlayScrollbar(
+    "overlay-scrollbar--preview",
+  );
+  document.body.append(pageOverlayScrollbar);
+  previewPanel?.append(previewOverlayScrollbar);
+
+  const setOverlayThumb = (
+    element,
+    trackTop,
+    trackHeight,
+    scrollTop,
+    scrollHeight,
+    clientHeight,
+  ) => {
+    if (scrollHeight <= clientHeight + 1) {
+      element.classList.remove("is-visible");
+      return false;
+    }
+    const thumbHeight = Math.max(
+      24,
+      (clientHeight / scrollHeight) * trackHeight,
+    );
+    const maxScroll = scrollHeight - clientHeight;
+    const offset =
+      maxScroll > 0
+        ? (scrollTop / maxScroll) * (trackHeight - thumbHeight)
+        : 0;
+    element.style.height = `${thumbHeight}px`;
+    element.style.top = `${trackTop + offset}px`;
+    return true;
+  };
+
+  const updatePageOverlayScrollbar = () => {
+    const doc = document.documentElement;
+    return setOverlayThumb(
+      pageOverlayScrollbar,
+      0,
+      window.innerHeight,
+      window.scrollY,
+      doc.scrollHeight,
+      window.innerHeight,
+    );
+  };
+
+  const updatePreviewOverlayScrollbar = () => {
+    if (!previewScroll || !previewPanel) return false;
+    const scrollRect = previewScroll.getBoundingClientRect();
+    const panelRect = previewPanel.getBoundingClientRect();
+    const headerHeight = previewHeader?.offsetHeight ?? 0;
+    const footerHeight = previewFooter?.offsetHeight ?? 0;
+    return setOverlayThumb(
+      previewOverlayScrollbar,
+      scrollRect.top - panelRect.top + headerHeight,
+      Math.max(24, scrollRect.height - headerHeight - footerHeight),
+      previewScroll.scrollTop,
+      previewScroll.scrollHeight,
+      previewScroll.clientHeight,
+    );
+  };
+
+  const bindOverlayScrollbar = (indicator, update, scrollTarget) => {
+    let hideTimer = 0;
+    scrollTarget.addEventListener(
+      "scroll",
+      () => {
+        if (!update()) return;
+        indicator.classList.add("is-visible");
+        window.clearTimeout(hideTimer);
+        hideTimer = window.setTimeout(() => {
+          indicator.classList.remove("is-visible");
+        }, 700);
+      },
+      { passive: true },
+    );
+  };
+
+  bindOverlayScrollbar(
+    pageOverlayScrollbar,
+    updatePageOverlayScrollbar,
+    window,
+  );
+  if (previewScroll) {
+    bindOverlayScrollbar(
+      previewOverlayScrollbar,
+      updatePreviewOverlayScrollbar,
+      previewScroll,
+    );
+  }
+
+  window.addEventListener(
+    "resize",
+    () => {
+      updatePageOverlayScrollbar();
+      updatePreviewOverlayScrollbar();
+    },
+    { passive: true },
+  );
+
   let previewLockedScrollY = 0;
   let previewBodyLocked = false;
 
