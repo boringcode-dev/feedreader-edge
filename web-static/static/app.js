@@ -1524,6 +1524,8 @@
     if (next === previewChromeHidden) return;
     previewChromeHidden = next;
     previewPanel.classList.toggle("is-preview-chrome-hidden", next);
+    previewHeader?.toggleAttribute("inert", next);
+    previewFooter?.toggleAttribute("inert", next);
   };
 
   const resetPreviewChrome = () => {
