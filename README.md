@@ -374,6 +374,7 @@ Presentation-layer note:
 - previews are fetched by the Worker via `GET /api/preview?url=…`; only URLs already stored as feed items are accepted, and upstream HTML is never injected into the page
 - on screens wider than 900px the preview panel is an aside fixed on the right at about 65% of the width and 0.8rem top/bottom insets, with the bookmark, `…`, and Close controls in its header; the page keeps its normal scroll behavior
 - at 900px or narrower the borderless panel covers the full viewport and the footer places the bookmark, `…`, and Close after Previous/Next (in both portrait and landscape). Above 900px the aside header holds the bookmark, `…`, and Close. The `…` button opens a settings-style dialog headed by the article title with its source icon/host and a close button, with the actions stacked as full-width rows over the standard backdrop (dismiss with the close button, backdrop, Escape, or by choosing an action). Content respects left/right safe-area insets in iPhone landscape; while the panel covers the viewport the `theme-color` tint matches the panel surface so the status-bar strip blends with it
+- on phones, the glass preview header and footer slide away while scrolling down and return when scrolling up; the desktop aside keeps its chrome visible
 - preview is available on every device; phones open the reader view full-screen, and the Reading option is always shown in Reader settings
 
 ### Bookmarks

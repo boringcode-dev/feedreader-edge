@@ -1212,6 +1212,10 @@ body.is-dialog-open {
   gap: 0.5rem;
   padding: var(--preview-panel-padding);
   padding-bottom: calc(var(--preview-panel-padding) + 0.25rem);
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    visibility 0s;
 }
 
 /* Glass header: the scroll content passes beneath this layer, so the header's
@@ -1481,6 +1485,10 @@ body.is-dialog-open {
   gap: 0.5rem;
   padding: calc(var(--preview-panel-padding) + 0.25rem)
     var(--preview-panel-padding) var(--preview-panel-padding);
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    visibility 0s;
 }
 
 /* Mirror of the header glass: content scrolls beneath the footer, and the
@@ -1530,6 +1538,41 @@ body.is-dialog-open {
     background: var(--surface);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+}
+
+.preview-panel.is-preview-chrome-hidden .preview-panel-header,
+.preview-panel.is-preview-chrome-hidden .preview-panel-footer {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    transform 260ms cubic-bezier(0.22, 1, 0.36, 1),
+    opacity 180ms ease,
+    visibility 0s linear 260ms;
+}
+
+.preview-panel.is-preview-chrome-hidden .preview-panel-header {
+  transform: translateY(-100%);
+}
+
+.preview-panel.is-preview-chrome-hidden .preview-panel-footer {
+  transform: translateY(100%);
+}
+
+@media (max-width: 900px) {
+  .preview-panel-header,
+  .preview-panel-footer {
+    will-change: transform, opacity;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .preview-panel-header,
+  .preview-panel-footer,
+  .preview-panel.is-preview-chrome-hidden .preview-panel-header,
+  .preview-panel.is-preview-chrome-hidden .preview-panel-footer {
+    transition: none;
   }
 }
 

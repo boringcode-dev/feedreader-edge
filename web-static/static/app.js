@@ -201,6 +201,9 @@
     : 0;
   let hasNext = cardsGrid?.dataset.hasNext === "true";
   let previewAutoLoadingMore = false;
+  let previewChromeHidden = false;
+  let previewLastScrollTop = 0;
+  let previewScrollFrame = 0;
   let searchTimer = null;
   let ignoreNextEmptySearchInput = false;
   let requestSequence = 0;
@@ -1514,6 +1517,58 @@
   };
 
   const mobilePreviewMedia = window.matchMedia("(max-width: 900px)");
+
+  const setPreviewChromeHidden = (hidden) => {
+    if (!previewPanel) return;
+    const next = Boolean(hidden) && mobilePreviewMedia.matches;
+    if (next === previewChromeHidden) return;
+    previewChromeHidden = next;
+    previewPanel.classList.toggle("is-preview-chrome-hidden", next);
+  };
+
+  const resetPreviewChrome = () => {
+    previewLastScrollTop = previewScroll?.scrollTop ?? 0;
+    setPreviewChromeHidden(false);
+  };
+
+  const syncPreviewChromeOnScroll = () => {
+    if (!previewScroll || !mobilePreviewMedia.matches) {
+      setPreviewChromeHidden(false);
+      return;
+    }
+    const scrollTop = previewScroll.scrollTop;
+    const delta = scrollTop - previewLastScrollTop;
+    if (Math.abs(delta) < 4) return;
+    previewLastScrollTop = scrollTop;
+
+    if (scrollTop <= 4) {
+      setPreviewChromeHidden(false);
+      return;
+    }
+
+    const hideThreshold = (previewHeader?.offsetHeight ?? 64) + 12;
+    if (delta > 0 && scrollTop > hideThreshold) {
+      setPreviewChromeHidden(true);
+    } else if (delta < 0) {
+      setPreviewChromeHidden(false);
+    }
+  };
+
+  previewScroll?.addEventListener(
+    "scroll",
+    () => {
+      if (previewScrollFrame) return;
+      previewScrollFrame = window.requestAnimationFrame(() => {
+        previewScrollFrame = 0;
+        syncPreviewChromeOnScroll();
+      });
+    },
+    { passive: true },
+  );
+
+  mobilePreviewMedia.addEventListener?.("change", resetPreviewChrome);
+  window.addEventListener("orientationchange", resetPreviewChrome);
+
   let previewLockedScrollY = 0;
   let previewBodyLocked = false;
 
@@ -1576,6 +1631,8 @@
     document.body.classList.remove("is-preview-open");
     root.classList.remove("is-preview-open");
     unlockPreviewScroll();
+    setPreviewChromeHidden(false);
+    previewLastScrollTop = 0;
     syncThemeColor();
     previewContent?.replaceChildren();
     if (previewByline) {
@@ -1689,6 +1746,7 @@
     previewContent?.replaceChildren();
     setPreviewStatus("Loading preview…");
     previewScroll?.scrollTo({ top: 0 });
+    resetPreviewChrome();
 
     fetch(`/api/preview?url=${encodeURIComponent(url)}&v=9`, {
       headers: { Accept: "application/json" },
