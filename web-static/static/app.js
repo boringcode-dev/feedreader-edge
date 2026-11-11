@@ -43,6 +43,7 @@
   const bookmarksToggle = document.querySelector("[data-bookmarks-toggle]");
   const pageBody = document.querySelector("[data-page-body]");
   const previewPanel = document.querySelector("[data-preview-panel]");
+  const previewHeader = previewPanel?.querySelector(".preview-panel-header");
   const previewCloseButton = document.querySelector("[data-preview-close]");
   const previewScroll = document.querySelector("[data-preview-scroll]");
   const previewTitle = document.querySelector("[data-preview-title]");
@@ -1602,6 +1603,21 @@
     updatePreviewNavigation();
   };
 
+  const syncPreviewChromeHeights = () => {
+    if (!previewPanel) return;
+    for (const [property, element] of [
+      ["--preview-header-height", previewHeader],
+      ["--preview-footer-height", previewFooter],
+    ]) {
+      const height = element?.offsetHeight ?? 0;
+      if (height <= 0) continue;
+      const next = `${height}px`;
+      if (previewPanel.style.getPropertyValue(property) !== next) {
+        previewPanel.style.setProperty(property, next);
+      }
+    }
+  };
+
   const closeArticlePreview = () => {
     previewRequestSequence += 1;
     previewAbortController?.abort();
@@ -1654,6 +1670,7 @@
     root.classList.add("is-preview-open");
     syncThemeColor();
     setPreviewSource(source, host);
+    syncPreviewChromeHeights();
     setPreviewCommentsLink(commentsUrl);
     if (previewTitle) {
       previewTitle.textContent = title || "Article preview";
@@ -1867,12 +1884,22 @@
       for (const button of actionButtons) {
         target.append(button);
       }
+      syncPreviewChromeHeights();
       if (!previewActionsDialog?.open) refreshPreviewPanelLayer();
     }
   };
 
   syncPreviewActionPlacement();
   fullscreenPreviewMedia.addEventListener?.("change", syncPreviewActionPlacement);
+
+  if ((previewHeader || previewFooter) && "ResizeObserver" in window) {
+    const observer = new ResizeObserver(syncPreviewChromeHeights);
+    if (previewHeader) observer.observe(previewHeader);
+    if (previewFooter) observer.observe(previewFooter);
+  } else {
+    window.addEventListener("resize", syncPreviewChromeHeights);
+    window.addEventListener("orientationchange", syncPreviewChromeHeights);
+  }
 
   const syncPreviewScrollLock = () => {
     if (!previewPanel || previewPanel.classList.contains("is-hidden")) return;
