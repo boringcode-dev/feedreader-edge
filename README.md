@@ -22,7 +22,7 @@
 
 ## Screenshot
 
-![feedreader home screen](docs/assets/feedreader-home.png)
+![feedreader home screen](docs/assets/feedreader-home.png?v=2)
 
 ---
 

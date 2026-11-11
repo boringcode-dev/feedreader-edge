@@ -203,6 +203,8 @@
   let previewAutoLoadingMore = false;
   let previewChromeHidden = false;
   let previewLastScrollTop = 0;
+  let previewScrollDirection = 0;
+  let previewScrollTravel = 0;
   let previewScrollFrame = 0;
   let searchTimer = null;
   let ignoreNextEmptySearchInput = false;
@@ -1530,6 +1532,8 @@
 
   const resetPreviewChrome = () => {
     previewLastScrollTop = previewScroll?.scrollTop ?? 0;
+    previewScrollDirection = 0;
+    previewScrollTravel = 0;
     setPreviewChromeHidden(false);
   };
 
@@ -1540,18 +1544,29 @@
     }
     const scrollTop = previewScroll.scrollTop;
     const delta = scrollTop - previewLastScrollTop;
-    if (Math.abs(delta) < 4) return;
+    if (delta === 0) return;
     previewLastScrollTop = scrollTop;
 
-    if (scrollTop <= 4) {
+    const direction = delta > 0 ? 1 : -1;
+    if (direction !== previewScrollDirection) {
+      previewScrollDirection = direction;
+      previewScrollTravel = 0;
+    }
+    previewScrollTravel += Math.abs(delta);
+    // Ignore finger jitter: require a deliberate directional movement before
+    // the chrome slides, otherwise it can flicker in and out.
+    if (previewScrollTravel < 12) return;
+    previewScrollTravel = 0;
+
+    if (scrollTop <= 8) {
       setPreviewChromeHidden(false);
       return;
     }
 
-    const hideThreshold = (previewHeader?.offsetHeight ?? 64) + 12;
-    if (delta > 0 && scrollTop > hideThreshold) {
+    const hideThreshold = (previewHeader?.offsetHeight ?? 64) + 24;
+    if (direction > 0 && scrollTop > hideThreshold) {
       setPreviewChromeHidden(true);
-    } else if (delta < 0) {
+    } else if (direction < 0) {
       setPreviewChromeHidden(false);
     }
   };
