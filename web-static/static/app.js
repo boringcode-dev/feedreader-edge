@@ -1750,7 +1750,209 @@
     if (previewScroll) previewScroll.scrollTop = scrollTop;
   }
 
+  // Fullscreen preview: swipe in from the left screen edge and drag right to
+  // dismiss it, iOS back-gesture style. The panel follows the finger over the
+  // feed at its preserved scroll position; releasing past a distance or
+  // velocity threshold closes it, otherwise it springs back. Touch handling
+  // lives here rather than in CSS touch-action so wide tables keep horizontal
+  // panning inside the preview.
+  const previewSwipeEdgeWidth = 24;
+  const previewSwipeSlop = 8;
+  const previewSwipeCloseRatio = 0.3;
+  const previewSwipeMinDistance = 96;
+  const previewSwipeFlickVelocity = 0.5;
+  let previewSwipeTouchId = null;
+  let previewSwipeActive = false;
+  let previewSwipeClosing = false;
+  let previewSwipeStartX = 0;
+  let previewSwipeStartY = 0;
+  let previewSwipeOffset = 0;
+  let previewSwipeSamples = [];
+  let previewSwipeClickGuard = 0;
+  let previewSwipeCleanupTimer = 0;
+  let previewSwipeCloseToken = 0;
+
+  function resetPreviewSwipeState() {
+    previewSwipeCloseToken += 1;
+    previewSwipeClosing = false;
+    previewSwipeTouchId = null;
+    previewSwipeActive = false;
+    previewSwipeStartX = 0;
+    previewSwipeStartY = 0;
+    previewSwipeOffset = 0;
+    previewSwipeSamples = [];
+    window.clearTimeout(previewSwipeCleanupTimer);
+    if (!previewPanel) return;
+    previewPanel.classList.remove("is-preview-swiping");
+    previewPanel.style.removeProperty("pointer-events");
+    previewPanel.style.removeProperty("transition");
+    previewPanel.style.removeProperty("transform");
+  }
+
+  const springBackPreviewSwipe = () => {
+    if (!previewPanel) return;
+    previewPanel.style.transition =
+      "transform 260ms cubic-bezier(0.22, 1, 0.36, 1)";
+    previewPanel.style.transform = "";
+    window.clearTimeout(previewSwipeCleanupTimer);
+    previewSwipeCleanupTimer = window.setTimeout(() => {
+      previewPanel.classList.remove("is-preview-swiping");
+      previewPanel.style.removeProperty("transition");
+    }, 300);
+  };
+
+  const previewSwipeVelocity = () => {
+    if (previewSwipeSamples.length < 2) return 0;
+    const first = previewSwipeSamples[0];
+    const last = previewSwipeSamples[previewSwipeSamples.length - 1];
+    const elapsed = last.time - first.time;
+    return elapsed > 0 ? (last.x - first.x) / elapsed : 0;
+  };
+
+  function startPreviewSwipe(event) {
+    if (!previewPanel || previewSwipeClosing) return;
+    if (!mobilePreviewMedia.matches) return;
+    if (previewPanel.classList.contains("is-hidden")) return;
+    if (previewActionsDialog?.open) return;
+    if (event.touches.length !== 1) return;
+    const touch = event.touches[0];
+    const left = previewPanel.getBoundingClientRect().left;
+    if (touch.clientX - left > previewSwipeEdgeWidth) return;
+    previewSwipeTouchId = touch.identifier;
+    previewSwipeActive = false;
+    previewSwipeStartX = touch.clientX;
+    previewSwipeStartY = touch.clientY;
+    previewSwipeOffset = 0;
+    previewSwipeSamples = [{ x: touch.clientX, time: performance.now() }];
+  }
+
+  function finishPreviewSwipe(cancelled) {
+    previewSwipeTouchId = null;
+    const wasActive = previewSwipeActive;
+    const offset = previewSwipeOffset;
+    // Drop samples from before a pause so holding still before release does
+    // not register as a flick.
+    const releaseTime = performance.now();
+    previewSwipeSamples = previewSwipeSamples.filter(
+      (sample) => releaseTime - sample.time <= 100,
+    );
+    const velocity = previewSwipeVelocity();
+    previewSwipeActive = false;
+    previewSwipeOffset = 0;
+    previewSwipeSamples = [];
+    if (!wasActive) return;
+    previewSwipeClickGuard = performance.now() + 350;
+
+    const paneWidth = previewPanel.clientWidth || window.innerWidth;
+    const threshold = Math.max(
+      previewSwipeMinDistance,
+      paneWidth * previewSwipeCloseRatio,
+    );
+    const shouldClose =
+      !cancelled &&
+      (offset >= threshold ||
+        (offset > previewSwipeEdgeWidth &&
+          velocity >= previewSwipeFlickVelocity));
+    if (!shouldClose) {
+      springBackPreviewSwipe();
+      return;
+    }
+
+    previewSwipeClosing = true;
+    const token = ++previewSwipeCloseToken;
+    previewPanel.style.transition =
+      "transform 240ms cubic-bezier(0.32, 0.72, 0, 1)";
+    previewPanel.style.transform = "translate3d(100%, 0, 0)";
+    previewPanel.style.pointerEvents = "none";
+    window.setTimeout(() => {
+      if (token !== previewSwipeCloseToken) return;
+      closeArticlePreview();
+    }, 240);
+  }
+
+  function movePreviewSwipe(event) {
+    if (previewSwipeTouchId === null) return;
+    if (event.touches.length !== 1) {
+      finishPreviewSwipe(true);
+      return;
+    }
+    const touch = event.touches[0];
+    if (touch.identifier !== previewSwipeTouchId) return;
+    const dx = touch.clientX - previewSwipeStartX;
+    const dy = touch.clientY - previewSwipeStartY;
+
+    if (!previewSwipeActive) {
+      if (Math.abs(dx) < previewSwipeSlop && Math.abs(dy) < previewSwipeSlop) {
+        return;
+      }
+      // Vertical intent belongs to the preview's own scrolling, and the
+      // gesture only dismisses, so leftward drags are ignored as well.
+      if (Math.abs(dy) >= Math.abs(dx) || dx <= 0) {
+        previewSwipeTouchId = null;
+        previewSwipeSamples = [];
+        return;
+      }
+      previewSwipeActive = true;
+      previewSwipeClickGuard = performance.now() + 350;
+      previewPanel.classList.add("is-preview-swiping");
+      previewPanel.style.transition = "none";
+    }
+
+    event.preventDefault();
+    previewSwipeOffset = Math.max(0, dx);
+    previewPanel.style.transform = `translate3d(${previewSwipeOffset}px, 0, 0)`;
+
+    const now = performance.now();
+    previewSwipeSamples.push({ x: touch.clientX, time: now });
+    while (
+      previewSwipeSamples.length > 1 &&
+      now - previewSwipeSamples[0].time > 100
+    ) {
+      previewSwipeSamples.shift();
+    }
+  }
+
+  function endPreviewSwipe(event) {
+    if (previewSwipeTouchId === null) return;
+    const ended = Array.from(event.changedTouches ?? []).some(
+      (touch) => touch.identifier === previewSwipeTouchId,
+    );
+    if (!ended) return;
+    finishPreviewSwipe(false);
+  }
+
+  // Suppress the synthetic click a drag can leave on an edge control.
+  const guardPreviewSwipeClick = (event) => {
+    if (!previewSwipeClickGuard || performance.now() > previewSwipeClickGuard) {
+      return;
+    }
+    previewSwipeClickGuard = 0;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+
+  if (previewPanel) {
+    previewPanel.addEventListener("touchstart", startPreviewSwipe, {
+      passive: true,
+    });
+    previewPanel.addEventListener("touchmove", movePreviewSwipe, {
+      passive: false,
+    });
+    previewPanel.addEventListener("touchend", endPreviewSwipe, {
+      passive: true,
+    });
+    previewPanel.addEventListener(
+      "touchcancel",
+      () => finishPreviewSwipe(true),
+      { passive: true },
+    );
+    previewPanel.addEventListener("click", guardPreviewSwipeClick, true);
+    mobilePreviewMedia.addEventListener?.("change", resetPreviewSwipeState);
+    window.addEventListener("orientationchange", resetPreviewSwipeState);
+  }
+
   const resetPreviewPanel = () => {
+    resetPreviewSwipeState();
     closePreviewActionsDialog();
     previewPanel?.classList.add("is-hidden");
     currentPreviewItem = null;
@@ -1822,6 +2024,7 @@
       return;
     }
 
+    resetPreviewSwipeState();
     closePreviewActionsDialog();
     currentPreviewItem = {
       url: normalizeVisitedHref(url),
