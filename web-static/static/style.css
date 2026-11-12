@@ -2385,6 +2385,13 @@ body.is-dialog-open {
     box-shadow: none;
   }
 
+  /* Edge-swipe dismiss: the panel itself moves, so give it depth against the
+     feed revealed on the left while the finger drags. */
+  .preview-panel.is-preview-swiping {
+    will-change: transform;
+    box-shadow: -12px 0 28px rgba(0, 0, 0, 0.22);
+  }
+
   .preview-panel-actions .preview-panel-bookmark {
     display: none;
   }
