@@ -9,7 +9,7 @@
 | [`core/service.ts`](../core/service.ts)                                               | Refresh orchestration, feed pagination, health payloads, card-building, and error projection. |
 | [`core/render.ts`](../core/render.ts)                                                 | Server-side HTML rendering for the feed UI.                                                   |
 | [`core/preview.ts`](../core/preview.ts)                                               | Reader-view URL validation, guarded article fetch, and rich text/image/table extraction.      |
-| [`core/sources/`](../core/sources)                                                    | Upstream source adapters plus shared HTTP/DOM helpers.                                        |
+| [`core/sources/`](../core/sources)                                                    | Upstream source adapters plus shared HTTP/HTML parsing helpers.                                |
 | [`platforms/cloudflare/src/index.ts`](../platforms/cloudflare/src/index.ts)           | Worker request router and scheduled entrypoint.                                               |
 | [`platforms/cloudflare/src/repository.ts`](../platforms/cloudflare/src/repository.ts) | D1-backed `FeedRepository` implementation.                                                    |
 | [`platforms/cloudflare/migrations/`](../platforms/cloudflare/migrations)              | D1 schema migrations.                                                                         |

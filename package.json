@@ -30,6 +30,6 @@
     "wrangler": "4.161.0"
   },
   "dependencies": {
-    "linkedom": "0.18.15"
+    "node-html-parser": "9.0.7"
   }
 }

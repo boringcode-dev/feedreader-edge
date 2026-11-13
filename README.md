@@ -107,7 +107,7 @@ It optimizes for:
 - TypeScript
 - Cloudflare Workers
 - Web Standard APIs
-- `linkedom`
+- `node-html-parser`
 
 ### Frontend
 

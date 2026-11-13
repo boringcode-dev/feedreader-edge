@@ -436,10 +436,8 @@ function itemsCacheRequest(
   return new Request(url, { method: "GET" });
 }
 
-// tsconfig includes the DOM lib (needed for linkedom-based source parsing
-// elsewhere), whose own `CacheStorage`/`Cache` types shadow the Workers ones
-// and lack the Workers-only `expirationTtl` put option — declare the small
-// surface used here once.
+// @cloudflare/workers-types omits the runtime's `expirationTtl` put option, so
+// declare the small Cache surface used here.
 interface EdgeCache {
   match(request: Request): Promise<Response | null | undefined>;
   put(
@@ -450,7 +448,7 @@ interface EdgeCache {
 }
 
 function defaultEdgeCache(): EdgeCache {
-  return (caches as unknown as { default: EdgeCache }).default;
+  return caches.default;
 }
 
 async function readEdgeCache(cacheRequest: Request): Promise<Response | null> {
@@ -698,11 +696,8 @@ function personalizeCacheRequest(
   return new Request(url, { method: "GET" });
 }
 
-// tsconfig includes the DOM lib (needed for linkedom-based source parsing
-// elsewhere), whose own `CacheStorage` type shadows the Workers one and
-// lacks `.default` — cast through `unknown` once to recover it.
 function defaultPersonalizeCache(): Cache {
-  return (caches as unknown as { default: Cache }).default;
+  return caches.default;
 }
 
 interface CachedRanking {

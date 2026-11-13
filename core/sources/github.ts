@@ -1,8 +1,9 @@
-// Port of internal/sources/github.go. Uses linkedom (DOM parsing) because
-// the extraction is CSS-selector-based, same as the Go app's goquery usage.
+// Port of internal/sources/github.go. Uses node-html-parser (DOM-like
+// parsing) because the extraction is CSS-selector-based, same as the Go app's
+// goquery usage.
 
 import type { FeedItem } from "../domain.ts";
-import { parseHtmlDocument } from "./dom.ts";
+import { parseHtmlDocument, type HtmlElement } from "./dom.ts";
 import type { Source } from "./index.ts";
 import {
   cleanString,
@@ -78,7 +79,7 @@ export function parseGitHubTrending(html: string): FeedItem[] {
   return items;
 }
 
-function textOf(el: Element | null): string {
+function textOf(el: HtmlElement | null): string {
   return el?.textContent ?? "";
 }
 

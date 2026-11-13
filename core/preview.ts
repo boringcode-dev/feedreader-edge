@@ -15,7 +15,14 @@
 // rebinding vector; the stored-item allowlist and platform egress rules are
 // the layers that bound it.
 
-import { parseHtmlDocument } from "./sources/dom.ts";
+import {
+  isElement,
+  parentElement,
+  parseHtmlDocument,
+  type HtmlDocument,
+  type HtmlElement,
+  type HtmlNode,
+} from "./sources/dom.ts";
 
 const DEFAULT_MAX_BYTES = 400_000;
 const DEFAULT_TIMEOUT_MS = 10_000;
@@ -286,7 +293,7 @@ export function extractArticlePreview(
 }
 
 function extractBlocks(
-  root: Element,
+  root: HtmlElement,
   title: string,
   pageUrl: string,
 ): PreviewBlock[] {
@@ -404,7 +411,7 @@ interface InlineMarks {
 }
 
 function extractInlineSegments(
-  element: Element,
+  element: HtmlElement,
   pageUrl: string,
 ): PreviewSegment[] {
   const raw: PreviewSegment[] = [];
@@ -413,7 +420,7 @@ function extractInlineSegments(
 }
 
 function collectInlineSegments(
-  node: Node,
+  node: HtmlNode,
   pageUrl: string,
   marks: InlineMarks,
   out: PreviewSegment[],
@@ -423,9 +430,9 @@ function collectInlineSegments(
     if (text !== "") out.push({ text, ...marks });
     return;
   }
-  if (node.nodeType !== 1) return;
+  if (!isElement(node)) return;
 
-  const element = node as Element;
+  const element = node;
   const tagName = element.tagName;
   if (
     tagName === "SCRIPT" ||
@@ -469,7 +476,10 @@ function collectInlineSegments(
  * `normalizePreviewUrl` rejects javascript:, data:, credentials, non-standard
  * ports, and private/link-local hosts, so callers never see unsafe schemes.
  */
-function resolveInlineHref(raw: string | null, pageUrl: string): string {
+function resolveInlineHref(
+  raw: string | null | undefined,
+  pageUrl: string,
+): string {
   const trimmed = (raw ?? "").trim();
   if (trimmed === "") return "";
   try {
@@ -557,7 +567,7 @@ function capSegments(
 }
 
 function extractImageBlock(
-  image: Element,
+  image: HtmlElement,
   pageUrl: string,
 ): PreviewImageBlock | null {
   const width = parseImageDimension(image.getAttribute("width"));
@@ -610,8 +620,8 @@ function extractImageBlock(
   return block;
 }
 
-function extractTableBlock(table: Element): PreviewTableBlock | null {
-  if (table.parentElement?.closest("table")) return null;
+function extractTableBlock(table: HtmlElement): PreviewTableBlock | null {
+  if (parentElement(table)?.closest("table")) return null;
 
   const rows: string[][] = [];
   let header = false;
@@ -637,7 +647,10 @@ function extractTableBlock(table: Element): PreviewTableBlock | null {
   return rows.length > 0 ? { type: "table", header, rows } : null;
 }
 
-function resolveImageUrl(raw: string | null, pageUrl: string): string {
+function resolveImageUrl(
+  raw: string | null | undefined,
+  pageUrl: string,
+): string {
   const trimmed = (raw ?? "").trim();
   if (trimmed === "" || trimmed.startsWith("data:")) return "";
   try {
@@ -698,7 +711,10 @@ function isDecorativeImageSrc(rawUrl: string): boolean {
   );
 }
 
-function resolveSrcsetUrl(srcset: string | null, pageUrl: string): string {
+function resolveSrcsetUrl(
+  srcset: string | null | undefined,
+  pageUrl: string,
+): string {
   const raw = (srcset ?? "").trim();
   if (raw === "") return "";
   let best = "";
@@ -717,8 +733,10 @@ function resolveSrcsetUrl(srcset: string | null, pageUrl: string): string {
   return best;
 }
 
-function parseImageDimension(raw: string | null): number | undefined {
-  if (raw === null) return undefined;
+function parseImageDimension(
+  raw: string | null | undefined,
+): number | undefined {
+  if (raw === null || raw === undefined) return undefined;
   const trimmed = raw.trim();
   if (!/^\d+$/.test(trimmed)) return undefined;
   const parsed = Number.parseInt(trimmed, 10);
@@ -768,7 +786,7 @@ function isHuggingFacePaperPage(pageUrl: string): boolean {
  * one document. Start at the "Abstract" section so the reader view keeps the
  * paper itself instead of the surrounding discussion chrome.
  */
-function extractHuggingFacePaperByline(document: Document): string {
+function extractHuggingFacePaperByline(document: HtmlDocument): string {
   const nodes = Array.from(document.querySelectorAll(".author, h2"));
   const abstractIndex = nodes.findIndex(
     (element) =>
@@ -789,11 +807,11 @@ function extractHuggingFacePaperByline(document: Document): string {
 }
 
 function extractHuggingFacePaperLinks(
-  document: Document,
+  document: HtmlDocument,
   pageUrl: string,
 ): PreviewSegment[] {
   const heading = findHuggingFaceAbstractHeading(document);
-  const container = heading?.parentElement?.nextElementSibling;
+  const container = parentElement(heading)?.nextElementSibling;
   const anchors = container
     ? Array.from(container.querySelectorAll("a[href]"))
     : [];
@@ -816,7 +834,7 @@ function extractHuggingFacePaperLinks(
 }
 
 function extractHuggingFacePaperCitations(
-  document: Document,
+  document: HtmlDocument,
   pageUrl: string,
 ): PreviewBlock[] {
   const blocks: PreviewBlock[] = [];
@@ -853,7 +871,7 @@ function extractHuggingFacePaperCitations(
   return blocks;
 }
 
-function findHuggingFaceAbstractHeading(document: Document): Element | null {
+function findHuggingFaceAbstractHeading(document: HtmlDocument): HtmlElement | null {
   return (
     Array.from(document.querySelectorAll("h2")).find(
       (element) =>
@@ -862,18 +880,18 @@ function findHuggingFaceAbstractHeading(document: Document): Element | null {
   );
 }
 
-function pickHuggingFacePaperRoot(document: Document): Element | null {
+function pickHuggingFacePaperRoot(document: HtmlDocument): HtmlElement | null {
   const heading = findHuggingFaceAbstractHeading(document);
-  const parent = heading?.parentElement ?? null;
+  const parent = parentElement(heading);
   if (!parent || parent === document.body || parent.tagName === "MAIN") {
     return null;
   }
   return parent;
 }
 
-function pickContentRoot(document: Document): Element | null {
+function pickContentRoot(document: HtmlDocument): HtmlElement | null {
   const articles = Array.from(document.querySelectorAll("article"));
-  let bestArticle: Element | null = null;
+  let bestArticle: HtmlElement | null = null;
   let bestArticleScore = 0;
   for (const article of articles) {
     const score = contentScore(article);
@@ -886,7 +904,7 @@ function pickContentRoot(document: Document): Element | null {
     return bestArticle;
   }
 
-  const candidates: Element[] = [...articles];
+  const candidates: HtmlElement[] = [...articles];
   const main = document.querySelector("main, [role=main]");
   if (main) candidates.push(main);
   if (document.body) candidates.push(document.body);
@@ -904,7 +922,7 @@ function pickContentRoot(document: Document): Element | null {
   return best;
 }
 
-function contentScore(element: Element): number {
+function contentScore(element: HtmlElement): number {
   let score = 0;
   element.querySelectorAll("p, li, blockquote").forEach((node) => {
     const length = normalizeText(node.textContent).length;
@@ -931,7 +949,7 @@ function blockTypeFor(tagName: string): PreviewTextBlockType {
   }
 }
 
-function extractPublishedAt(document: Document): string | undefined {
+function extractPublishedAt(document: HtmlDocument): string | undefined {
   const candidates = [
     metaContent(document, [
       'meta[property="article:published_time"]',
@@ -992,7 +1010,7 @@ function isUsefulBlock(type: PreviewTextBlockType, text: string): boolean {
   }
 }
 
-function metaContent(document: Document, selectors: string[]): string {
+function metaContent(document: HtmlDocument, selectors: string[]): string {
   for (const selector of selectors) {
     const content = document.querySelector(selector)?.getAttribute("content");
     const normalized = normalizeText(content);
