@@ -33,7 +33,11 @@ import { D1Repository } from "./repository.ts";
 import { CloudflareLlmRanker } from "./llmRanker.ts";
 import { CloudflareEmbedder } from "./embedder.ts";
 import { createPreviewFallback } from "./previewFallbackChain.ts";
-import { takePreviewRateLimit } from "./previewRateLimit.ts";
+import {
+  PERSONALIZE_RATE_LIMIT_PER_MINUTE,
+  PREVIEW_RATE_LIMIT_PER_MINUTE,
+  takeRateLimit,
+} from "./rateLimit.ts";
 import { previewCacheTtlSeconds } from "./previewCachePolicy.ts";
 import { loadConfig } from "./config.ts";
 import type { Env } from "./env.d.ts";
@@ -295,7 +299,12 @@ async function handlePreview(
 
   // Only cache misses can hit the upstream/AI/Browser Run path; cached
   // previews stay unrestricted. The limiter is best-effort and per-colo.
-  if (!(await takePreviewRateLimit(caches.default, previewClientIp(request)))) {
+  if (
+    !(await takeRateLimit(caches.default, requestClientIp(request), {
+      namespace: "preview",
+      limit: PREVIEW_RATE_LIMIT_PER_MINUTE,
+    }))
+  ) {
     console.warn(
       JSON.stringify({
         event: "preview_rate_limited",
@@ -420,7 +429,7 @@ function previewCacheRequest(target: string): Request {
 
 /** Cloudflare supplies this header; do not trust client-forwarded headers.
  * Local dev has no header, so all local requests share one bucket. */
-function previewClientIp(request: Request): string {
+function requestClientIp(request: Request): string {
   const ip = request.headers.get("cf-connecting-ip")?.trim() ?? "";
   return ip !== "" ? ip : "unknown";
 }
@@ -714,6 +723,29 @@ async function handlePersonalize(
     rankedKeys = cached.rankedKeys;
     personalization = cached.personalization;
   } else {
+    // Cache hits skip the AI work, so only misses consume this bucket.
+    if (
+      !(await takeRateLimit(caches.default, requestClientIp(request), {
+        namespace: "personalize",
+        limit: PERSONALIZE_RATE_LIMIT_PER_MINUTE,
+      }))
+    ) {
+      console.warn(JSON.stringify({ event: "personalize_rate_limited" }));
+      return Response.json(
+        {
+          error: "too many personalization requests",
+          reason: "rate_limited",
+        },
+        {
+          status: 429,
+          headers: {
+            "Cache-Control": "no-store",
+            "Retry-After": "60",
+          },
+        },
+      );
+    }
+
     let interestsVector: number[] | null = null;
     try {
       const embedder = new CloudflareEmbedder(env.AI);
