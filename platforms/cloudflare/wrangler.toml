@@ -69,6 +69,10 @@ FEEDREADER_MAX_ITEMS_PER_SOURCE = "1000"
 # the remaining slots are filled from the top similarity hits. See
 # src/index.ts's handlePersonalize and src/embedder.ts.
 FEEDREADER_PERSONALIZE_POLISH_POOL_SIZE = "30"
+# Workers AI Markdown Conversion fallback for previews the built-in extractor
+# can't read (PDFs/Office documents, JavaScript shells, truncated bodies).
+# Set to "false" to disable it without a code change.
+FEEDREADER_AI_PREVIEW_FALLBACK = "true"
 
 # REFRESH_SECRET is a secret, not a var — set it with:
 #   wrangler secret put REFRESH_SECRET --config platforms/cloudflare/wrangler.toml

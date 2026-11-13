@@ -32,6 +32,7 @@ import { paginate } from "../../../core/sources/listInMemory.ts";
 import { D1Repository } from "./repository.ts";
 import { CloudflareLlmRanker } from "./llmRanker.ts";
 import { CloudflareEmbedder } from "./embedder.ts";
+import { aiPreviewFallback } from "./previewFallback.ts";
 import { loadConfig } from "./config.ts";
 import type { Env } from "./env.d.ts";
 
@@ -291,8 +292,17 @@ async function handlePreview(
   if (cached) return clientCacheResponse(cached);
 
   try {
+    // PDFs/Office documents and pages with no readable blocks may still be
+    // previewable through Workers AI's Markdown conversion. The fallback is
+    // best-effort: a null result keeps the original failure reason.
+    const aiFallbackEnabled =
+      (env.FEEDREADER_AI_PREVIEW_FALLBACK ?? "true").trim().toLowerCase() !==
+      "false";
     const preview = await fetchArticlePreview(target, {
       userAgent: loadConfig(env).userAgent,
+      ...(aiFallbackEnabled
+        ? { fallback: (input) => aiPreviewFallback(env, input, item.title) }
+        : {}),
     });
     const payload = {
       url: item.url,
@@ -374,9 +384,10 @@ async function handlePreview(
  * `.invalid` is reserved by RFC 2606 for exactly this kind of placeholder
  * use, so it's guaranteed not to collide with a real host. */
 function previewCacheRequest(target: string): Request {
-  // v9 adds paper resource/citation sections; v8 added arXiv links and v7
-  // covered author bylines.
-  const raw = `preview:v9:${target}`;
+  // v10 adds the Workers AI Markdown fallback, so previously cached empty
+  // previews get another extraction attempt; v9 added paper resource/citation
+  // sections, v8 added arXiv links, and v7 covered author bylines.
+  const raw = `preview:v10:${target}`;
   const url = `https://feedreader-internal.invalid/preview-cache?k=${encodeURIComponent(raw)}`;
   return new Request(url, { method: "GET" });
 }

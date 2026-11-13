@@ -18,4 +18,7 @@ export interface Env {
    * embedding-similarity order on its own. See src/index.ts's
    * handlePersonalize. */
   FEEDREADER_PERSONALIZE_POLISH_POOL_SIZE?: string;
+  /** Set to "false" to disable the Workers AI toMarkdown fallback for
+   * non-HTML and empty/truncated article previews. */
+  FEEDREADER_AI_PREVIEW_FALLBACK?: string;
 }
