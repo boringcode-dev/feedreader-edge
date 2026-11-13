@@ -58,6 +58,18 @@ describe("browserPreviewFallback", () => {
     expect(quickAction).not.toHaveBeenCalled();
   });
 
+  it("rejects an unusable input URL before calling Browser Run", async () => {
+    const quickAction = vi.fn(async () => successResponse("Unused."));
+    const result = await browserPreviewFallback(
+      envWith("true", quickAction),
+      { ...HTML_INPUT, url: "http://127.0.0.1/private" },
+      "Stored title",
+    );
+
+    expect(result).toBeNull();
+    expect(quickAction).not.toHaveBeenCalled();
+  });
+
   it("only handles no_content HTML failures", async () => {
     const quickAction = vi.fn(async () => successResponse("Unused."));
 
@@ -73,8 +85,9 @@ describe("browserPreviewFallback", () => {
   });
 
   it("maps rendered Markdown to a preview", async () => {
-    const quickAction = vi.fn(async () =>
-      successResponse(`---
+    const quickAction = vi.fn(
+      async (_action: string, _options: unknown) =>
+        successResponse(`---
 title: "TodoMVC: React"
 ---
 
@@ -100,6 +113,20 @@ A long enough paragraph rendered after JavaScript executes.`),
         rejectResourceTypes: ["image", "media", "font"],
       }),
     );
+
+    const options = quickAction.mock.calls[0]?.[1] as {
+      rejectRequestPattern?: string[];
+    };
+    const pattern = options.rejectRequestPattern?.[0];
+    expect(pattern).toBeDefined();
+    const privateHost = new RegExp(
+      pattern!.slice(1, pattern!.lastIndexOf("/")),
+    );
+    expect(privateHost.test("http://127.0.0.1/x")).toBe(true);
+    expect(privateHost.test("http://[::ffff:127.0.0.1]/x")).toBe(true);
+    expect(privateHost.test("https://metadata.google.internal/")).toBe(true);
+    expect(privateHost.test("https://example.com/x")).toBe(false);
+
     expect(result).toMatchObject({
       title: "Stored title",
       siteName: "example.com",
@@ -118,6 +145,28 @@ A long enough paragraph rendered after JavaScript executes.`),
     const quickAction = vi.fn(async () =>
       successResponse("A long enough paragraph from a private redirect.", {
         finalUrl: "http://127.0.0.1/internal",
+      }),
+    );
+
+    const result = await browserPreviewFallback(
+      envWith("true", quickAction),
+      HTML_INPUT,
+      "Stored title",
+    );
+
+    expect(result).toBeNull();
+  });
+
+  it("rejects a redirect chain that reaches a private host", async () => {
+    const quickAction = vi.fn(async () =>
+      successResponse("A long enough paragraph after a redirect.", {
+        redirectChain: [
+          {
+            url: "https://example.com/start",
+            status: 302,
+            headers: { location: "http://127.0.0.1/internal" },
+          },
+        ],
       }),
     );
 

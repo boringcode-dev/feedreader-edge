@@ -4,6 +4,11 @@
 // render the page in a real browser and return Markdown; the mapper then
 // applies the same URL/block validation as the other extractors.
 //
+// input.url is the final URL validated by core's safe-redirect fetch. This
+// adapter re-validates it and rejects literal private-host requests (and
+// redirect hops) as defense-in-depth; Browser Run's own egress is the layer
+// for DNS-resolved private addresses, which Workers cannot pin.
+//
 // Workers Free includes 10 browser-minutes/day and paces Quick Actions to
 // one request per 10 seconds. This adapter runs only on a preview cache miss
 // after the static extractor and AI fallback both found nothing; successes
@@ -33,10 +38,11 @@ const REJECTED_RESOURCE_TYPES: BrowserRunResourceType[] = [
   "font",
 ];
 // Quick Actions do not support session guardrails. Block literal private
-// hosts at the request layer and re-check meta.finalUrl below; the
-// stored-item allowlist remains the primary SSRF boundary.
+// hosts and cloud-metadata names at the request layer and re-check the
+// redirect chain/final URL below; the stored-item allowlist remains the
+// primary SSRF boundary.
 const PRIVATE_HOST_REQUEST_PATTERN =
-  "/^https?:\\/\\/(?:localhost|127\\.|0\\.|10\\.|192\\.168\\.|169\\.254\\.|172\\.(?:1[6-9]|2[0-9]|3[01])\\.|\\[::1\\]|\\[f[cd])/";
+  "/^https?:\\/\\/(?:localhost|127\\.|0\\.|10\\.|192\\.168\\.|169\\.254\\.|172\\.(?:1[6-9]|2[0-9]|3[01])\\.|metadata\\.google\\.internal|metadata\\.goog|instance-data|\\[::1\\]|\\[::ffff:|\\[f[cd]|\\[fe[89ab])/";
 
 export async function browserPreviewFallback(
   env: Env,
@@ -47,12 +53,14 @@ export async function browserPreviewFallback(
     return null;
   }
   if (input.kind !== "no_content") return null;
+  const target = normalizePreviewUrl(input.url);
+  if (!target) return null;
 
   const startedAt = Date.now();
   try {
     const response = await withTimeout(
       env.BROWSER.quickAction("markdown", {
-        url: input.url,
+        url: target,
         gotoOptions: {
           timeout: BROWSER_GOTO_TIMEOUT_MS,
           // SPAs finish rendering after the initial DOM load; wait for the
@@ -101,7 +109,18 @@ export async function browserPreviewFallback(
       return null;
     }
 
-    const finalUrl = normalizePreviewUrl(payload.meta.finalUrl ?? input.url);
+    if (!hasOnlyPublicRedirects(payload.meta.redirectChain)) {
+      logBrowserFallback(input, startedAt, {
+        outcome: "error",
+        status: response.status,
+        pageStatus,
+        browserMs,
+        error: "unusable redirect chain",
+      });
+      return null;
+    }
+
+    const finalUrl = normalizePreviewUrl(payload.meta.finalUrl ?? target);
     if (!finalUrl) {
       logBrowserFallback(input, startedAt, {
         outcome: "error",
@@ -153,6 +172,41 @@ export async function browserPreviewFallback(
 
 function isBrowserFallbackEnabled(raw: string | undefined): boolean {
   return (raw ?? "true").trim().toLowerCase() !== "false";
+}
+
+/**
+ * Browser Run follows redirects itself. Reject the rendered result if any
+ * hop's source or Location is not a public http(s) URL; the request-layer
+ * reject pattern is the corresponding prevention layer.
+ */
+function hasOnlyPublicRedirects(
+  hops: BrowserRunRedirectHop[] | undefined,
+): boolean {
+  if (!hops) return true;
+  for (const hop of hops) {
+    if (!normalizePreviewUrl(hop.url)) return false;
+    const location = headerValue(hop.headers, "location");
+    if (location === undefined) return false;
+    let next: string;
+    try {
+      next = new URL(location, hop.url).toString();
+    } catch {
+      return false;
+    }
+    if (!normalizePreviewUrl(next)) return false;
+  }
+  return true;
+}
+
+function headerValue(
+  headers: Record<string, string>,
+  name: string,
+): string | undefined {
+  const target = name.toLowerCase();
+  for (const [key, value] of Object.entries(headers)) {
+    if (key.toLowerCase() === target) return value;
+  }
+  return undefined;
 }
 
 function parseHeaderInt(raw: string | null): number | undefined {
