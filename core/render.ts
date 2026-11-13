@@ -164,13 +164,13 @@ export function renderIndexPage(data: PageData): string {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>reader</title>
-    <meta name="application-name" content="reader" />
+    <title>reader.</title>
+    <meta name="application-name" content="reader." />
     <meta name="description" content="Tiny feed reader for Hacker News, GitHub Trending, and Hugging Face Trending Papers." />
     <link rel="canonical" href="${escapeHtml(data.canonicalUrl)}" />
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="reader" />
-    <meta property="og:title" content="reader — engineering and research signals" />
+    <meta property="og:site_name" content="reader." />
+    <meta property="og:title" content="reader. — engineering and research signals" />
     <meta property="og:description" content="Tiny feed reader for Hacker News, GitHub Trending, and Hugging Face Trending Papers." />
     <meta property="og:url" content="${escapeHtml(data.canonicalUrl)}" />
     <meta property="og:image" content="${escapeHtml(data.socialImageUrl)}" />
@@ -178,7 +178,7 @@ export function renderIndexPage(data: PageData): string {
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="reader — engineering and research signals" />
+    <meta name="twitter:title" content="reader. — engineering and research signals" />
     <meta name="twitter:description" content="Tiny feed reader for Hacker News, GitHub Trending, and Hugging Face Trending Papers." />
     <meta name="twitter:image" content="${escapeHtml(data.socialImageUrl)}" />
     <meta name="twitter:image:alt" content="reader social preview showing branded feed cards for engineering and research sources" />
@@ -189,13 +189,13 @@ export function renderIndexPage(data: PageData): string {
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="reader" />
-    <link rel="manifest" href="/site.webmanifest?v=17" />
+    <meta name="apple-mobile-web-app-title" content="reader." />
+    <link rel="manifest" href="/site.webmanifest?v=18" />
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
     <script>${data.themeInitScript}</script>
     <style>${data.inlineCss}</style>
-    <script src="/static/app.js?v=108" defer></script>
+    <script src="/static/app.js?v=109" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <div class="boot-veil" data-boot-veil aria-hidden="true">

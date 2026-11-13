@@ -36,8 +36,28 @@ describe("renderIndexPage", () => {
     expect(html).toContain(
       "<script>document.documentElement.dataset.theme='dark';</script>",
     );
-    expect(html).toContain('/static/app.js?v=108');
+    expect(html).toContain('/static/app.js?v=109');
     expect(html).not.toContain("style.css");
     expect(html).not.toContain("theme-init.js");
+  });
+
+  it("uses the dotted brand name in browser and installed-app metadata", () => {
+    const html = renderPage();
+    expect(html).toContain("<title>reader.</title>");
+    expect(html).toContain(
+      '<meta name="application-name" content="reader." />',
+    );
+    expect(html).toContain(
+      '<meta name="apple-mobile-web-app-title" content="reader." />',
+    );
+    expect(html).toContain(
+      '<meta property="og:site_name" content="reader." />',
+    );
+    expect(html).toContain(
+      '<meta property="og:title" content="reader. — engineering and research signals" />',
+    );
+    expect(html).toContain(
+      '<meta name="twitter:title" content="reader. — engineering and research signals" />',
+    );
   });
 });
