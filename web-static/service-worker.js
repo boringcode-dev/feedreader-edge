@@ -7,7 +7,7 @@ const CORE_ASSETS = [
   "/static/source-icons/github.svg",
   "/static/source-icons/huggingface.svg",
   "/favicon.svg?v=8",
-  "/site.webmanifest?v=17",
+  "/site.webmanifest?v=18",
   "/apple-touch-icon.png?v=8",
   "/icon-192.png?v=8",
   "/icon-512.png?v=8",

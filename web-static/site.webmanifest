@@ -1,7 +1,7 @@
 {
   "id": "/",
-  "name": "reader",
-  "short_name": "reader",
+  "name": "reader.",
+  "short_name": "reader.",
   "description": "Tiny feed reader for Hacker News, GitHub Trending, and Hugging Face Trending Papers.",
   "lang": "en",
   "dir": "ltr",
