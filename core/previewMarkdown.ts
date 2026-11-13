@@ -76,7 +76,10 @@ export function markdownToPreviewBlocks(
   markdown: string,
   options: MarkdownPreviewOptions,
 ): PreviewBlock[] {
-  const source = stripTrailingJsonLd(markdown.replace(/\r\n?/g, "\n"));
+  const normalized = stripLeadingFrontmatter(
+    markdown.replace(/\r\n?/g, "\n"),
+  );
+  const source = stripTrailingJsonLd(normalized);
   const lines = source.split("\n");
   const blocks: PreviewBlock[] = [];
   const seenImages = new Set<string>();
@@ -625,6 +628,23 @@ function codePoint(fallback: string, value: number): string {
     return fallback;
   }
   return String.fromCodePoint(value);
+}
+
+/**
+ * Browser Run prefixes Markdown with YAML frontmatter when the page exposes
+ * metadata. Strip a leading `---` block only when it contains at least one
+ * `key:` line, so a document that starts with a horizontal rule is left
+ * alone.
+ */
+function stripLeadingFrontmatter(markdown: string): string {
+  if (!markdown.startsWith("---\n")) return markdown;
+  const end = markdown.indexOf("\n---", 4);
+  if (end === -1) return markdown;
+  const frontmatter = markdown.slice(4, end);
+  if (!/^[A-Za-z0-9_-]+:/m.test(frontmatter)) return markdown;
+  const after = markdown.slice(end + 4);
+  if (after !== "" && !after.startsWith("\n")) return markdown;
+  return after.replace(/^\n+/, "");
 }
 
 /**

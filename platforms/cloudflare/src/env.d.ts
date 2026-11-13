@@ -8,6 +8,8 @@ export interface Env {
   /** Workers AI binding backing the "For You" LlmRanker — see
    * platforms/cloudflare/src/llmRanker.ts. No secret needed. */
   AI: Ai;
+  /** Browser Run binding backing the JavaScript-rendered preview fallback. */
+  BROWSER: BrowserRun;
   REFRESH_SECRET: string;
   APP_VERSION?: string;
   FEEDREADER_ITEMS_PER_SOURCE?: string;
@@ -21,4 +23,7 @@ export interface Env {
   /** Set to "false" to disable the Workers AI toMarkdown fallback for
    * non-HTML and empty/truncated article previews. */
   FEEDREADER_AI_PREVIEW_FALLBACK?: string;
+  /** Set to "false" to disable the Browser Run fallback for JavaScript-
+   * rendered HTML previews. */
+  FEEDREADER_BROWSER_PREVIEW_FALLBACK?: string;
 }

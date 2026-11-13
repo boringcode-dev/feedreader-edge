@@ -16,10 +16,14 @@ import {
 } from "../../../core/preview.ts";
 import { markdownToPreviewBlocks } from "../../../core/previewMarkdown.ts";
 import type { Env } from "./env.d.ts";
+import {
+  errorMessage,
+  hostLabel,
+  previewTitle,
+  withTimeout,
+} from "./previewFallbackUtils.ts";
 
 const AI_TIMEOUT_MS = 10_000;
-const MAX_LOG_ERROR_CHARS = 300;
-const TITLE_MAX_CHARS = 200;
 
 // toMarkdown also accepts images, but turning a standalone image into an AI
 // description is not a useful article preview and can consume the Workers AI
@@ -96,6 +100,7 @@ export async function aiPreviewFallback(
         },
       }),
       AI_TIMEOUT_MS,
+      "AI Markdown conversion timed out",
     );
 
     if (result.format === "error") {
@@ -124,10 +129,7 @@ export async function aiPreviewFallback(
 
     const readingMinutes = estimateReadingMinutes(blocks);
     const preview: ArticlePreview = {
-      title:
-        titleHint.trim().slice(0, TITLE_MAX_CHARS) ||
-        firstHeading(blocks) ||
-        "Article preview",
+      title: previewTitle(titleHint, blocks),
       siteName: hostLabel(input.url),
       blocks,
     };
@@ -194,19 +196,6 @@ function urlExtension(rawUrl: string): string {
   }
 }
 
-function firstHeading(blocks: PreviewBlock[]): string {
-  for (const block of blocks) {
-    if (block.type !== "heading") continue;
-    const text =
-      "segments" in block
-        ? block.segments.map((segment) => segment.text).join("")
-        : block.text;
-    const trimmed = text.trim();
-    if (trimmed !== "") return trimmed;
-  }
-  return "";
-}
-
 /**
  * PDF conversion emits a heading for the uploaded filename and for each page
  * ("Page 1", "Page 2", ...). Neither is article content; drop them so the
@@ -242,36 +231,6 @@ function blockPlainText(block: PreviewBlock): string | null {
   return "segments" in block
     ? block.segments.map((segment) => segment.text).join("")
     : block.text;
-}
-
-function hostLabel(rawUrl: string): string {
-  try {
-    return new URL(rawUrl).hostname.toLowerCase().replace(/^www\./, "");
-  } catch {
-    return "";
-  }
-}
-
-function errorMessage(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.slice(0, MAX_LOG_ERROR_CHARS);
-}
-
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  try {
-    return await Promise.race([
-      promise,
-      new Promise<never>((_, reject) => {
-        timer = setTimeout(
-          () => reject(new Error("AI Markdown conversion timed out")),
-          timeoutMs,
-        );
-      }),
-    ]);
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
-  }
 }
 
 function logFallback(
