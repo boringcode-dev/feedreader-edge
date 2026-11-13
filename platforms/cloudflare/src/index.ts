@@ -33,6 +33,8 @@ import { D1Repository } from "./repository.ts";
 import { CloudflareLlmRanker } from "./llmRanker.ts";
 import { CloudflareEmbedder } from "./embedder.ts";
 import { createPreviewFallback } from "./previewFallbackChain.ts";
+import { takePreviewRateLimit } from "./previewRateLimit.ts";
+import { previewCacheTtlSeconds } from "./previewCachePolicy.ts";
 import { loadConfig } from "./config.ts";
 import type { Env } from "./env.d.ts";
 
@@ -87,11 +89,8 @@ const PRIVATE_NO_STORE = "private, no-store";
 const HOME_EDGE_CACHE_CONTROL = `public, max-age=${HOME_CACHE_TTL_SECONDS}`;
 
 // Reader previews are fetched on demand when the user opens the side panel.
-// A short edge cache keeps repeated clicks from re-fetching the same article
-// (and re-burning the CPU budget on extraction), while still picking up
-// article edits within half an hour.
-const PREVIEW_CACHE_TTL_SECONDS = 1800;
-const PREVIEW_EDGE_CACHE_CONTROL = `public, max-age=${PREVIEW_CACHE_TTL_SECONDS}`;
+// The TTL split (30 minutes for content, 5 minutes for empty results) lives
+// in previewCachePolicy.ts.
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -102,7 +101,9 @@ export default {
     if (url.pathname === "/") return handleHome(url, env, repo, sources);
     if (url.pathname === "/healthz") return handleHealthz(sources, repo);
     if (url.pathname === "/api/items") return handleItemsApi(url, repo);
-    if (url.pathname === "/api/preview") return handlePreview(url, env, repo);
+    if (url.pathname === "/api/preview") {
+      return handlePreview(url, env, repo, request);
+    }
     if (url.pathname === "/api/version") return handleVersion(env);
     if (url.pathname === "/api/personalize") {
       if (request.method !== "POST") {
@@ -265,6 +266,7 @@ async function handlePreview(
   url: URL,
   env: Env,
   repo: D1Repository,
+  request: Request,
 ): Promise<Response> {
   const requestedUrl = (url.searchParams.get("url") ?? "").trim();
   if (requestedUrl === "") {
@@ -291,6 +293,30 @@ async function handlePreview(
   const cached = await readEdgeCache(cacheRequest);
   if (cached) return clientCacheResponse(cached);
 
+  // Only cache misses can hit the upstream/AI/Browser Run path; cached
+  // previews stay unrestricted. The limiter is best-effort and per-colo.
+  if (!(await takePreviewRateLimit(caches.default, previewClientIp(request)))) {
+    console.warn(
+      JSON.stringify({
+        event: "preview_rate_limited",
+        url: item.url,
+      }),
+    );
+    return Response.json(
+      {
+        error: "too many preview requests",
+        reason: "rate_limited",
+      },
+      {
+        status: 429,
+        headers: {
+          "Cache-Control": "no-store",
+          "Retry-After": "60",
+        },
+      },
+    );
+  }
+
   try {
     // PDFs/Office documents go through Workers AI Markdown conversion; if an
     // HTML page still has no readable blocks, Browser Run can render a
@@ -311,20 +337,22 @@ async function handlePreview(
       blocks: preview.blocks,
       ...(preview.blocks.length === 0 ? { reason: "no_content" } : {}),
     };
+    const cacheTtl = previewCacheTtlSeconds(preview.blocks.length);
     const body = JSON.stringify(payload);
     const cacheResponse = new Response(body, {
       headers: {
         "Content-Type": "application/json",
-        "Cache-Control": PREVIEW_EDGE_CACHE_CONTROL,
+        "Cache-Control": `public, max-age=${cacheTtl}`,
       },
     });
-    await writeEdgeCache(cacheRequest, cacheResponse, PREVIEW_CACHE_TTL_SECONDS);
+    await writeEdgeCache(cacheRequest, cacheResponse, cacheTtl);
     if (preview.blocks.length === 0) {
       console.warn(
         JSON.stringify({
           event: "preview_empty",
           url: item.url,
           reason: "no_content",
+          cache_ttl_seconds: cacheTtl,
         }),
       );
     }
@@ -388,6 +416,13 @@ function previewCacheRequest(target: string): Request {
   const raw = `preview:v11:${target}`;
   const url = `https://feedreader-internal.invalid/preview-cache?k=${encodeURIComponent(raw)}`;
   return new Request(url, { method: "GET" });
+}
+
+/** Cloudflare supplies this header; do not trust client-forwarded headers.
+ * Local dev has no header, so all local requests share one bucket. */
+function previewClientIp(request: Request): string {
+  const ip = request.headers.get("cf-connecting-ip")?.trim() ?? "";
+  return ip !== "" ? ip : "unknown";
 }
 
 /**
