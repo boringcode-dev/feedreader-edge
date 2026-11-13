@@ -47,24 +47,11 @@ const MIN_PARAGRAPH_CHARS = 25;
 // GitHub don't leak repository chrome into the reader view.
 const MIN_ARTICLE_SCORE = 300;
 
-const NOISE_SELECTORS = [
-  "script",
-  "style",
-  "noscript",
-  "template",
-  "svg",
-  "canvas",
-  "iframe",
-  "object",
-  "embed",
-  "form",
-  "nav",
-  "header",
-  "footer",
-  "aside",
-  "[hidden]",
-  '[aria-hidden="true"]',
-];
+// One comma-separated selector lets node-html-parser traverse the tree once
+// instead of once per tag. Removing a parent also removes nested matches, so
+// the deduplicated result is equivalent to the old per-selector loop.
+const NOISE_SELECTOR =
+  'script,style,noscript,template,svg,canvas,iframe,object,embed,form,nav,header,footer,aside,[hidden],[aria-hidden="true"]';
 
 export type PreviewTextBlockType = "heading" | "paragraph" | "list" | "quote";
 
@@ -396,7 +383,7 @@ export function extractArticlePreview(
   html: string,
   pageUrl: string,
 ): ArticlePreview {
-  const document = parseHtmlDocument(html);
+  const document = parseHtmlDocument(focusPreviewHtml(html, pageUrl));
 
   const rawTitle = firstNonEmpty(
     metaContent(document, [
@@ -432,11 +419,9 @@ export function extractArticlePreview(
     ? extractHuggingFacePaperCitations(document, pageUrl)
     : [];
 
-  for (const selector of NOISE_SELECTORS) {
-    document.querySelectorAll(selector).forEach((element) => {
-      element.remove();
-    });
-  }
+  document.querySelectorAll(NOISE_SELECTOR).forEach((element) => {
+    element.remove();
+  });
 
   const root = isPaperPage
     ? (pickHuggingFacePaperRoot(document) ?? pickContentRoot(document))
@@ -952,6 +937,27 @@ function sanitizePreviewTitle(rawTitle: string, pageUrl: string): string {
     cleaned = cleaned.replace(/^Paper page\s*[-–—]\s*/i, "");
   }
   return cleaned.trim() || title;
+}
+
+/**
+ * Hugging Face paper pages put the article inside <main>, surrounded by a
+ * large header/footer and client-hydration chrome. Parsing only <head> and
+ * <main> keeps title/byline/date metadata and the paper/citation blocks
+ * while cutting the DOM by roughly a quarter on the pages that have hit the
+ * Workers Free CPU limit.
+ */
+function focusPreviewHtml(html: string, pageUrl: string): string {
+  if (!isHuggingFacePaperPage(pageUrl)) return html;
+
+  const mainStart = /<main(?:\s|>)/i.exec(html);
+  if (!mainStart) return html;
+  const mainHtml = html.slice(mainStart.index);
+  const mainClose = /<\/main\s*>/i.exec(mainHtml);
+  if (!mainClose) return html;
+
+  const focusedMain = mainHtml.slice(0, mainClose.index + mainClose[0].length);
+  const head = /<head[^>]*>[\s\S]*?<\/head\s*>/i.exec(html)?.[0] ?? "";
+  return `<html>${head}<body>${focusedMain}</body></html>`;
 }
 
 function isHuggingFacePaperPage(pageUrl: string): boolean {
