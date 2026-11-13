@@ -227,6 +227,7 @@
   let reconnectRefetchInFlight = false;
   let deferredInstallPrompt = null;
   let previewRequestSequence = 0;
+  let previewSkeletonTimer = null;
   let previewAbortController = null;
   let currentPreviewItem = null;
   let currentCardActionData = null;
@@ -291,6 +292,21 @@
 
   const skeletonMarkup = (count) =>
     Array.from({ length: count }, () => skeletonCardTemplate).join("");
+
+  const previewSkeletonMarkup = `
+    <div class="preview-skeleton" data-preview-skeleton aria-hidden="true">
+      <div class="preview-skeleton-meta">
+        <span class="skeleton-line skeleton-line--preview-meta"></span>
+        <span class="skeleton-line skeleton-line--preview-meta-short"></span>
+      </div>
+      <span class="skeleton-line skeleton-line--preview-heading"></span>
+      <span class="skeleton-line skeleton-line--preview-body"></span>
+      <span class="skeleton-line skeleton-line--preview-body"></span>
+      <span class="skeleton-line skeleton-line--preview-body-short"></span>
+      <span class="skeleton-line preview-skeleton-figure"></span>
+      <span class="skeleton-line skeleton-line--preview-body"></span>
+      <span class="skeleton-line skeleton-line--preview-body-short"></span>
+    </div>`;
 
   const browserLocales =
     Array.isArray(navigator.languages) && navigator.languages.length > 0
@@ -1349,10 +1365,56 @@
     }
   }
 
-  const setPreviewStatus = (message, { hidden = false } = {}) => {
+  const setPreviewStatus = (
+    message,
+    { hidden = false, visuallyHidden = false } = {},
+  ) => {
     if (!previewStatus) return;
     previewStatus.textContent = hidden ? "" : message;
     previewStatus.classList.toggle("is-hidden", hidden);
+    previewStatus.classList.toggle("sr-only", visuallyHidden);
+  };
+
+  const setPreviewTitle = (nextTitle) => {
+    if (!previewTitle) return;
+    const next = nextTitle || "Article preview";
+    if (previewTitle.textContent === next) return;
+    previewTitle.textContent = next;
+    if (
+      reducedMotionMedia?.matches === true ||
+      typeof previewTitle.animate !== "function"
+    ) {
+      return;
+    }
+    previewTitle.animate([{ opacity: 0.45 }, { opacity: 1 }], {
+      duration: 180,
+      easing: "ease-out",
+    });
+  };
+
+  const animatePreviewContent = () => {
+    if (!previewContent || reducedMotionMedia?.matches === true) return;
+    if (typeof previewContent.animate !== "function") return;
+    previewContent.animate(
+      [
+        { opacity: 0.35, transform: "translateY(3px)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: 200, easing: "ease-out" },
+    );
+  };
+
+  const clearPreviewSkeletonTimer = () => {
+    if (previewSkeletonTimer !== null) {
+      window.clearTimeout(previewSkeletonTimer);
+      previewSkeletonTimer = null;
+    }
+  };
+
+  const showPreviewSkeleton = (requestId) => {
+    previewSkeletonTimer = null;
+    if (requestId !== previewRequestSequence || !previewContent) return;
+    previewContent.innerHTML = previewSkeletonMarkup;
   };
 
   const setSourceIcon = (image, source) => {
@@ -2114,6 +2176,7 @@
   }
 
   const resetPreviewPanel = () => {
+    clearPreviewSkeletonTimer();
     resetPreviewSwipeState();
     closePreviewActionsDialog();
     previewPanel?.classList.add("is-hidden");
@@ -2210,6 +2273,7 @@
     previewAbortController?.abort();
     const controller = new AbortController();
     previewAbortController = controller;
+    clearPreviewSkeletonTimer();
 
     lockPreviewScroll();
     previewPanel.classList.remove("is-hidden");
@@ -2221,9 +2285,7 @@
     setPreviewSource(source, host);
     syncPreviewChromeHeights();
     setPreviewCommentsLink(commentsUrl);
-    if (previewTitle) {
-      previewTitle.textContent = title || "Article preview";
-    }
+    setPreviewTitle(title);
     if (previewByline) {
       previewByline.textContent = "";
       previewByline.classList.add("is-hidden");
@@ -2236,9 +2298,13 @@
       previewMenuOpenLink.href = url;
     }
     previewContent?.replaceChildren();
-    setPreviewStatus("Loading preview…");
+    setPreviewStatus("Loading preview…", { visuallyHidden: true });
     previewScroll?.scrollTo({ top: 0 });
     resetPreviewChrome();
+    previewSkeletonTimer = window.setTimeout(
+      () => showPreviewSkeleton(requestId),
+      150,
+    );
 
     fetch(`/api/preview?url=${encodeURIComponent(url)}&v=9`, {
       headers: { Accept: "application/json" },
@@ -2253,14 +2319,13 @@
       })
       .then((payload) => {
         if (!payload || requestId !== previewRequestSequence) return;
+        clearPreviewSkeletonTimer();
         const blocks = Array.isArray(payload.blocks) ? payload.blocks : [];
         const nextTitle =
           typeof payload.title === "string" && payload.title.trim() !== ""
             ? payload.title
             : title;
-        if (previewTitle) {
-          previewTitle.textContent = nextTitle || "Article preview";
-        }
+        setPreviewTitle(nextTitle);
         const bylineParts = [payload.byline, payload.site_name].filter(
           (value) => typeof value === "string" && value.trim() !== "",
         );
@@ -2291,6 +2356,7 @@
           );
         }
         renderPreviewBlocks(blocks);
+        if (blocks.length > 0) animatePreviewContent();
         setPreviewStatus(
           "No readable text was found. Open the source to read the article.",
           { hidden: blocks.length > 0 },
@@ -2303,6 +2369,7 @@
         ) {
           return;
         }
+        clearPreviewSkeletonTimer();
         previewContent?.replaceChildren();
         previewByline?.classList.add("is-hidden");
         previewReadingMeta?.classList.add("is-hidden");

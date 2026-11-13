@@ -195,7 +195,7 @@ export function renderIndexPage(data: PageData): string {
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
     <script>${data.themeInitScript}</script>
     <style>${data.inlineCss}</style>
-    <script src="/static/app.js?v=107" defer></script>
+    <script src="/static/app.js?v=108" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <div class="boot-veil" data-boot-veil aria-hidden="true">

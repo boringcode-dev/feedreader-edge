@@ -2115,6 +2115,55 @@ body.is-dialog-open {
   height: 0.52rem;
 }
 
+/* Reader-panel skeleton: the card title stays visible, so the placeholder
+   starts at the byline/meta line and mirrors the article block rhythm. */
+.preview-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.72rem;
+}
+
+.preview-skeleton-meta {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.skeleton-line--preview-meta {
+  width: 5.5rem;
+  height: 0.55rem;
+}
+
+.skeleton-line--preview-meta-short {
+  width: 3.25rem;
+  height: 0.55rem;
+}
+
+.skeleton-line--preview-heading {
+  width: 64%;
+  height: 0.92rem;
+  margin-top: 0.25rem;
+}
+
+.skeleton-line--preview-body {
+  width: 100%;
+  height: 0.72rem;
+}
+
+.skeleton-line--preview-body-short {
+  width: 74%;
+  height: 0.72rem;
+}
+
+.preview-skeleton-figure {
+  width: 100%;
+  height: auto;
+  min-height: 8rem;
+  aspect-ratio: 16 / 9;
+  border-radius: 0.6rem;
+  margin: 0.15rem 0;
+}
+
 @keyframes skeleton-shimmer {
   from {
     background-position: 100% 50%;

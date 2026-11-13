@@ -368,6 +368,8 @@ Presentation-layer note:
 ### Article preview
 
 - when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
+- while the preview request is in flight, the panel keeps the card title and shows a preview skeleton after a short delay; the loaded title and content fade in, and a failed request replaces the skeleton with a readable error message
+- the visible loading message is visually hidden while the skeleton is shown; the panel remains `aria-busy` and a live region announces the loading state
 - `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
 - the panel shows the extracted title, byline, publication date/reading time, rich text with validated inline links/emphasis/inline code, image blocks with captions and intrinsic dimensions, and semantic tables; images load directly from the source with lazy loading and no referrer; `Open source` opens the original page
 - consecutive list items render as one list and prose uses the full preview width; figures are capped in height so a single image cannot dominate the panel

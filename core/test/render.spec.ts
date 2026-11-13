@@ -36,7 +36,7 @@ describe("renderIndexPage", () => {
     expect(html).toContain(
       "<script>document.documentElement.dataset.theme='dark';</script>",
     );
-    expect(html).toContain('/static/app.js?v=107');
+    expect(html).toContain('/static/app.js?v=108');
     expect(html).not.toContain("style.css");
     expect(html).not.toContain("theme-init.js");
   });
