@@ -19,6 +19,10 @@ POST /internal/refresh/huggingface    ─┘  X-Refresh-Secret header
 
 This preserves per-source fault isolation: one source's failure updates only that source's `sync_state` row and never wipes its existing `items` rows.
 
+**Source fetch reliability:** all source requests send a descriptive `User-Agent` and `Accept` header through `core/sources/util.ts`. Retryable responses are attempted twice more; `429` responses honor `Retry-After` (capped at 5 seconds) or use 1s/3s backoff instead of the short 5xx backoff. Error details are capped at 200 characters, and HTML error pages are stored as `upstream returned an HTML error page`, so a large challenge page never lands in `/healthz`, the UI banner, or D1's `last_error` column.
+
+Hugging Face trending papers are fetched from `https://huggingface.co/api/daily_papers` (about 272 KB of JSON, same 50 entries) instead of the ~1.4 MB `/papers/trending` HTML page. The HTML page was the main source of the 429 challenge bodies and cost more Worker CPU to regex-parse; the JSON API keeps the source invocation comfortably inside the Free-tier CPU budget.
+
 **If a source consistently nears the CPU ceiling:**
 
 - inspect whether the upstream page size changed dramatically

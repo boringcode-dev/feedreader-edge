@@ -142,6 +142,7 @@ Key properties:
 - fetch failures do not wipe existing data
 - sources without a native article date fall back to the initial fetch time (`first_seen_at`) for ordering
 - later refreshes preserve the original published/fetched ordering timestamps for existing items
+- source fetches send a descriptive User-Agent, honor `Retry-After` on 429s, and cap error details; Hugging Face reads its daily-papers JSON API instead of scraping the trending HTML page
 
 ---
 
