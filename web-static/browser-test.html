@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Browser preview test</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      setTimeout(() => {
+        document.getElementById("root").innerHTML =
+          '<article><h1>Rendered by JavaScript</h1><p>This paragraph exists only after the browser executes the page script, so the static extractor and AI conversion should both find no readable content.</p></article>';
+      }, 100);
+    </script>
+  </body>
+</html>
