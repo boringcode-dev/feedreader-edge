@@ -195,9 +195,16 @@ export function renderIndexPage(data: PageData): string {
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
     <script>${data.themeInitScript}</script>
     <style>${data.inlineCss}</style>
-    <script src="/static/app.js?v=106" defer></script>
+    <script src="/static/app.js?v=107" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
+    <div class="boot-veil" data-boot-veil aria-hidden="true">
+      <div class="boot-veil-brand">
+        <img class="boot-veil-mark" src="/favicon.svg?v=8" alt="" aria-hidden="true" />
+        <span class="boot-veil-wordmark">reader<span class="boot-veil-dot">.</span></span>
+      </div>
+      <span class="boot-veil-track" aria-hidden="true"><span class="boot-veil-bar"></span></span>
+    </div>
     <header class="shell page-header">
       <div class="toast" data-toast role="status" aria-live="polite"></div>
       <div class="header-top">
@@ -503,6 +510,7 @@ ${errorsBlock}
         </svg>
         Personalized by AI
       </p>
+      <p class="sr-only" data-feed-status role="status" aria-live="polite"></p>
       <section class="cards-grid${cardsHiddenClass}" data-card-grid data-current-source="${escapeHtml(data.currentSource)}" data-page-size="${data.pageSize}" data-has-next="${data.hasNext ? "true" : "false"}" aria-busy="false">
         ${data.cards.map(renderCard).join("\n        ")}
       </section>

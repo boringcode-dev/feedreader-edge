@@ -100,6 +100,10 @@ Before considering any `core/render.ts` change done:
 3. Load `http://127.0.0.1:8788` and verify:
    - the document has no external `style.css` or `theme-init.js` request; both are inlined in `<head>`
    - the response carries `Cache-Control: public, max-age=0, s-maxage=300`
+   - in a regular browser tab the launch veil stays hidden (`display: none`) and is removed from the DOM; in an installed/standalone window it is visible and fades out within about a second
+   - throttle the network, then change a source filter or run a search: skeleton cards appear after ~150 ms and are replaced by the new cards; `View more` appends three skeleton rows
+   - with `prefers-reduced-motion: reduce`, skeleton shimmer and the view/Web Animations transitions are disabled
+   - typing in the search box shows only the app's close control, not a second native clear X
    - header actions render correctly
    - source filters and search controls render correctly
    - the reader settings dialog opens and closes, its Appearance/Reading/Sources tabs switch via click and arrow keys, and Cancel/Save show their icons
@@ -117,3 +121,12 @@ Before considering any `core/render.ts` change done:
    - enabling bookmarks in Reader settings, bookmarking a card, confirming the Saved count and view, then reloading to confirm the bookmark persists; disabling bookmarks hides the card/preview controls and Saved filter, leaves the Saved view, and re-enabling restores the saved item
 
 4. If the change also affects `/api/items`, hit the endpoint directly and verify the JSON shape still matches what `web-static/static/app.js` expects.
+
+## PWA shell updates
+
+The launch veil and skeleton styles are part of the server-rendered HTML/CSS shell. When changing `core/render.ts`, `web-static/static/style.css`, `web-static/static/theme-init.js`, or `web-static/static/app.js`:
+
+- bump the `app.js?v=` value in `core/render.ts` and `web-static/service-worker.js`
+- bump `SHELL_CACHE` in `web-static/service-worker.js`
+
+The service worker navigation handler is network-first, but the version bump ensures installed clients install the new shell atomically.

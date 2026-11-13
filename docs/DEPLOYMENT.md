@@ -63,6 +63,7 @@ The checked-in `wrangler.toml` config does not hardcode a route. Domain attachme
 - D1: 5GB storage, 5M row reads/day, 100k row writes/day.
 - Workers: 100k requests/day, 10ms CPU time per invocation, 50 subrequests per request.
 - The five-minute home-page cache absorbs most `GET /` traffic, so only cache misses run the feed query and render the HTML. Each cold-isolate cache miss also reads `style.css` and `theme-init.js` through the `ASSETS` binding (two local subrequests), then reuses them in memory.
+- The standalone launch veil and skeleton styles are inlined with the existing HTML/CSS, so they add no extra requests. Bump the shell cache version when the HTML shell or `app.js` changes; see [RUNBOOK.md](RUNBOOK.md#pwa-shell-updates).
 - Article previews add one outbound fetch (and one `node-html-parser` parse) per uncached `/api/preview` request. The 400 KB body cap and 30-minute edge cache in `core/preview.ts` bound that cost; watch the CPU-time panel if preview usage is heavy. Richer preview blocks (inline links, captions, tables) increase the cached response payload but not the upstream fetch count; the same byte cap and cache TTL apply.
 
 Check the Cloudflare dashboard's D1 usage and Workers CPU-time panels periodically — see [RUNBOOK.md](RUNBOOK.md) for what to do if a source consistently nears the CPU ceiling.
