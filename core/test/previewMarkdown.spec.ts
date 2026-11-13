@@ -303,6 +303,55 @@ A long enough paragraph that should remain in the preview.`;
     ).toEqual([{ type: "paragraph", text: markdown }]);
   });
 
+  it("strips YAML frontmatter returned by Browser Run", () => {
+    const markdown = `---
+title: "TodoMVC: React"
+meta:
+  description: "A TodoMVC written in React."
+---
+
+### Rendered
+
+A long enough paragraph rendered after JavaScript executes.`;
+
+    expect(
+      markdownToPreviewBlocks(markdown, {
+        pageUrl: "https://example.com/posts/rendered",
+      }),
+    ).toEqual([
+      { type: "heading", text: "Rendered" },
+      {
+        type: "paragraph",
+        text: "A long enough paragraph rendered after JavaScript executes.",
+      },
+    ]);
+  });
+
+  it("does not treat horizontal rules as frontmatter", () => {
+    const markdown = `---
+
+A long enough paragraph that stays after the first rule.
+
+---
+
+Another long enough paragraph after the second rule.`;
+
+    expect(
+      markdownToPreviewBlocks(markdown, {
+        pageUrl: "https://example.com/posts/rules",
+      }),
+    ).toEqual([
+      {
+        type: "paragraph",
+        text: "A long enough paragraph that stays after the first rule.",
+      },
+      {
+        type: "paragraph",
+        text: "Another long enough paragraph after the second rule.",
+      },
+    ]);
+  });
+
   it("returns no blocks for empty or JSON-LD-only input", () => {
     expect(
       markdownToPreviewBlocks("", {

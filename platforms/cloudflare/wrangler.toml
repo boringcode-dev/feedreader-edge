@@ -53,6 +53,12 @@ service = "feedreader"
 [ai]
 binding = "AI"
 
+# Browser Run binding for the JavaScript-rendered preview fallback (see
+# platforms/cloudflare/src/browserPreviewFallback.ts). Workers Free includes
+# 10 browser-minutes/day and one Quick Action request per 10 seconds.
+[browser]
+binding = "BROWSER"
+
 [vars]
 APP_VERSION = "dev"
 FEEDREADER_ITEMS_PER_SOURCE = "20"
@@ -73,6 +79,10 @@ FEEDREADER_PERSONALIZE_POLISH_POOL_SIZE = "30"
 # can't read (PDFs/Office documents, JavaScript shells, truncated bodies).
 # Set to "false" to disable it without a code change.
 FEEDREADER_AI_PREVIEW_FALLBACK = "true"
+# Browser Run fallback for HTML pages that still have no readable content
+# after the static extractor and AI fallback. Runs only on a preview cache
+# miss and is cached for 30 minutes. Set to "false" to disable it.
+FEEDREADER_BROWSER_PREVIEW_FALLBACK = "true"
 
 # REFRESH_SECRET is a secret, not a var — set it with:
 #   wrangler secret put REFRESH_SECRET --config platforms/cloudflare/wrangler.toml
