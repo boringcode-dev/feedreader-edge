@@ -789,7 +789,7 @@ describe("fetchArticlePreview", () => {
 
   it("caps how much of the response body it reads", async () => {
     const marker = "UNIQUE_TRAILING_MARKER";
-    const html = `<html><body><p>${"a".repeat(400)}</p><p>${marker}</p></body></html>`;
+    const html = `<html><body><p>Readable opening paragraph that should survive the cap.</p>${" ".repeat(400)}<p>${marker}</p></body></html>`;
 
     const preview = await fetchArticlePreview("https://example.com/long", {
       userAgent: "feedreader-test",
@@ -797,10 +797,84 @@ describe("fetchArticlePreview", () => {
       fetchImpl: async () => htmlResponse(html),
     });
 
+    expect(preview.blocks.length).toBeGreaterThan(0);
     expect(
       preview.blocks
         .map((block) => (block.type === "image" ? block.src : blockText(block)))
         .join(" "),
     ).not.toContain(marker);
+  });
+
+  it("labels blocked upstream responses with a reason", async () => {
+    await expect(
+      fetchArticlePreview("https://example.com/blocked", {
+        userAgent: "feedreader-test",
+        fetchImpl: async () => new Response("blocked", { status: 403 }),
+      }),
+    ).rejects.toMatchObject({
+      reason: "blocked",
+      upstreamStatus: 403,
+    });
+  });
+
+  it("retries a transient upstream 503 once", async () => {
+    let calls = 0;
+    const preview = await fetchArticlePreview("https://example.com/busy", {
+      userAgent: "feedreader-test",
+      retryDelayMs: 0,
+      retryJitterMs: 0,
+      fetchImpl: async () => {
+        calls += 1;
+        return calls === 1
+          ? new Response("busy", { status: 503 })
+          : htmlResponse(ARTICLE_HTML);
+      },
+    });
+
+    expect(calls).toBe(2);
+    expect(preview.blocks.length).toBeGreaterThan(0);
+  });
+
+  it("reports a persistent upstream 5xx after one retry", async () => {
+    let calls = 0;
+    await expect(
+      fetchArticlePreview("https://example.com/down", {
+        userAgent: "feedreader-test",
+        retryDelayMs: 0,
+        retryJitterMs: 0,
+        fetchImpl: async () => {
+          calls += 1;
+          return new Response("down", { status: 503 });
+        },
+      }),
+    ).rejects.toMatchObject({
+      reason: "upstream_error",
+      upstreamStatus: 503,
+    });
+    expect(calls).toBe(2);
+  });
+
+  it("labels timeouts", async () => {
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    await expect(
+      fetchArticlePreview("https://example.com/slow", {
+        userAgent: "feedreader-test",
+        fetchImpl: async () => {
+          throw timeout;
+        },
+      }),
+    ).rejects.toMatchObject({ reason: "timeout" });
+  });
+
+  it("labels truncated bodies with no readable content", async () => {
+    const html = `<html><body><div>${"a".repeat(400)}</div></body></html>`;
+    await expect(
+      fetchArticlePreview("https://example.com/huge", {
+        userAgent: "feedreader-test",
+        maxBytes: 120,
+        fetchImpl: async () => htmlResponse(html),
+      }),
+    ).rejects.toMatchObject({ reason: "too_large" });
   });
 });
