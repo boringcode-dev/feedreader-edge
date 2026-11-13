@@ -119,6 +119,8 @@
   const cardsGrid = document.querySelector("[data-card-grid]");
   const emptyState = document.querySelector("[data-empty-state]");
   const footerActions = document.querySelector("[data-footer-actions]");
+  const feedStatus = document.querySelector("[data-feed-status]");
+  const bootVeil = document.querySelector("[data-boot-veil]");
   const viewMoreButton = document.querySelector("[data-view-more]");
   const viewMoreLabel = document.querySelector("[data-view-more-label]");
   const searchToggle = document.querySelector("[data-search-toggle]");
@@ -151,6 +153,9 @@
   const updateButton = document.querySelector("[data-update-button]");
   const pageSize = Number(cardsGrid?.dataset.pageSize || 12);
   const searchDebounceMs = 1100;
+  const reducedMotionMedia = window.matchMedia?.(
+    "(prefers-reduced-motion: reduce)",
+  );
   const sourceConfigStorageKey = "feedreader.sources";
   const densityConfigStorageKey = "feedreader.uiDensity";
   const visitedLinksStorageKey = "feedreader.visited";
@@ -212,12 +217,17 @@
   let refreshInFlight = false;
   let feedLoading = false;
   let feedLoadingMode = "";
+  let skeletonTimer = null;
+  let skeletonActive = false;
+  let skeletonMode = "";
+  let previousGridHtml = "";
   let activeToastKind = "";
   let browserOnline = navigator.onLine;
   let offlineViewUnavailable = false;
   let reconnectRefetchInFlight = false;
   let deferredInstallPrompt = null;
   let previewRequestSequence = 0;
+  let previewSkeletonTimer = null;
   let previewAbortController = null;
   let currentPreviewItem = null;
   let currentCardActionData = null;
@@ -259,6 +269,44 @@
     </article>
   `;
   };
+
+  const skeletonCardTemplate = `
+    <article class="item-card item-card--skeleton" data-skeleton aria-hidden="true">
+      <h2 class="item-title">
+        <span class="skeleton-line skeleton-line--index"></span>
+        <span class="skeleton-stack">
+          <span class="skeleton-line skeleton-line--title"></span>
+          <span class="skeleton-line skeleton-line--title-short"></span>
+        </span>
+      </h2>
+      <div class="item-brief skeleton-brief">
+        <span class="skeleton-line skeleton-line--brief"></span>
+        <span class="skeleton-line skeleton-line--brief-short"></span>
+        <span class="skeleton-line skeleton-line--brief-tiny"></span>
+      </div>
+      <p class="item-host skeleton-host">
+        <span class="skeleton-dot"></span>
+        <span class="skeleton-line skeleton-line--host"></span>
+      </p>
+    </article>`;
+
+  const skeletonMarkup = (count) =>
+    Array.from({ length: count }, () => skeletonCardTemplate).join("");
+
+  const previewSkeletonMarkup = `
+    <div class="preview-skeleton" data-preview-skeleton aria-hidden="true">
+      <div class="preview-skeleton-meta">
+        <span class="skeleton-line skeleton-line--preview-meta"></span>
+        <span class="skeleton-line skeleton-line--preview-meta-short"></span>
+      </div>
+      <span class="skeleton-line skeleton-line--preview-heading"></span>
+      <span class="skeleton-line skeleton-line--preview-body"></span>
+      <span class="skeleton-line skeleton-line--preview-body"></span>
+      <span class="skeleton-line skeleton-line--preview-body-short"></span>
+      <span class="skeleton-line preview-skeleton-figure"></span>
+      <span class="skeleton-line skeleton-line--preview-body"></span>
+      <span class="skeleton-line skeleton-line--preview-body-short"></span>
+    </div>`;
 
   const browserLocales =
     Array.isArray(navigator.languages) && navigator.languages.length > 0
@@ -992,13 +1040,131 @@
     }
   };
 
+  const clearSkeletonTimer = () => {
+    if (skeletonTimer !== null) {
+      window.clearTimeout(skeletonTimer);
+      skeletonTimer = null;
+    }
+  };
+
+  const removeSkeletonCards = () => {
+    cardsGrid
+      ?.querySelectorAll("[data-skeleton]")
+      .forEach((card) => card.remove());
+  };
+
+  const clearSkeletons = ({ restore = false } = {}) => {
+    clearSkeletonTimer();
+    if (!skeletonActive) return;
+    if (restore) {
+      if (skeletonMode === "replace" && cardsGrid) {
+        cardsGrid.innerHTML = previousGridHtml;
+        localizeBriefDates(cardsGrid);
+        applyVisitedLinkState();
+        applyBookmarkState();
+        applyPreviewActiveCardState();
+        updatePreviewNavigation();
+      } else {
+        removeSkeletonCards();
+      }
+    } else if (skeletonMode === "append") {
+      removeSkeletonCards();
+    }
+    skeletonActive = false;
+    skeletonMode = "";
+    previousGridHtml = "";
+  };
+
+  const showSkeletons = (mode) => {
+    if (!cardsGrid) return;
+    if (mode === "replace") {
+      previousGridHtml = cardsGrid.innerHTML;
+      skeletonMode = "replace";
+      cardsGrid.innerHTML = skeletonMarkup(pageSize);
+      cardsGrid.classList.remove("is-hidden");
+    } else {
+      skeletonMode = "append";
+      cardsGrid.insertAdjacentHTML(
+        "beforeend",
+        skeletonMarkup(Math.min(3, pageSize)),
+      );
+    }
+    skeletonActive = true;
+    renderFeedBody();
+  };
+
+  const animateGrid = () => {
+    if (
+      !cardsGrid ||
+      reducedMotionMedia?.matches === true ||
+      typeof cardsGrid.animate !== "function"
+    ) {
+      return;
+    }
+    cardsGrid.animate(
+      [
+        { opacity: 0.4, transform: "translateY(3px)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: 180, easing: "ease-out" },
+    );
+  };
+
+  const runGridUpdate = (update) => {
+    if (
+      cardsGrid &&
+      reducedMotionMedia?.matches !== true &&
+      typeof document.startViewTransition === "function"
+    ) {
+      try {
+        document.startViewTransition(update);
+        return;
+      } catch {
+        // Use the Web Animations fallback below.
+      }
+    }
+    update();
+    animateGrid();
+  };
+
+  const animateAppendedCards = (count) => {
+    if (
+      !cardsGrid ||
+      count <= 0 ||
+      reducedMotionMedia?.matches === true
+    ) {
+      return;
+    }
+    const cards = Array.from(
+      cardsGrid.querySelectorAll(".item-card:not([data-skeleton])"),
+    ).slice(-count);
+    cards.forEach((card, index) => {
+      if (typeof card.animate !== "function") return;
+      card.animate(
+        [
+          { opacity: 0, transform: "translateY(4px)" },
+          { opacity: 1, transform: "none" },
+        ],
+        {
+          duration: 200,
+          delay: Math.min(index, 5) * 20,
+          easing: "ease-out",
+          fill: "backwards",
+        },
+      );
+    });
+  };
+
   const renderFeedBody = () => {
     if (cardsGrid) {
-      const showCards = loadedCount > 0;
+      const showCards = loadedCount > 0 || skeletonActive;
       cardsGrid.classList.toggle("is-hidden", !showCards);
       cardsGrid.classList.toggle(
         "is-loading",
-        feedLoading && feedLoadingMode !== "append" && showCards,
+        feedLoading &&
+          feedLoadingMode !== "append" &&
+          showCards &&
+          !skeletonActive,
       );
       cardsGrid.setAttribute("aria-busy", String(feedLoading));
     }
@@ -1007,23 +1173,35 @@
         source: activeFilter,
         query: activeQuery,
       });
-      emptyState.classList.toggle("is-hidden", feedLoading || loadedCount > 0);
+      emptyState.classList.toggle(
+        "is-hidden",
+        feedLoading || loadedCount > 0 || skeletonActive,
+      );
     }
     renderViewMore();
   };
 
-  const setFeedLoading = (
-    active,
-    { mode = "replace", message = "", showLoadingToast = true } = {},
-  ) => {
-    feedLoading = active;
-    feedLoadingMode = active ? mode : "";
+  const setFeedLoading = (active, { mode = "replace", message = "" } = {}) => {
     if (active) {
-      if (showLoadingToast) {
-        showToast(message, "loading", { persistent: true });
+      clearSkeletons({ restore: true });
+      feedLoading = true;
+      feedLoadingMode = mode;
+      if (feedStatus) {
+        feedStatus.textContent = message || "Loading feed…";
       }
-    } else if (showLoadingToast) {
-      hideToast({ onlyKind: "loading" });
+      const delay = mode === "append" || loadedCount > 0 ? 150 : 0;
+      skeletonTimer = window.setTimeout(() => {
+        skeletonTimer = null;
+        if (!feedLoading || feedLoadingMode !== mode) return;
+        showSkeletons(mode);
+      }, delay);
+    } else {
+      feedLoading = false;
+      feedLoadingMode = "";
+      clearSkeletonTimer();
+      if (feedStatus) {
+        feedStatus.textContent = "";
+      }
     }
     renderFeedBody();
   };
@@ -1187,10 +1365,56 @@
     }
   }
 
-  const setPreviewStatus = (message, { hidden = false } = {}) => {
+  const setPreviewStatus = (
+    message,
+    { hidden = false, visuallyHidden = false } = {},
+  ) => {
     if (!previewStatus) return;
     previewStatus.textContent = hidden ? "" : message;
     previewStatus.classList.toggle("is-hidden", hidden);
+    previewStatus.classList.toggle("sr-only", visuallyHidden);
+  };
+
+  const setPreviewTitle = (nextTitle) => {
+    if (!previewTitle) return;
+    const next = nextTitle || "Article preview";
+    if (previewTitle.textContent === next) return;
+    previewTitle.textContent = next;
+    if (
+      reducedMotionMedia?.matches === true ||
+      typeof previewTitle.animate !== "function"
+    ) {
+      return;
+    }
+    previewTitle.animate([{ opacity: 0.45 }, { opacity: 1 }], {
+      duration: 180,
+      easing: "ease-out",
+    });
+  };
+
+  const animatePreviewContent = () => {
+    if (!previewContent || reducedMotionMedia?.matches === true) return;
+    if (typeof previewContent.animate !== "function") return;
+    previewContent.animate(
+      [
+        { opacity: 0.35, transform: "translateY(3px)" },
+        { opacity: 1, transform: "none" },
+      ],
+      { duration: 200, easing: "ease-out" },
+    );
+  };
+
+  const clearPreviewSkeletonTimer = () => {
+    if (previewSkeletonTimer !== null) {
+      window.clearTimeout(previewSkeletonTimer);
+      previewSkeletonTimer = null;
+    }
+  };
+
+  const showPreviewSkeleton = (requestId) => {
+    previewSkeletonTimer = null;
+    if (requestId !== previewRequestSequence || !previewContent) return;
+    previewContent.innerHTML = previewSkeletonMarkup;
   };
 
   const setSourceIcon = (image, source) => {
@@ -1952,6 +2176,7 @@
   }
 
   const resetPreviewPanel = () => {
+    clearPreviewSkeletonTimer();
     resetPreviewSwipeState();
     closePreviewActionsDialog();
     previewPanel?.classList.add("is-hidden");
@@ -2048,6 +2273,7 @@
     previewAbortController?.abort();
     const controller = new AbortController();
     previewAbortController = controller;
+    clearPreviewSkeletonTimer();
 
     lockPreviewScroll();
     previewPanel.classList.remove("is-hidden");
@@ -2059,9 +2285,7 @@
     setPreviewSource(source, host);
     syncPreviewChromeHeights();
     setPreviewCommentsLink(commentsUrl);
-    if (previewTitle) {
-      previewTitle.textContent = title || "Article preview";
-    }
+    setPreviewTitle(title);
     if (previewByline) {
       previewByline.textContent = "";
       previewByline.classList.add("is-hidden");
@@ -2074,9 +2298,13 @@
       previewMenuOpenLink.href = url;
     }
     previewContent?.replaceChildren();
-    setPreviewStatus("Loading preview…");
+    setPreviewStatus("Loading preview…", { visuallyHidden: true });
     previewScroll?.scrollTo({ top: 0 });
     resetPreviewChrome();
+    previewSkeletonTimer = window.setTimeout(
+      () => showPreviewSkeleton(requestId),
+      150,
+    );
 
     fetch(`/api/preview?url=${encodeURIComponent(url)}&v=9`, {
       headers: { Accept: "application/json" },
@@ -2091,14 +2319,13 @@
       })
       .then((payload) => {
         if (!payload || requestId !== previewRequestSequence) return;
+        clearPreviewSkeletonTimer();
         const blocks = Array.isArray(payload.blocks) ? payload.blocks : [];
         const nextTitle =
           typeof payload.title === "string" && payload.title.trim() !== ""
             ? payload.title
             : title;
-        if (previewTitle) {
-          previewTitle.textContent = nextTitle || "Article preview";
-        }
+        setPreviewTitle(nextTitle);
         const bylineParts = [payload.byline, payload.site_name].filter(
           (value) => typeof value === "string" && value.trim() !== "",
         );
@@ -2129,6 +2356,7 @@
           );
         }
         renderPreviewBlocks(blocks);
+        if (blocks.length > 0) animatePreviewContent();
         setPreviewStatus(
           "No readable text was found. Open the source to read the article.",
           { hidden: blocks.length > 0 },
@@ -2141,6 +2369,7 @@
         ) {
           return;
         }
+        clearPreviewSkeletonTimer();
         previewContent?.replaceChildren();
         previewByline?.classList.add("is-hidden");
         previewReadingMeta?.classList.add("is-hidden");
@@ -2396,10 +2625,31 @@
     );
   };
 
+  const dismissBootVeil = () => {
+    if (!bootVeil) return;
+    const remove = () => bootVeil.remove();
+    const reveal = () => {
+      bootVeil.classList.add("is-ready");
+      if (reducedMotionMedia?.matches === true) {
+        remove();
+        return;
+      }
+      bootVeil.addEventListener("transitionend", remove, { once: true });
+      window.setTimeout(remove, 600);
+    };
+    // Let the first content frame paint behind the veil before fading it.
+    requestAnimationFrame(() => requestAnimationFrame(reveal));
+  };
+
   const renderSavedFeed = ({ query = "" } = {}) => {
     const saved = bookmarks
       .filter((bookmark) => savedMatchesQuery(bookmark, query))
       .sort((a, b) => b.savedAt.localeCompare(a.savedAt));
+    loadedCount = saved.length;
+    hasNext = false;
+    offlineViewUnavailable = false;
+    personalizedActive = false;
+    renderPersonalizedIndicator();
     if (cardsGrid) {
       const html = saved
         .map((bookmark, i) =>
@@ -2414,21 +2664,23 @@
           }),
         )
         .join("");
-      cardsGrid.innerHTML = html; // HTML is built from escaped stored fields.
+      runGridUpdate(() => {
+        cardsGrid.innerHTML = html; // HTML is built from escaped stored fields.
+        localizeBriefDates(cardsGrid);
+        applyVisitedLinkState();
+        applyBookmarkState();
+        applyPreviewActiveCardState();
+        updatePreviewNavigation();
+      });
       cardsGrid.dataset.hasNext = "false";
       cardsGrid.dataset.currentSource = "saved";
+    } else {
+      applyVisitedLinkState();
+      applyBookmarkState();
+      applyPreviewActiveCardState();
+      updatePreviewNavigation();
     }
-    loadedCount = saved.length;
-    hasNext = false;
-    offlineViewUnavailable = false;
-    personalizedActive = false;
-    renderPersonalizedIndicator();
-    applyVisitedLinkState();
-    applyBookmarkState();
-    localizeBriefDates(cardsGrid);
     renderFeedBody();
-    applyPreviewActiveCardState();
-    updatePreviewNavigation();
   };
 
   const fetchItems = async ({
@@ -2437,7 +2689,6 @@
     offset,
     append,
     loadingMessage,
-    showLoadingToast = true,
   }) => {
     syncConnectivityState();
     if (source === "saved") {
@@ -2457,9 +2708,9 @@
           : personalize
             ? "Personalizing feed…"
             : "Loading feed…"),
-      showLoadingToast,
     });
 
+    let applied = false;
     try {
       let response;
       if (personalize) {
@@ -2502,34 +2753,43 @@
       const offlineCacheMiss = Boolean(payload.offline && payload.cache_miss);
       const items = payload.items || [];
       if (append && offlineCacheMiss) {
-        renderFeedBody();
         return;
       }
 
+      clearSkeletons();
       offlineViewUnavailable = !append && offlineCacheMiss;
       hasNext = Boolean(payload.has_next);
+      loadedCount = append ? loadedCount + items.length : items.length;
       if (cardsGrid) {
         cardsGrid.dataset.hasNext = hasNext ? "true" : "false";
         cardsGrid.dataset.currentSource = source || "all";
       }
 
-      if (!append && cardsGrid) {
-        cardsGrid.innerHTML = "";
-        loadedCount = 0;
-      }
-
+      const html = items.map((item) => cardTemplate(item)).join("");
       if (cardsGrid) {
-        const html = items.map((item) => cardTemplate(item)).join("");
-        if (html) {
-          cardsGrid.insertAdjacentHTML("beforeend", html); // HTML is built from escaped API fields plus fixed local icon paths.
-          localizeBriefDates(cardsGrid);
+        if (append) {
+          if (html) {
+            cardsGrid.insertAdjacentHTML("beforeend", html); // HTML is built from escaped API fields plus fixed local icon paths.
+            localizeBriefDates(cardsGrid);
+            animateAppendedCards(items.length);
+          }
+          applyVisitedLinkState();
+          applyBookmarkState();
+          applyPreviewActiveCardState();
+          updatePreviewNavigation();
+        } else {
+          runGridUpdate(() => {
+            if (requestId !== requestSequence) return;
+            cardsGrid.innerHTML = html; // HTML is built from escaped API fields plus fixed local icon paths.
+            localizeBriefDates(cardsGrid);
+            applyVisitedLinkState();
+            applyBookmarkState();
+            applyPreviewActiveCardState();
+            updatePreviewNavigation();
+          });
         }
       }
-      loadedCount = append ? loadedCount + items.length : items.length;
-      applyVisitedLinkState();
-      applyBookmarkState();
-      applyPreviewActiveCardState();
-      updatePreviewNavigation();
+      applied = true;
 
       if (personalize) {
         personalizedActive = payload.personalization !== "none";
@@ -2543,7 +2803,10 @@
       renderFeedBody();
     } finally {
       if (requestId === requestSequence) {
-        setFeedLoading(false, { showLoadingToast });
+        if (!applied) {
+          clearSkeletons({ restore: true });
+        }
+        setFeedLoading(false);
       }
     }
   };
@@ -2624,7 +2887,6 @@
 
   async function refetchCurrentView({
     loadingMessage = "Loading feed…",
-    showLoadingToast = true,
   } = {}) {
     ensureActiveFilterIsVisible();
     renderFilters();
@@ -2636,7 +2898,6 @@
       offset: 0,
       append: false,
       loadingMessage,
-      showLoadingToast,
     });
   }
 
@@ -2647,7 +2908,7 @@
     }
     reconnectRefetchInFlight = true;
     try {
-      await refetchCurrentView({ showLoadingToast: false });
+      await refetchCurrentView();
       return true;
     } catch (error) {
       return false;
@@ -3268,6 +3529,7 @@
   renderFeedBody();
   setRefreshButtonLoading(false);
   renderConnectionIndicator();
+  dismissBootVeil();
 
   if (shouldBootstrapRefetch) {
     refetchCurrentView({ loadingMessage: "Loading feed…" }).catch(() => {

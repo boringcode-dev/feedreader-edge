@@ -33,6 +33,15 @@
 
 Browser-only preferences and reading state live in `localStorage`: theme preference (including Auto, which follows the device), density, visible sources, the article-preview and bookmark-visibility settings, visited links, and saved articles. Bookmarks store a display snapshot and never leave the device, so they survive source pruning and offline use without a server API.
 
+## Loading and launch states
+
+- The inline pre-paint theme script also records `display-mode: standalone` (and iOS `navigator.standalone`) as `data-standalone`. The server renders a lightweight boot veil; CSS only displays it in an installed app, and `app.js` fades and removes it after the first content frame. Browser tabs never see it, so it does not affect LCP.
+- Client-side feed loads use skeleton cards. A 150 ms delay avoids flashing placeholders on fast responses when a feed is already on screen (an empty grid shows them immediately); replace loads snapshot the current grid so a failed request can restore it, and append loads add three skeleton rows at the bottom.
+- The reader preview uses the same delayed-skeleton idea: the card title stays visible, a preview skeleton replaces the visible loading message after 150 ms, and the loaded title/content fade in. Aborts and failures clear the skeleton and restore the readable status message.
+- Skeleton cards are `aria-hidden`; the grid sets `aria-busy`, and a visually hidden live region carries the loading message.
+- Completed replace loads crossfade through the View Transitions API when available, with a Web Animations fade fallback. `prefers-reduced-motion: reduce` disables shimmer and both transition paths.
+- The search field hides the browser's native `type="search"` clear control; the app's search toggle/close button is the only clear affordance.
+
 ## Data model and refresh behavior
 
 - Items are upserted by `(source, external_id)`.

@@ -159,6 +159,115 @@ body {
   background-repeat: no-repeat;
 }
 
+/* Standalone-only launch veil. It masks the blank/white frame between the OS
+   splash and the first rendered feed, then fades out from app.js. Browser
+   loads never display it, so it cannot affect LCP. */
+.boot-veil {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  place-content: center;
+  justify-items: center;
+  gap: 1.1rem;
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 1.5rem)
+    calc(env(safe-area-inset-right, 0px) + 1.5rem)
+    calc(env(safe-area-inset-bottom, 0px) + 1.5rem)
+    calc(env(safe-area-inset-left, 0px) + 1.5rem);
+  background-color: var(--bg);
+  background-image: radial-gradient(
+    72rem 34rem at 50% -12rem,
+    var(--bg-glow),
+    transparent 70%
+  );
+  background-repeat: no-repeat;
+  color: var(--text);
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 240ms ease,
+    visibility 240ms ease;
+}
+
+html[data-standalone='true'] .boot-veil {
+  display: grid;
+}
+
+@media (display-mode: standalone), (display-mode: window-controls-overlay) {
+  .boot-veil {
+    display: grid;
+  }
+}
+
+.boot-veil.is-ready {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.boot-veil-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  font-weight: 600;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+
+.boot-veil-mark {
+  width: 2.15rem;
+  height: 2.15rem;
+  flex: 0 0 auto;
+  border-radius: 0.45rem;
+}
+
+.boot-veil-dot {
+  color: var(--accent);
+}
+
+.boot-veil-track {
+  display: block;
+  width: 5.5rem;
+  height: 2px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--border);
+}
+
+.boot-veil-bar {
+  display: block;
+  width: 42%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+  animation: boot-veil-progress 1.15s ease-in-out infinite;
+}
+
+@keyframes boot-veil-progress {
+  from {
+    transform: translateX(-120%);
+  }
+
+  to {
+    transform: translateX(320%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .boot-veil {
+    transition: none;
+  }
+
+  .boot-veil-bar {
+    width: 100%;
+    opacity: 0.65;
+    animation: none;
+  }
+}
+
 @media (pointer: fine) {
   html {
     scrollbar-width: none;
@@ -504,6 +613,19 @@ button {
 .search-input:focus {
   outline: none;
   border-bottom-color: var(--accent);
+}
+
+/* The app has its own search toggle/close control; suppress the browser's
+   native clear affordance so the field never shows a second X. */
+.search-input::-webkit-search-cancel-button,
+.search-input::-webkit-search-decoration {
+  display: none;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.search-input::-moz-search-clear-button {
+  display: none;
 }
 
 .interests-input {
@@ -1833,6 +1955,20 @@ body.is-dialog-open {
   display: grid;
   grid-template-columns: 1fr;
   border-top: 1px solid var(--border);
+  view-transition-name: feed;
+}
+
+/* Only the feed crossfades between loading and loaded states; the rest of
+   the chrome stays put. Falls back to a Web Animations fade when unsupported. */
+::view-transition-old(feed),
+::view-transition-new(feed) {
+  animation-duration: 180ms;
+  animation-timing-function: ease;
+}
+
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
 }
 
 .cards-grid.is-loading {
@@ -1894,6 +2030,160 @@ body.is-dialog-open {
 .item-card.is-previewing .item-title a,
 .item-card.is-previewing .item-title a.is-visited {
   color: var(--text);
+}
+
+/* Skeleton cards mirror the real card's title/brief/host rhythm so replacing
+   them with content does not move the page. */
+.item-card--skeleton {
+  cursor: default;
+  pointer-events: none;
+  transition: none;
+}
+
+.item-card--skeleton:hover,
+.item-card--skeleton:active,
+.item-card--skeleton:focus-within {
+  background: transparent;
+  box-shadow: none;
+}
+
+.skeleton-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+  min-width: 0;
+}
+
+.skeleton-line {
+  display: block;
+  height: 0.68rem;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    color-mix(in srgb, var(--muted) 14%, transparent) 25%,
+    color-mix(in srgb, var(--muted) 24%, transparent) 37%,
+    color-mix(in srgb, var(--muted) 14%, transparent) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeleton-shimmer 1.4s ease infinite;
+}
+
+.skeleton-line--index {
+  width: 1.05rem;
+  height: 0.55rem;
+  margin-top: 0.35rem;
+}
+
+.skeleton-line--title {
+  width: 68%;
+  height: 0.92rem;
+}
+
+.skeleton-line--title-short {
+  width: 44%;
+  height: 0.92rem;
+}
+
+.skeleton-brief {
+  display: flex;
+  flex-direction: column;
+  gap: 0.36rem;
+}
+
+.skeleton-line--brief {
+  width: 94%;
+}
+
+.skeleton-line--brief-short {
+  width: 72%;
+}
+
+.skeleton-line--brief-tiny {
+  width: 48%;
+}
+
+.skeleton-dot {
+  width: 0.85rem;
+  height: 0.85rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--muted) 14%, transparent);
+}
+
+.skeleton-line--host {
+  width: 28%;
+  height: 0.52rem;
+}
+
+/* Reader-panel skeleton: the card title stays visible, so the placeholder
+   starts at the byline/meta line and mirrors the article block rhythm. */
+.preview-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 0.72rem;
+}
+
+.preview-skeleton-meta {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.15rem;
+}
+
+.skeleton-line--preview-meta {
+  width: 5.5rem;
+  height: 0.55rem;
+}
+
+.skeleton-line--preview-meta-short {
+  width: 3.25rem;
+  height: 0.55rem;
+}
+
+.skeleton-line--preview-heading {
+  width: 64%;
+  height: 0.92rem;
+  margin-top: 0.25rem;
+}
+
+.skeleton-line--preview-body {
+  width: 100%;
+  height: 0.72rem;
+}
+
+.skeleton-line--preview-body-short {
+  width: 74%;
+  height: 0.72rem;
+}
+
+.preview-skeleton-figure {
+  width: 100%;
+  height: auto;
+  min-height: 8rem;
+  aspect-ratio: 16 / 9;
+  border-radius: 0.6rem;
+  margin: 0.15rem 0;
+}
+
+@keyframes skeleton-shimmer {
+  from {
+    background-position: 100% 50%;
+  }
+
+  to {
+    background-position: 0 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-line {
+    animation: none;
+    background: color-mix(in srgb, var(--muted) 14%, transparent);
+  }
+
+  ::view-transition-old(feed),
+  ::view-transition-new(feed) {
+    animation: none;
+  }
 }
 
 .item-index,

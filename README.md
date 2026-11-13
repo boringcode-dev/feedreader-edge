@@ -81,7 +81,7 @@ npx lighthouse https://reader.boringcode.dev --view
 - **Persisted visited-link dimming** for feed card titles across reload/reopen using local storage
 - **Optional article preview** (off by default, toggled in Reader settings) that opens a reader view beside the feed on wide screens or full-screen on phones, with inline links/emphasis, image captions, tables, publication date/reading time, source-specific Hacker News comments, and an **Open source** button
 - **Saved articles** with an optional per-card bookmark toggle, a `Saved` filter, and a preview-panel toggle; bookmark controls are disabled by default and can be enabled in Reader settings, with saved items stored locally under `feedreader.bookmarks`
-- **PWA-ready assets and offline caching** including manifest, service worker, touch icons, cached shell assets, and cached `/api/items` responses for previously visited views
+- **PWA-ready assets and offline caching** including manifest, service worker, touch icons, cached shell assets, cached `/api/items` responses for previously visited views, a standalone launch veil, and skeleton loading states
 - **Reconnect list refresh** re-fetches the current view from backend stored items only; it does **not** refresh upstream sources
 - **Cloudflare-native deployment** with Workers, D1, Cron Triggers, and Workers Static Assets
 
@@ -312,16 +312,21 @@ Presentation-layer note:
 - typing is debounced and only triggers the search API once the query reaches at least 2 characters
 - closing the search control clears the query and resets the feed only when an active query exists
 - closing an empty visible search box just hides the control and does not refetch `/api/items`
+- the browser's native `type="search"` clear button is suppressed so the app's search toggle/close control is the only clear affordance
 
 ### Loading and empty states
 
-- first-load bootstrap queries, source filter changes, searches, `View more`, and header refresh all show an explicit toast-based loading state
-- source-filter changes use the generic loading toast text `Loading feed…`
+- first-load bootstrap queries, source filter changes, searches, `View more`, and header refresh use skeleton cards instead of a loading toast
+- skeletons appear after a short delay (150 ms when a feed is already on screen, immediately when the grid is empty) so fast responses do not flash a placeholder; replace loads swap the current grid for skeleton cards, while `View more` appends three skeleton rows
+- the grid exposes `aria-busy` while loading, skeleton cards are `aria-hidden`, and a visually hidden live region announces the loading message
+- completed loads crossfade into the new cards using the View Transitions API where available and a Web Animations fade as the fallback; a failed request restores the previous cards
+- `prefers-reduced-motion: reduce` disables shimmer and transition animations while keeping the state changes
 - source-filter and search requests that return zero items replace the list with an empty-state message instead of leaving stale cards on screen
 - `View more` disables itself while an append request is in flight and hides itself when the current result set has no further page
 
 ### Offline and connectivity
 
+- installed PWAs show a theme-matched launch veil instead of a blank frame while the shell starts; it fades out after the first content frame and is never displayed in a regular browser tab
 - the app shell and previously fetched `GET /api/items` views are cached by the service worker for offline reuse
 - this offline/PWA behavior requires a secure-context origin where service workers are available (for example `localhost` or HTTPS)
 - when the browser goes offline, a no-wifi indicator appears in the header action row instead of showing connectivity toasts
@@ -363,6 +368,8 @@ Presentation-layer note:
 ### Article preview
 
 - when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
+- while the preview request is in flight, the panel keeps the card title and shows a preview skeleton after a short delay; the loaded title and content fade in, and a failed request replaces the skeleton with a readable error message
+- the visible loading message is visually hidden while the skeleton is shown; the panel remains `aria-busy` and a live region announces the loading state
 - `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
 - the panel shows the extracted title, byline, publication date/reading time, rich text with validated inline links/emphasis/inline code, image blocks with captions and intrinsic dimensions, and semantic tables; images load directly from the source with lazy loading and no referrer; `Open source` opens the original page
 - consecutive list items render as one list and prose uses the full preview width; figures are capped in height so a single image cannot dominate the panel
