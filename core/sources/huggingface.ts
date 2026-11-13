@@ -1,5 +1,8 @@
-// Port of internal/sources/huggingface.go. Extracts an embedded JSON blob
-// via one regex — no DOM parsing needed.
+// Uses Hugging Face's daily-papers JSON API. The public /papers/trending
+// page is ~1.4 MB of HTML with the same data embedded in a data-props blob;
+// fetching and parsing it wasted Worker CPU and its HTML fallback page is
+// also what surfaced large 429 challenge bodies. The API returns the same
+// 50 daily-paper entries as JSON.
 
 import type { FeedItem } from "../domain.ts";
 import type { Source } from "./index.ts";
@@ -8,12 +11,11 @@ import {
   firstNonEmpty,
   getWithRetry,
   HttpError,
-  readLimitedText,
-  unescapeHtmlEntities,
+  readHttpErrorDetail,
 } from "./util.ts";
 
 const HOMEPAGE_URL = "https://huggingface.co/papers/trending";
-const DAILY_PAPERS_PATTERN = /data-target="DailyPapers"\s+data-props="([^"]+)"/;
+const DAILY_PAPERS_API_URL = "https://huggingface.co/api/daily_papers";
 
 interface HfAuthor {
   name?: string;
@@ -34,13 +36,10 @@ interface HfDailyPaperEntry {
   title?: string;
   summary?: string;
   upvotes?: number | null;
+  numComments?: number | null;
   publishedAt?: string;
   submittedBy?: { fullname?: string; name?: string };
   paper?: HfPaper;
-}
-
-interface HfDailyProps {
-  dailyPapers?: HfDailyPaperEntry[];
 }
 
 export const huggingFacePapersSource: Source = {
@@ -48,26 +47,26 @@ export const huggingFacePapersSource: Source = {
   label: () => "Hugging Face Trending Papers",
   homepageUrl: () => HOMEPAGE_URL,
   async fetch(): Promise<FeedItem[]> {
-    const response = await getWithRetry(HOMEPAGE_URL);
+    const response = await getWithRetry(DAILY_PAPERS_API_URL, {
+      headers: { Accept: "application/json" },
+    });
     if (!response.ok) {
       throw new HttpError(
         response.status,
-        await readLimitedText(response, 1024),
+        await readHttpErrorDetail(response),
       );
     }
-    const body = await response.text();
-    return parseHuggingFacePapers(body);
+    const payload = (await response.json()) as unknown;
+    if (!Array.isArray(payload)) {
+      throw new Error("unexpected daily papers payload");
+    }
+    return parseHuggingFaceDailyPapers(payload);
   },
 };
 
-export function parseHuggingFacePapers(payload: string): FeedItem[] {
-  const match = DAILY_PAPERS_PATTERN.exec(payload);
-  if (!match) {
-    throw new Error("unable to locate DailyPapers payload");
-  }
-  const props = JSON.parse(unescapeHtmlEntities(match[1]!)) as HfDailyProps;
-  const entries = props.dailyPapers ?? [];
-
+export function parseHuggingFaceDailyPapers(
+  entries: HfDailyPaperEntry[],
+): FeedItem[] {
   const items: FeedItem[] = [];
   entries.forEach((entry, i) => {
     const paper = entry.paper ?? {};
@@ -79,8 +78,9 @@ export function parseHuggingFacePapers(payload: string): FeedItem[] {
       .filter((name) => name !== "");
 
     const metadata: Record<string, unknown> = {};
-    if (paper.numComments != null) {
-      metadata.comments_count = paper.numComments;
+    const commentCount = firstDefined(entry.numComments, paper.numComments);
+    if (commentCount != null) {
+      metadata.comments_count = commentCount;
     }
     if (authors.length > 0) {
       metadata.authors = authors.length > 6 ? authors.slice(0, 6) : authors;

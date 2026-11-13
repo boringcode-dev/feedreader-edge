@@ -11,7 +11,7 @@ import {
   getWithRetry,
   HttpError,
   parseDigits,
-  readLimitedText,
+  readHttpErrorDetail,
 } from "./util.ts";
 
 const HOMEPAGE_URL = "https://github.com/trending";
@@ -26,7 +26,7 @@ export const gitHubTrendingSource: Source = {
     if (!response.ok) {
       throw new HttpError(
         response.status,
-        await readLimitedText(response, 1024),
+        await readHttpErrorDetail(response),
       );
     }
     const html = await response.text();

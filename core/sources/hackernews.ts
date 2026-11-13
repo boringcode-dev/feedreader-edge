@@ -7,7 +7,7 @@ import {
   firstNonEmpty,
   getWithRetry,
   HttpError,
-  readLimitedText,
+  readHttpErrorDetail,
   unescapeHtmlEntities,
 } from "./util.ts";
 
@@ -42,7 +42,7 @@ export const hackerNewsSource: Source = {
     if (!response.ok) {
       throw new HttpError(
         response.status,
-        await readLimitedText(response, 1024),
+        await readHttpErrorDetail(response),
       );
     }
     const payload = (await response.json()) as HnFrontPage;

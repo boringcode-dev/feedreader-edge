@@ -1,35 +1,29 @@
-// No huggingface_test.go exists in the Go repo to port from directly — this
-// exercises parseHuggingFacePapers against a synthetic payload shaped like
-// the real embedded data-props blob described in huggingface.go.
 import { describe, expect, it } from "vitest";
-import { parseHuggingFacePapers } from "../sources/huggingface.ts";
+import { parseHuggingFaceDailyPapers } from "../sources/huggingface.ts";
 
-describe("parseHuggingFacePapers", () => {
-  it("extracts papers from the embedded DailyPapers JSON", () => {
-    const props = {
-      dailyPapers: [
-        {
+describe("parseHuggingFaceDailyPapers", () => {
+  it("extracts papers from the daily papers API entries", () => {
+    const entries = [
+      {
+        id: "2606.00001",
+        title: "A Paper Title",
+        summary: "A short summary.",
+        numComments: 4,
+        publishedAt: "2026-06-20T00:00:00.000Z",
+        submittedBy: { fullname: "Jane Doe", name: "janedoe" },
+        paper: {
           id: "2606.00001",
           title: "A Paper Title",
           summary: "A short summary.",
-          upvotes: 12,
           publishedAt: "2026-06-20T00:00:00.000Z",
-          submittedBy: { fullname: "Jane Doe", name: "janedoe" },
-          paper: {
-            id: "2606.00001",
-            title: "A Paper Title",
-            summary: "A short summary.",
-            publishedAt: "2026-06-20T00:00:00.000Z",
-            upvotes: 12,
-            numComments: 4,
-            authors: [{ name: "Jane Doe" }, { name: "John Roe" }],
-          },
+          upvotes: 12,
+          numComments: null,
+          authors: [{ name: "Jane Doe" }, { name: "John Roe" }],
         },
-      ],
-    };
-    const payload = `<div data-target="DailyPapers" data-props="${JSON.stringify(props).replace(/"/g, "&quot;")}"></div>`;
+      },
+    ];
 
-    const items = parseHuggingFacePapers(payload);
+    const items = parseHuggingFaceDailyPapers(entries);
     expect(items).toHaveLength(1);
 
     const item = items[0]!;
@@ -46,7 +40,27 @@ describe("parseHuggingFacePapers", () => {
     expect(item.sourceRank).toBe(1);
   });
 
-  it("throws when the DailyPapers payload is missing", () => {
-    expect(() => parseHuggingFacePapers("<div>no papers here</div>")).toThrow();
+  it("falls back to the paper's comment count and title fields", () => {
+    const items = parseHuggingFaceDailyPapers([
+      {
+        id: "2606.00002",
+        paper: {
+          id: "2606.00002",
+          title: "Paper-only title",
+          summary: "Paper-only summary.",
+          numComments: 7,
+          authors: [{ name: "Alice Smith" }],
+        },
+      },
+    ]);
+
+    expect(items).toHaveLength(1);
+    expect(items[0]?.title).toBe("Paper-only title");
+    expect(items[0]?.summary).toBe("Paper-only summary.");
+    expect(items[0]?.metadata.comments_count).toBe(7);
+  });
+
+  it("skips entries without a paper id", () => {
+    expect(parseHuggingFaceDailyPapers([{}, { paper: {} }])).toEqual([]);
   });
 });
