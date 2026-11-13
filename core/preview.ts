@@ -25,6 +25,10 @@ import {
 } from "./sources/dom.ts";
 
 const DEFAULT_MAX_BYTES = 400_000;
+// Non-HTML bodies are handed to the optional platform fallback (for example
+// Workers AI's toMarkdown) instead of being parsed here. Keep the cap well
+// below the Worker's memory budget while still covering typical papers.
+const DEFAULT_MAX_FALLBACK_BYTES = 5_000_000;
 const DEFAULT_TIMEOUT_MS = 10_000;
 const MAX_REDIRECTS = 5;
 const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308]);
@@ -118,6 +122,33 @@ export interface ArticlePreview {
   blocks: PreviewBlock[];
 }
 
+/** Content the primary extractor cannot turn into blocks. A platform adapter
+ * may convert it another way (for example Workers AI's Markdown conversion);
+ * core only passes bytes/text and receives already-validated blocks back. */
+export type PreviewFallbackKind =
+  | "no_content"
+  | "too_large"
+  | "unsupported_content_type";
+
+export interface PreviewFallbackInput {
+  kind: PreviewFallbackKind;
+  url: string;
+  contentType: string;
+  /** Present for HTML fallbacks. */
+  html?: string;
+  /** Present for non-HTML fallbacks, capped by `maxFallbackBytes`. */
+  bytes?: Uint8Array;
+}
+
+/**
+ * Optional platform hook for previews the built-in extractor can't produce.
+ * It must return plain `PreviewBlock` data (never upstream HTML) or null to
+ * preserve the original failure. Core never imports a platform SDK.
+ */
+export type PreviewFallback = (
+  input: PreviewFallbackInput,
+) => Promise<ArticlePreview | null>;
+
 export type PreviewFailureReason =
   | "invalid_url"
   | "fetch_failed"
@@ -170,6 +201,11 @@ export interface FetchArticlePreviewOptions {
   retryDelayMs?: number;
   /** Random jitter added to the retry delay. */
   retryJitterMs?: number;
+  /** Attempted only when the built-in extractor finds no readable blocks or
+   * the response is not HTML. */
+  fallback?: PreviewFallback;
+  /** Cap for non-HTML response bodies handed to `fallback`. */
+  maxFallbackBytes?: number;
 }
 
 /**
@@ -218,7 +254,11 @@ export async function fetchArticlePreview(
     try {
       lastResult = await fetchWithSafeRedirects(fetchImpl, target, {
         headers: {
-          Accept: "text/html, application/xhtml+xml",
+          // PDF/octet-stream let document URLs negotiate their document
+          // instead of an HTML wrapper; HTML stays the preferred type for
+          // ordinary article URLs.
+          Accept:
+            "text/html, application/xhtml+xml, application/pdf;q=0.9, application/octet-stream;q=0.5",
           "User-Agent": options.userAgent,
         },
         signal: timeoutSignal,
@@ -272,11 +312,44 @@ export async function fetchArticlePreview(
   }
 
   const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
-  if (
-    contentType !== "" &&
-    !contentType.includes("text/html") &&
-    !contentType.includes("application/xhtml+xml")
-  ) {
+  const isHtml =
+    contentType === "" ||
+    contentType.includes("text/html") ||
+    contentType.includes("application/xhtml+xml");
+  const fallback = options.fallback;
+
+  if (!isHtml) {
+    const maxFallbackBytes =
+      options.maxFallbackBytes ?? DEFAULT_MAX_FALLBACK_BYTES;
+    const declaredLength = Number.parseInt(
+      response.headers.get("content-length") ?? "",
+      10,
+    );
+    // Do not download a document that already declares itself too large: the
+    // fallback would reject the partial file anyway.
+    const declaredTooLarge =
+      Number.isFinite(declaredLength) && declaredLength > maxFallbackBytes;
+    if (fallback && !declaredTooLarge) {
+      try {
+        const { bytes, truncated } = await readBytesLimited(
+          response,
+          maxFallbackBytes,
+        );
+        // A partial PDF/Office file is unlikely to convert; preserve the
+        // original unsupported-content reason instead of spending an AI call.
+        if (!truncated) {
+          const converted = await tryPreviewFallback(fallback, {
+            kind: "unsupported_content_type",
+            url: finalUrl,
+            contentType,
+            bytes,
+          });
+          if (converted) return converted;
+        }
+      } catch {
+        // The fallback is best-effort; report the original reason below.
+      }
+    }
     throw new PreviewUnavailableError(
       "article is not HTML",
       "unsupported_content_type",
@@ -292,6 +365,15 @@ export async function fetchArticlePreview(
   }
 
   const preview = extractArticlePreview(html, finalUrl);
+  if (preview.blocks.length === 0 && fallback) {
+    const converted = await tryPreviewFallback(fallback, {
+      kind: truncated ? "too_large" : "no_content",
+      url: finalUrl,
+      contentType,
+      html,
+    });
+    if (converted) return converted;
+  }
   if (truncated && preview.blocks.length === 0) {
     throw new PreviewUnavailableError(
       "article body exceeded the preview limit before readable content",
@@ -689,8 +771,7 @@ function extractImageBlock(
     }
   }
   if (resolved === "") return null;
-  if (isAvatarImageSrc(resolved)) return null;
-  if (isDecorativeImageSrc(resolved)) return null;
+  if (isDecorativePreviewImageSrc(resolved)) return null;
 
   const caption = normalizeText(
     image.closest("figure")?.querySelector("figcaption")?.textContent,
@@ -744,6 +825,15 @@ function resolveImageUrl(
   } catch {
     return "";
   }
+}
+
+/**
+ * True for interface chrome that should never become a reader-view figure.
+ * Shared with the Markdown fallback mapper so both extractors apply the same
+ * avatar/wordmark/badge policy.
+ */
+export function isDecorativePreviewImageSrc(rawUrl: string): boolean {
+  return isAvatarImageSrc(rawUrl) || isDecorativeImageSrc(rawUrl);
 }
 
 /**
@@ -1058,7 +1148,7 @@ function extractPublishedAt(document: HtmlDocument): string | undefined {
   return undefined;
 }
 
-function estimateReadingMinutes(
+export function estimateReadingMinutes(
   blocks: PreviewBlock[],
 ): number | undefined {
   let words = 0;
@@ -1199,6 +1289,18 @@ function isPrivateIpv6(hostname: string): boolean {
   return firstGroup.startsWith("ff");
 }
 
+async function tryPreviewFallback(
+  fallback: PreviewFallback,
+  input: PreviewFallbackInput,
+): Promise<ArticlePreview | null> {
+  try {
+    const preview = await fallback(input);
+    return preview && preview.blocks.length > 0 ? preview : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Follows redirects manually so every hop's Location is checked by
  * normalizePreviewUrl before the request is issued. `redirect: "follow"`
@@ -1297,4 +1399,52 @@ async function readBodyLimited(
     await reader.cancel().catch(() => {});
   }
   return { text: out, truncated };
+}
+
+async function readBytesLimited(
+  response: Response,
+  maxBytes: number,
+): Promise<{ bytes: Uint8Array; truncated: boolean }> {
+  if (!response.body) {
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    return {
+      bytes: bytes.slice(0, maxBytes),
+      truncated: bytes.byteLength > maxBytes,
+    };
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let bytesRead = 0;
+  let truncated = false;
+  try {
+    while (bytesRead < maxBytes) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (!value || value.byteLength === 0) continue;
+      const remaining = maxBytes - bytesRead;
+      if (value.byteLength > remaining) {
+        chunks.push(value.subarray(0, remaining));
+        bytesRead += remaining;
+        truncated = true;
+        break;
+      }
+      chunks.push(value);
+      bytesRead += value.byteLength;
+    }
+    if (!truncated && bytesRead >= maxBytes) {
+      const extra = await reader.read();
+      truncated = !extra.done;
+    }
+  } finally {
+    await reader.cancel().catch(() => {});
+  }
+
+  const bytes = new Uint8Array(bytesRead);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return { bytes, truncated };
 }

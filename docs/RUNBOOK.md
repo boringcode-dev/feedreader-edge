@@ -78,10 +78,12 @@ Use Cloudflare dashboard → Workers & Pages → `feedreader` → Triggers → C
 - `502 blocked` — the upstream returned `401`/`403` (for example DataDome/paywall protection)
 - `502 rate_limited` / `502 upstream_error` — the upstream returned `429`/`5xx` after one retry
 - `504 timeout` — the fetch exceeded the 10-second timeout
-- `502 unsupported_content_type` / `empty_body` / `redirect` / `fetch_failed` — other fetch or extraction failures
-- `200` with `reason: "no_content"` — the page was fetched but no readable blocks were found
+- `502 unsupported_content_type` / `empty_body` / `redirect` / `fetch_failed` — other fetch or extraction failures. `unsupported_content_type` also covers a document the AI fallback could not convert (disabled, over 5 MB, timed out, or unsupported by `toMarkdown`).
+- `200` with `reason: "no_content"` — the page was fetched and had no readable blocks, and the AI fallback was disabled or returned nothing.
 
-The Worker logs `preview_unavailable` and `preview_empty` events with the URL, reason, and upstream status. Successful previews are edge-cached for 30 minutes via the Cache API; browser-facing responses are `private, no-store`. Transient upstream `429`/`5xx` responses are retried once with jitter. If bursts produce transient `503`s, check Workers Logs/CPU: the extractor runs in the request invocation, and sequential retries succeeding usually points at the Workers Free 10 ms CPU limit rather than a lasting upstream block. Lowering `DEFAULT_MAX_BYTES` in `core/preview.ts` (400 KB today) reduces the parse cost.
+Before returning `unsupported_content_type` for a non-HTML response, `too_large` for a truncated page, or `no_content` for an empty HTML page, `fetchArticlePreview` calls the optional Workers AI `toMarkdown` fallback (`platforms/cloudflare/src/previewFallback.ts`). It downloads at most 5 MB (`DEFAULT_MAX_FALLBACK_BYTES`), races the conversion against a 10-second timeout, strips the filename/page-marker headings from PDF output, and maps the Markdown back into validated preview blocks. Standalone images are skipped; the fallback disables AI image-description conversion. Set `FEEDREADER_AI_PREVIEW_FALLBACK=false` to disable it. Document text conversion is free in Workers AI.
+
+The Worker logs `preview_unavailable` and `preview_empty` events with the URL, reason, and upstream status, plus a `preview_ai_fallback` event for each attempt (`kind`, `outcome` = `ok`/`empty`/`error`, `ms`, `blocks`, `tokens`, and a capped `error`). Successful previews, including AI-converted ones, are edge-cached for 30 minutes via the Cache API; browser-facing responses are `private, no-store`. Transient upstream `429`/`5xx` responses are retried once with jitter. If bursts produce transient `503`s, check Workers Logs/CPU: the extractor runs in the request invocation, and sequential retries succeeding usually points at the Workers Free 10 ms CPU limit rather than a lasting upstream block. Lowering `DEFAULT_MAX_BYTES` in `core/preview.ts` (400 KB today) reduces the parse cost.
 
 ## Local SSR smoke procedure
 

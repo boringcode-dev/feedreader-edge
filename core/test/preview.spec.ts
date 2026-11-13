@@ -5,6 +5,7 @@ import {
   normalizePreviewUrl,
   PreviewUnavailableError,
   type PreviewBlock,
+  type PreviewFallbackInput,
 } from "../preview.ts";
 
 function blockText(block: PreviewBlock): string {
@@ -876,5 +877,219 @@ describe("fetchArticlePreview", () => {
         fetchImpl: async () => htmlResponse(html),
       }),
     ).rejects.toMatchObject({ reason: "too_large" });
+  });
+
+  it("converts non-HTML content through the optional fallback", async () => {
+    const inputs: PreviewFallbackInput[] = [];
+    const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2d]);
+
+    const preview = await fetchArticlePreview("https://example.com/paper.pdf", {
+      userAgent: "feedreader-test",
+      fetchImpl: async () =>
+        new Response(bytes, {
+          headers: { "content-type": "application/pdf; charset=binary" },
+        }),
+      fallback: async (input) => {
+        inputs.push(input);
+        return {
+          title: "Paper",
+          siteName: "example.com",
+          blocks: [{ type: "paragraph", text: "Converted PDF text." }],
+        };
+      },
+    });
+
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0]).toMatchObject({
+      kind: "unsupported_content_type",
+      url: "https://example.com/paper.pdf",
+      contentType: "application/pdf; charset=binary",
+    });
+    expect(inputs[0]?.bytes).toEqual(bytes);
+    expect(inputs[0]?.html).toBeUndefined();
+    expect(preview.blocks).toEqual([
+      { type: "paragraph", text: "Converted PDF text." },
+    ]);
+  });
+
+  it("preserves the unsupported-content reason when the fallback gives up", async () => {
+    const response = () =>
+      new Response("%PDF-1.7", {
+        headers: { "content-type": "application/pdf" },
+      });
+
+    await expect(
+      fetchArticlePreview("https://example.com/paper.pdf", {
+        userAgent: "feedreader-test",
+        fetchImpl: async () => response(),
+        fallback: async () => null,
+      }),
+    ).rejects.toMatchObject({ reason: "unsupported_content_type" });
+
+    await expect(
+      fetchArticlePreview("https://example.com/paper.pdf", {
+        userAgent: "feedreader-test",
+        fetchImpl: async () => response(),
+        fallback: async () => {
+          throw new Error("AI unavailable");
+        },
+      }),
+    ).rejects.toMatchObject({ reason: "unsupported_content_type" });
+  });
+
+  it("does not hand a truncated non-HTML body to the fallback", async () => {
+    let called = false;
+
+    await expect(
+      fetchArticlePreview("https://example.com/large.pdf", {
+        userAgent: "feedreader-test",
+        maxFallbackBytes: 4,
+        fetchImpl: async () =>
+          new Response(new Uint8Array([1, 2, 3, 4, 5]), {
+            headers: { "content-type": "application/pdf" },
+          }),
+        fallback: async () => {
+          called = true;
+          return null;
+        },
+      }),
+    ).rejects.toMatchObject({ reason: "unsupported_content_type" });
+
+    expect(called).toBe(false);
+  });
+
+  it("does not read a document whose content-length is over the fallback cap", async () => {
+    let called = false;
+
+    await expect(
+      fetchArticlePreview("https://example.com/large.pdf", {
+        userAgent: "feedreader-test",
+        maxFallbackBytes: 4,
+        fetchImpl: async () =>
+          new Response(new Uint8Array([1, 2, 3, 4, 5]), {
+            headers: {
+              "content-type": "application/pdf",
+              "content-length": "5",
+            },
+          }),
+        fallback: async () => {
+          called = true;
+          return null;
+        },
+      }),
+    ).rejects.toMatchObject({ reason: "unsupported_content_type" });
+
+    expect(called).toBe(false);
+  });
+
+  it("uses the fallback when an HTML page has no readable blocks", async () => {
+    const inputs: PreviewFallbackInput[] = [];
+
+    const preview = await fetchArticlePreview("https://example.com/shell", {
+      userAgent: "feedreader-test",
+      fetchImpl: async () =>
+        htmlResponse("<html><body><div>tiny</div></body></html>"),
+      fallback: async (input) => {
+        inputs.push(input);
+        return {
+          title: "Shell",
+          siteName: "example.com",
+          blocks: [{ type: "paragraph", text: "Recovered article text." }],
+        };
+      },
+    });
+
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0]).toMatchObject({
+      kind: "no_content",
+      url: "https://example.com/shell",
+      contentType: "text/html; charset=utf-8",
+    });
+    expect(inputs[0]?.html).toBe(
+      "<html><body><div>tiny</div></body></html>",
+    );
+    expect(inputs[0]?.bytes).toBeUndefined();
+    expect(preview.blocks).toEqual([
+      { type: "paragraph", text: "Recovered article text." },
+    ]);
+  });
+
+  it("uses the fallback when truncation left no readable blocks", async () => {
+    const inputs: PreviewFallbackInput[] = [];
+    const html = `<html><body><div>${"a".repeat(400)}</div></body></html>`;
+
+    const preview = await fetchArticlePreview("https://example.com/huge", {
+      userAgent: "feedreader-test",
+      maxBytes: 120,
+      fetchImpl: async () => htmlResponse(html),
+      fallback: async (input) => {
+        inputs.push(input);
+        return {
+          title: "Huge",
+          siteName: "example.com",
+          blocks: [{ type: "paragraph", text: "Recovered from the prefix." }],
+        };
+      },
+    });
+
+    expect(inputs[0]?.kind).toBe("too_large");
+    expect(preview.blocks).toEqual([
+      { type: "paragraph", text: "Recovered from the prefix." },
+    ]);
+  });
+
+  it("keeps the too_large reason when the fallback cannot recover", async () => {
+    const html = `<html><body><div>${"a".repeat(400)}</div></body></html>`;
+
+    await expect(
+      fetchArticlePreview("https://example.com/huge", {
+        userAgent: "feedreader-test",
+        maxBytes: 120,
+        fetchImpl: async () => htmlResponse(html),
+        fallback: async () => null,
+      }),
+    ).rejects.toMatchObject({ reason: "too_large" });
+  });
+
+  it("does not invoke the fallback when the primary extractor succeeds", async () => {
+    let called = false;
+
+    const preview = await fetchArticlePreview("https://example.com/edge", {
+      userAgent: "feedreader-test",
+      fetchImpl: async () => htmlResponse(ARTICLE_HTML),
+      fallback: async () => {
+        called = true;
+        return null;
+      },
+    });
+
+    expect(called).toBe(false);
+    expect(preview.blocks.length).toBeGreaterThan(0);
+  });
+
+  it("does not invoke the fallback for blocked responses or empty bodies", async () => {
+    let called = false;
+    const fallback = async (): Promise<null> => {
+      called = true;
+      return null;
+    };
+
+    await expect(
+      fetchArticlePreview("https://example.com/blocked", {
+        userAgent: "feedreader-test",
+        fetchImpl: async () => new Response("blocked", { status: 403 }),
+        fallback,
+      }),
+    ).rejects.toMatchObject({ reason: "blocked" });
+
+    await expect(
+      fetchArticlePreview("https://example.com/empty", {
+        userAgent: "feedreader-test",
+        fetchImpl: async () => htmlResponse(""),
+        fallback,
+      }),
+    ).rejects.toMatchObject({ reason: "empty_body" });
+
+    expect(called).toBe(false);
   });
 });

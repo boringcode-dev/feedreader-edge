@@ -79,7 +79,7 @@ npx lighthouse https://reader.boringcode.dev --view
 - **Scheduled refresh** every 1 hour on wall-clock boundaries
 - **Manual refresh** from the header re-fetches the current feed view from backend stored items only; it does **not** re-fetch upstream sources
 - **Persisted visited-link dimming** for feed card titles across reload/reopen using local storage
-- **Optional article preview** (off by default, toggled in Reader settings) that opens a reader view beside the feed on wide screens or full-screen on phones, with inline links/emphasis, image captions, tables, publication date/reading time, source-specific Hacker News comments, and an **Open source** button
+- **Optional article preview** (off by default, toggled in Reader settings) that opens a reader view beside the feed on wide screens or full-screen on phones, with inline links/emphasis, image captions, tables, publication date/reading time, a Workers AI Markdown fallback for PDFs, Office documents, and HTML pages with no readable blocks, source-specific Hacker News comments, and an **Open source** button
 - **Saved articles** with an optional per-card bookmark toggle, a `Saved` filter, and a preview-panel toggle; bookmark controls are disabled by default and can be enabled in Reader settings, with saved items stored locally under `feedreader.bookmarks`
 - **PWA-ready assets and offline caching** including manifest, service worker, touch icons, cached shell assets, cached `/api/items` responses for previously visited views, a standalone launch veil, and skeleton loading states
 - **Reconnect list refresh** re-fetches the current view from backend stored items only; it does **not** refresh upstream sources
@@ -220,6 +220,7 @@ Runtime configuration:
 | ----------------------------- | ----------------: | -------------------------------------------------------------- |
 | `FEEDREADER_ITEMS_PER_SOURCE` |              `20` | Per-source item count used in source dashboard/health contexts |
 | `FEEDREADER_USER_AGENT`       |  `feedreader/0.1` | Outbound fetch user agent                                      |
+| `FEEDREADER_AI_PREVIEW_FALLBACK` |           `true` | Workers AI Markdown fallback for PDFs/Office documents and empty previews; `false` disables it |
 | `REFRESH_SECRET`              | _required secret_ | Shared secret for internal per-source refresh fan-out routes   |
 
 ---
@@ -265,7 +266,7 @@ Returns a reader view for a stored feed item: rich text segments, image blocks w
 
 - `url` — required; must exactly match the URL of an item currently stored in D1
 
-The Worker fetches the article with a timeout and 400 KB cap, rejects non-HTML responses and non-public hosts, and never returns upstream markup. Inline targets are restricted to validated public http(s) URLs. Responses are edge-cached for 30 minutes. Returns `404` for unknown URLs and `502` when the upstream page cannot be previewed.
+The Worker fetches the article with a 10-second timeout and a 400 KB HTML cap, rejects non-public hosts, and never returns upstream markup. When the built-in extractor finds no readable blocks or the response is a document (PDF/Office), the Worker can convert it through Workers AI's Markdown conversion with a 5 MB cap; set `FEEDREADER_AI_PREVIEW_FALLBACK=false` to disable that fallback. Inline targets and images are restricted to validated public http(s) URLs. Responses are edge-cached for 30 minutes. Returns `404` for unknown URLs and `502` when the upstream page cannot be previewed.
 
 ### `POST /api/refresh`
 
