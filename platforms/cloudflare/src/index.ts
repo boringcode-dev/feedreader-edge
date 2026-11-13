@@ -32,7 +32,7 @@ import { paginate } from "../../../core/sources/listInMemory.ts";
 import { D1Repository } from "./repository.ts";
 import { CloudflareLlmRanker } from "./llmRanker.ts";
 import { CloudflareEmbedder } from "./embedder.ts";
-import { aiPreviewFallback } from "./previewFallback.ts";
+import { createPreviewFallback } from "./previewFallbackChain.ts";
 import { loadConfig } from "./config.ts";
 import type { Env } from "./env.d.ts";
 
@@ -124,6 +124,21 @@ export default {
     }
     if (url.pathname.startsWith("/internal/refresh/")) {
       return handleInternalRefresh(request, env, repo, sources, url);
+    }
+    // TEMPORARY: full preview-fallback smoke test; removed before merge.
+    if (url.pathname === "/debug/browser-fallback") {
+      const target = normalizePreviewUrl(url.searchParams.get("url") ?? "");
+      if (!target) {
+        return Response.json({ error: "url is required" }, { status: 400 });
+      }
+      const fallback = createPreviewFallback(env, "Browser preview test");
+      const preview = await fallback?.({
+        kind: "no_content",
+        url: target,
+        contentType: "text/html",
+        html: "",
+      });
+      return Response.json({ preview });
     }
     return new Response("not found", { status: 404 });
   },
@@ -292,17 +307,14 @@ async function handlePreview(
   if (cached) return clientCacheResponse(cached);
 
   try {
-    // PDFs/Office documents and pages with no readable blocks may still be
-    // previewable through Workers AI's Markdown conversion. The fallback is
-    // best-effort: a null result keeps the original failure reason.
-    const aiFallbackEnabled =
-      (env.FEEDREADER_AI_PREVIEW_FALLBACK ?? "true").trim().toLowerCase() !==
-      "false";
+    // PDFs/Office documents go through Workers AI Markdown conversion; if an
+    // HTML page still has no readable blocks, Browser Run can render a
+    // JavaScript shell. Both are best-effort and preserve the original
+    // failure when they return null.
+    const fallback = createPreviewFallback(env, item.title);
     const preview = await fetchArticlePreview(target, {
       userAgent: loadConfig(env).userAgent,
-      ...(aiFallbackEnabled
-        ? { fallback: (input) => aiPreviewFallback(env, input, item.title) }
-        : {}),
+      ...(fallback ? { fallback } : {}),
     });
     const payload = {
       url: item.url,
@@ -384,10 +396,11 @@ async function handlePreview(
  * `.invalid` is reserved by RFC 2606 for exactly this kind of placeholder
  * use, so it's guaranteed not to collide with a real host. */
 function previewCacheRequest(target: string): Request {
-  // v10 adds the Workers AI Markdown fallback, so previously cached empty
-  // previews get another extraction attempt; v9 added paper resource/citation
-  // sections, v8 added arXiv links, and v7 covered author bylines.
-  const raw = `preview:v10:${target}`;
+  // v11 adds the Browser Run fallback, so previously cached empty previews
+  // get a JavaScript-rendered attempt; v10 added the Workers AI Markdown
+  // fallback, v9 added paper resource/citation sections, v8 added arXiv
+  // links, and v7 covered author bylines.
+  const raw = `preview:v11:${target}`;
   const url = `https://feedreader-internal.invalid/preview-cache?k=${encodeURIComponent(raw)}`;
   return new Request(url, { method: "GET" });
 }
