@@ -1,0 +1,35 @@
+# Browser-cache static assets for a year. Every URL the HTML or manifest
+# references carries a ?v= build stamp, so replacing an asset requires bumping
+# that stamp. service-worker.js is intentionally excluded so updates land.
+/static/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/favicon.svg
+  Cache-Control: public, max-age=31536000, immutable
+
+/site.webmanifest
+  Cache-Control: public, max-age=31536000, immutable
+
+/apple-touch-icon.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/icon-192.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/icon-512.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/icon-maskable-192.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/icon-maskable-512.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/og-image.png
+  Cache-Control: public, max-age=31536000, immutable
+
+/manifest-assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/shortcuts/*
+  Cache-Control: public, max-age=31536000, immutable

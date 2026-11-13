@@ -77,7 +77,7 @@ Use Cloudflare dashboard → Workers & Pages → `feedreader` → Triggers → C
 - `422` — the stored URL is not public http(s) (for example an upstream feed emitted a `javascript:` or localhost link)
 - `502` — the upstream article timed out, returned non-HTML, or refused the fetch; the panel shows its fallback message and the **Open source** link still works
 
-Successful previews are edge-cached for 30 minutes. Local `wrangler dev` treats the Cache API as a no-op, so repeated clicks re-fetch. If previews start hitting Worker CPU limits, lower `DEFAULT_MAX_BYTES` in `core/preview.ts` (400 KB today) — parsing the upstream HTML with `linkedom` is the expensive step.
+Successful previews are edge-cached for 30 minutes. Local `wrangler dev` treats the Cache API as a no-op, so repeated clicks re-fetch. If previews start hitting Worker CPU limits, lower `DEFAULT_MAX_BYTES` in `core/preview.ts` (400 KB today) — parsing the upstream HTML with `node-html-parser` is the expensive step.
 
 ## Local SSR smoke procedure
 
@@ -98,6 +98,8 @@ Before considering any `core/render.ts` change done:
    ```
 
 3. Load `http://127.0.0.1:8788` and verify:
+   - the document has no external `style.css` or `theme-init.js` request; both are inlined in `<head>`
+   - the response carries `Cache-Control: public, max-age=0, s-maxage=300`
    - header actions render correctly
    - source filters and search controls render correctly
    - the reader settings dialog opens and closes, its Appearance/Reading/Sources tabs switch via click and arrow keys, and Cancel/Save show their icons

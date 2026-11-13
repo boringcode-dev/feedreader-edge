@@ -30,6 +30,8 @@
 
 `feedreader` is server-rendered HTML with vanilla JS/CSS — no framework runtime, no client hydration, no bundler payload. That keeps it genuinely tiny and fast, not just "fast for a SPA."
 
+The home page has no render-blocking asset requests: the stylesheet and pre-paint theme bootstrap are inlined into the HTML, and the response is edge-cached per URL for five minutes. Versioned static assets are served with immutable browser caching; see [`web-static/_headers`](web-static/_headers).
+
 Lighthouse against the production deployment (mobile, simulated throttling):
 
 ![Lighthouse report](docs/assets/lighthouse-report.png)
@@ -105,7 +107,7 @@ It optimizes for:
 - TypeScript
 - Cloudflare Workers
 - Web Standard APIs
-- `linkedom`
+- `node-html-parser`
 
 ### Frontend
 
@@ -343,7 +345,7 @@ Presentation-layer note:
 - selected density is stored in `localStorage` under `feedreader.uiDensity`
 - selected theme is stored in `localStorage` under `feedreader.theme`; valid values are `system` (default), `dark`, `light`, `sepia`, `terminal`, `glacier`, and `ember`
 - `system` resolves to the device's current light/dark preference and follows changes live; existing `dark`/`light` preferences keep working
-- an inline pre-paint theme init script applies the stored preference before the stylesheet loads, avoiding a light/dark flash
+- an inline pre-paint theme init script applies the stored preference before first paint, avoiding a light/dark flash (the script is read from `web-static/static/theme-init.js` and inlined with the stylesheet)
 - article preview is off by default and stored in `localStorage` under `feedreader.articlePreviewEnabled`
 - bookmark controls are off by default and stored in `localStorage` under `feedreader.bookmarksEnabled`; enabling them shows the bookmark controls and Saved filter, and disabling them hides those controls without deleting saved items
 - source-specific filters render as **real icon-only buttons**

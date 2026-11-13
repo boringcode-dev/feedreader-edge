@@ -7,7 +7,6 @@ import type { CardView, RefreshOutcome, SyncState } from "../../../core/domain.t
 import {
   buildCards,
   buildErrors,
-  dashboard,
   feedItems,
   healthPayload,
   refreshOne,
@@ -71,6 +70,12 @@ const PERSONALIZE_CACHE_TTL_SECONDS = 21600;
 // source data refreshes (see latestSuccessAt), so this just bounds
 // staleness if a source somehow stops refreshing.
 const ITEMS_CACHE_TTL_SECONDS = 21600;
+// The server-rendered home page is identical for every visitor of the same
+// URL, so it can be cached like /api/items. Keep it short: error banners and
+// fresh items are only as current as the last source refresh, and a deploy
+// changes the content through APP_VERSION in the cache key.
+const HOME_CACHE_TTL_SECONDS = 300;
+
 // Reader previews are fetched on demand when the user opens the side panel.
 // A short edge cache keeps repeated clicks from re-fetching the same article
 // (and re-burning the CPU budget on extraction), while still picking up
@@ -83,7 +88,7 @@ export default {
     const repo = new D1Repository(env.DB);
     const sources = build();
 
-    if (url.pathname === "/") return handleHome(url, env, repo);
+    if (url.pathname === "/") return handleHome(url, env, repo, sources);
     if (url.pathname === "/healthz") return handleHealthz(sources, repo);
     if (url.pathname === "/api/items") return handleItemsApi(url, repo);
     if (url.pathname === "/api/preview") return handlePreview(url, env, repo);
@@ -130,6 +135,7 @@ async function handleHome(
   url: URL,
   env: Env,
   repo: D1Repository,
+  sources: Source[],
 ): Promise<Response> {
   const protocolAction = normalizeProtocolAction(url.searchParams.get("open"));
   const source = normalizeSource(
@@ -143,19 +149,34 @@ async function handleHome(
   const socialImageUrl = `${url.origin}/og-image.png?v=3`;
   const appVersion = currentAppVersion(env);
 
-  const { items, hasNext } = await feedItems(
-    repo,
-    PAGE_SIZE,
-    0,
-    querySource,
-    [],
-    searchQuery,
+  // APP_VERSION changes on every deploy, so it both keys the cache and
+  // prevents stale HTML in production. Local `wrangler dev` pins it to
+  // "dev", which would hide template/CSS edits behind a warm cache.
+  const homeCacheEnabled = appVersion !== "dev";
+  const cacheRequest = homeCacheRequest(url, appVersion);
+  if (homeCacheEnabled) {
+    const cached = await readEdgeCache(cacheRequest);
+    if (cached) return cached;
+  }
+
+  const [{ items, hasNext }, states, inlineCss, themeInitScript] =
+    await Promise.all([
+      feedItems(repo, PAGE_SIZE, 0, querySource, [], searchQuery),
+      repo.listSourceStates(),
+      loadInlineAsset(env, "/static/style.css"),
+      loadInlineAsset(env, "/static/theme-init.js"),
+    ]);
+  const errors = buildErrors(
+    sources.map((item) => ({
+      source: item.key(),
+      label: item.label(),
+      lastError: states[item.key()]?.lastError ?? "",
+    })),
   );
-  const snapshots = await dashboard(build(), repo, 1);
 
   const html = renderIndexPage({
     cards: buildCards(items, 0),
-    errors: buildErrors(snapshots),
+    errors,
     sourceFilters: buildSourceFilters(source),
     currentSource: source,
     searchQuery,
@@ -167,10 +188,19 @@ async function handleHome(
     canonicalUrl,
     socialImageUrl,
     appVersion,
+    inlineCss,
+    themeInitScript,
   });
-  return new Response(html, {
-    headers: { "Content-Type": "text/html; charset=utf-8" },
+  const response = new Response(html, {
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": `public, max-age=0, s-maxage=${HOME_CACHE_TTL_SECONDS}`,
+    },
   });
+  if (homeCacheEnabled) {
+    await writeEdgeCache(cacheRequest, response.clone(), HOME_CACHE_TTL_SECONDS);
+  }
+  return response;
 }
 
 async function handleHealthz(
@@ -330,6 +360,42 @@ async function handleItemsApi(url: URL, repo: D1Repository): Promise<Response> {
   return response;
 }
 
+// The home page inlines style.css and theme-init.js so first paint doesn't
+// wait on render-blocking requests. Both are read once per isolate from the
+// ASSETS binding (the files stay the single source of truth) and reused by
+// every subsequent render.
+const inlineAssetCache = new Map<string, Promise<string>>();
+
+function loadInlineAsset(env: Env, path: string): Promise<string> {
+  let pending = inlineAssetCache.get(path);
+  if (!pending) {
+    pending = env.ASSETS.fetch(`https://feedreader-internal.invalid${path}`)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`asset ${path} returned ${response.status}`);
+        }
+        return response.text();
+      })
+      .catch((error) => {
+        inlineAssetCache.delete(path);
+        throw error;
+      });
+    inlineAssetCache.set(path, pending);
+  }
+  return pending;
+}
+
+/** Synthetic GET request used purely as a Cache API key — never fetched.
+ * `.invalid` is reserved by RFC 2606 for exactly this kind of placeholder
+ * use, so it's guaranteed not to collide with a real host. The raw query
+ * string is part of the key because it drives source/search filters and the
+ * canonical URL; APP_VERSION invalidates the cache across deploys. */
+function homeCacheRequest(url: URL, appVersion: string): Request {
+  const raw = `home:v1:${url.origin}${url.pathname}${url.search}|${appVersion}`;
+  const cacheUrl = `https://feedreader-internal.invalid/home-cache?k=${encodeURIComponent(raw)}`;
+  return new Request(cacheUrl, { method: "GET" });
+}
+
 /** Latest successful refresh among the sources in scope — used so an edge
  * cache entry (items) and the personalize ranking cache both invalidate
  * themselves whenever new items arrive, without needing an explicit purge. */
@@ -370,11 +436,19 @@ function itemsCacheRequest(
   return new Request(url, { method: "GET" });
 }
 
-// tsconfig includes the DOM lib (needed for linkedom-based source parsing
-// elsewhere), whose own `CacheStorage` type shadows the Workers one and
-// lacks `.default` — cast through `unknown` once to recover it.
-function defaultEdgeCache(): Cache {
-  return (caches as unknown as { default: Cache }).default;
+// @cloudflare/workers-types omits the runtime's `expirationTtl` put option, so
+// declare the small Cache surface used here.
+interface EdgeCache {
+  match(request: Request): Promise<Response | null | undefined>;
+  put(
+    request: Request,
+    response: Response,
+    options?: { expirationTtl?: number },
+  ): Promise<void>;
+}
+
+function defaultEdgeCache(): EdgeCache {
+  return caches.default;
 }
 
 async function readEdgeCache(cacheRequest: Request): Promise<Response | null> {
@@ -390,9 +464,15 @@ async function readEdgeCache(cacheRequest: Request): Promise<Response | null> {
 async function writeEdgeCache(
   cacheRequest: Request,
   response: Response,
+  expirationTtl?: number,
 ): Promise<void> {
   try {
-    await defaultEdgeCache().put(cacheRequest, response);
+    const cache = defaultEdgeCache();
+    if (expirationTtl) {
+      await cache.put(cacheRequest, response, { expirationTtl });
+    } else {
+      await cache.put(cacheRequest, response);
+    }
   } catch {
     // Same as above — a failed write just means the next request re-queries D1.
   }
@@ -616,11 +696,8 @@ function personalizeCacheRequest(
   return new Request(url, { method: "GET" });
 }
 
-// tsconfig includes the DOM lib (needed for linkedom-based source parsing
-// elsewhere), whose own `CacheStorage` type shadows the Workers one and
-// lacks `.default` — cast through `unknown` once to recover it.
 function defaultPersonalizeCache(): Cache {
-  return (caches as unknown as { default: Cache }).default;
+  return caches.default;
 }
 
 interface CachedRanking {

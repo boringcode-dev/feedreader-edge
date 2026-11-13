@@ -104,25 +104,25 @@ export async function dashboard(
   limit: number,
 ): Promise<SourceSnapshot[]> {
   const states = await repo.listSourceStates();
-  const snapshots: SourceSnapshot[] = [];
-  for (const source of sources) {
-    const state = states[source.key()] ?? {
-      source: source.key(),
-      itemCount: 0,
-    };
-    const items = await repo.getCurrentItems(source.key(), limit);
-    snapshots.push({
-      source: source.key(),
-      label: source.label(),
-      homepageUrl: source.homepageUrl(),
-      lastAttemptAt: state.lastAttemptAt,
-      lastSuccessAt: state.lastSuccessAt,
-      lastError: state.lastError,
-      itemCount: state.itemCount,
-      items,
-    });
-  }
-  return snapshots;
+  return Promise.all(
+    sources.map(async (source) => {
+      const state = states[source.key()] ?? {
+        source: source.key(),
+        itemCount: 0,
+      };
+      const items = await repo.getCurrentItems(source.key(), limit);
+      return {
+        source: source.key(),
+        label: source.label(),
+        homepageUrl: source.homepageUrl(),
+        lastAttemptAt: state.lastAttemptAt,
+        lastSuccessAt: state.lastSuccessAt,
+        lastError: state.lastError,
+        itemCount: state.itemCount,
+        items,
+      };
+    }),
+  );
 }
 
 export async function feedItems(
@@ -153,8 +153,10 @@ export async function healthPayload(
   sources: Source[],
   repo: FeedRepository,
 ): Promise<Record<string, unknown>> {
-  const snapshots = await dashboard(sources, repo, 1);
-  const total = await repo.countTotalItems();
+  const [snapshots, total] = await Promise.all([
+    dashboard(sources, repo, 1),
+    repo.countTotalItems(),
+  ]);
   return {
     status: "ok",
     total_items: total,
@@ -194,7 +196,11 @@ export function buildCards(items: FeedItem[], offset: number): CardView[] {
   });
 }
 
-export function buildErrors(snapshots: SourceSnapshot[]): ErrorView[] {
+export function buildErrors(
+  snapshots: ReadonlyArray<
+    Pick<SourceSnapshot, "source" | "label" | "lastError">
+  >,
+): ErrorView[] {
   return snapshots
     .filter((snapshot) => (snapshot.lastError ?? "").trim() !== "")
     .map((snapshot) => ({
