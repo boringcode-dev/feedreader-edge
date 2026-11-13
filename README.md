@@ -30,7 +30,7 @@
 
 `feedreader` is server-rendered HTML with vanilla JS/CSS — no framework runtime, no client hydration, no bundler payload. That keeps it genuinely tiny and fast, not just "fast for a SPA."
 
-The home page has no render-blocking asset requests: the stylesheet and pre-paint theme bootstrap are inlined into the HTML, and the response is edge-cached per URL for five minutes. Versioned static assets are served with immutable browser caching; see [`web-static/_headers`](web-static/_headers).
+The home page has no render-blocking asset requests: the stylesheet and pre-paint theme bootstrap are inlined into the HTML, and the response is edge-cached per URL for five minutes. The browser-facing copy is `private, no-store`; the five-minute cache lives in the Worker Cache API. Versioned static assets are served with immutable browser caching; see [`web-static/_headers`](web-static/_headers).
 
 Lighthouse against the production deployment (mobile, simulated throttling):
 

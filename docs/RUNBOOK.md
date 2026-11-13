@@ -99,7 +99,7 @@ Before considering any `core/render.ts` change done:
 
 3. Load `http://127.0.0.1:8788` and verify:
    - the document has no external `style.css` or `theme-init.js` request; both are inlined in `<head>`
-   - the response carries `Cache-Control: public, max-age=0, s-maxage=300`
+   - the response carries `Cache-Control: private, no-store` (the five-minute edge copy lives in the Cache API and is rewritten to this header on the way out)
    - in a regular browser tab the launch veil stays hidden (`display: none`) and is removed from the DOM; in an installed/standalone window it is visible and fades out within about a second
    - throttle the network, then change a source filter or run a search: skeleton cards appear after ~150 ms and are replaced by the new cards; `View more` appends three skeleton rows
    - enable article preview, throttle the network, and open a card: the card title stays visible while a preview skeleton appears in the panel, then the fetched title/content fade in; a failed preview clears the skeleton and shows the error status
