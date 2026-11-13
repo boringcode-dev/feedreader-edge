@@ -270,7 +270,11 @@ Returns a reader view for a stored feed item: rich text segments, image blocks w
 
 - `url` — required; must exactly match the URL of an item currently stored in D1
 
-The Worker fetches the article with a 10-second timeout and a 400 KB HTML cap, rejects non-public hosts, and never returns upstream markup. When the built-in extractor finds no readable blocks or the response is a document (PDF/Office), the Worker can convert it through Workers AI's Markdown conversion with a 5 MB cap; if an HTML page still has no readable content, it can render the page through Browser Run. Set `FEEDREADER_AI_PREVIEW_FALLBACK=false` or `FEEDREADER_BROWSER_PREVIEW_FALLBACK=false` to disable either fallback. Inline targets and images are restricted to validated public http(s) URLs. Responses are edge-cached for 30 minutes (empty `no_content` results for 5 minutes); cache-miss previews are limited to 20 per minute per IP, while cached previews are unrestricted. Returns `404` for unknown URLs and `502` when the upstream page cannot be previewed.
+The Worker fetches the article with a 10-second timeout and a 400 KB HTML cap, rejects non-public hosts, and never returns upstream markup. When the built-in extractor finds no readable blocks or the response is a document (PDF/Office), the Worker can convert it through Workers AI's Markdown conversion with a 5 MB cap; if an HTML page still has no readable content, it can render the page through Browser Run. Set `FEEDREADER_AI_PREVIEW_FALLBACK=false` or `FEEDREADER_BROWSER_PREVIEW_FALLBACK=false` to disable either fallback. Inline targets and images are restricted to validated public http(s) URLs. Responses are edge-cached for 30 minutes (empty `no_content` results for 5 minutes); cache-miss previews are limited to 20 per minute per IP, while cached previews are unrestricted. The client retries a transient `503` once. Returns `404` for unknown URLs and `502` when the upstream page cannot be previewed.
+
+### `POST /api/personalize`
+
+Returns a `For You` ranking for an interests string. Cache-miss requests are limited to 10 per minute per IP; cached rankings are unrestricted.
 
 ### `POST /api/refresh`
 

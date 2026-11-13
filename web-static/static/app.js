@@ -2236,6 +2236,28 @@
     resetPreviewPanel();
   };
 
+  // Cloudflare returns 503 when a Worker invocation exceeds the CPU limit;
+  // the same preview usually succeeds on a second attempt. Do not retry 429:
+  // the endpoint's Retry-After is 60 seconds.
+  const previewRetryDelayMs = 500;
+  const fetchPreviewWithRetry = (previewUrl, signal) => {
+    const request = () =>
+      fetch(`/api/preview?url=${encodeURIComponent(previewUrl)}&v=9`, {
+        headers: { Accept: "application/json" },
+        signal,
+      });
+    return request().then((response) => {
+      if (response.status !== 503 || signal.aborted) return response;
+      void response.body?.cancel().catch(() => {});
+      return new Promise((resolve) =>
+        window.setTimeout(resolve, previewRetryDelayMs),
+      ).then(() => {
+        if (signal.aborted) return response;
+        return request();
+      });
+    });
+  };
+
   const openArticlePreview = ({
     url,
     title,
@@ -2306,10 +2328,7 @@
       150,
     );
 
-    fetch(`/api/preview?url=${encodeURIComponent(url)}&v=9`, {
-      headers: { Accept: "application/json" },
-      signal: controller.signal,
-    })
+    fetchPreviewWithRetry(url, controller.signal)
       .then(async (response) => {
         if (requestId !== previewRequestSequence) return null;
         if (!response.ok) {
