@@ -369,6 +369,7 @@ Presentation-layer note:
 
 - when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
 - while the preview request is in flight, the panel keeps the card title and shows a preview skeleton after a short delay; the loaded title and content fade in, and a failed request replaces the skeleton with a readable error message
+- transient upstream `429`/`5xx` responses are retried once with jitter; blocked sources, timeouts, unsupported formats, and failed fetches get specific messages
 - the visible loading message is visually hidden while the skeleton is shown; the panel remains `aria-busy` and a live region announces the loading state
 - `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
 - the panel shows the extracted title, byline, publication date/reading time, rich text with validated inline links/emphasis/inline code, image blocks with captions and intrinsic dimensions, and semantic tables; images load directly from the source with lazy loading and no referrer; `Open source` opens the original page
@@ -381,6 +382,7 @@ Presentation-layer note:
 - the article currently being previewed is highlighted in the feed; the preview header shows the card’s stats/date metadata without repeating the title
 - previous/next buttons at the bottom of the panel move through the currently rendered feed or Saved list; when the last rendered card is previewed, Next stays enabled if more pages exist and loads the next page before advancing
 - previews are fetched by the Worker via `GET /api/preview?url=…`; only URLs already stored as feed items are accepted, and upstream HTML is never injected into the page
+- successful previews are edge-cached for 30 minutes via the Cache API and browser-facing responses are `private, no-store`
 - on screens wider than 900px the preview panel is an aside fixed on the right at about 65% of the width and 0.8rem top/bottom insets, with the bookmark, `…`, and Close controls in its header; the page keeps its normal scroll behavior
 - at 900px or narrower the borderless panel covers the full viewport and the footer places the bookmark, `…`, and Close after Previous/Next (in both portrait and landscape). Above 900px the aside header holds the bookmark, `…`, and Close. The `…` button opens a settings-style dialog headed by the article title with its source icon/host and a close button, with the actions stacked as full-width rows over the standard backdrop (dismiss with the close button, backdrop, Escape, or by choosing an action). Content respects left/right safe-area insets in iPhone landscape; while the panel covers the viewport the `theme-color` tint matches the panel surface so the status-bar strip blends with it
 - on phones, the glass preview header and footer slide away while scrolling down and return when scrolling up; the desktop aside keeps its chrome visible

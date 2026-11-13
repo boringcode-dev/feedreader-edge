@@ -16,6 +16,7 @@ import { renderIndexPage } from "../../../core/render.ts";
 import {
   fetchArticlePreview,
   normalizePreviewUrl,
+  PreviewUnavailableError,
 } from "../../../core/preview.ts";
 import {
   MAX_INTERESTS_LENGTH,
@@ -70,16 +71,18 @@ const PERSONALIZE_CACHE_TTL_SECONDS = 21600;
 // source data refreshes (see latestSuccessAt), so this just bounds
 // staleness if a source somehow stops refreshing.
 const ITEMS_CACHE_TTL_SECONDS = 21600;
+const ITEMS_EDGE_CACHE_CONTROL = `public, max-age=${ITEMS_CACHE_TTL_SECONDS}`;
 // The server-rendered home page is identical for every visitor of the same
 // URL, so it can be cached like /api/items. Keep it short: error banners and
 // fresh items are only as current as the last source refresh, and a deploy
 // changes the content through APP_VERSION in the cache key.
 const HOME_CACHE_TTL_SECONDS = 300;
-// The browser copy must always revalidate. `no-store` also keeps Cloudflare's
-// CDN from caching the Worker response, because the zone's Browser Cache TTL
-// setting rewrites `max-age` on CDN-cached HTML (observed as a 4-hour TTL).
-// Edge caching is handled explicitly by the Cache API instead.
-const HOME_CLIENT_CACHE_CONTROL = "private, no-store";
+// Browser-facing responses must always revalidate. `no-store` also keeps
+// Cloudflare's CDN from caching them, because the zone's Browser Cache TTL
+// setting rewrites `max-age` on CDN-cached responses (observed as a 4-hour
+// TTL on home and preview responses). Edge caching is handled explicitly by
+// the Cache API instead.
+const PRIVATE_NO_STORE = "private, no-store";
 const HOME_EDGE_CACHE_CONTROL = `public, max-age=${HOME_CACHE_TTL_SECONDS}`;
 
 // Reader previews are fetched on demand when the user opens the side panel.
@@ -87,6 +90,7 @@ const HOME_EDGE_CACHE_CONTROL = `public, max-age=${HOME_CACHE_TTL_SECONDS}`;
 // (and re-burning the CPU budget on extraction), while still picking up
 // article edits within half an hour.
 const PREVIEW_CACHE_TTL_SECONDS = 1800;
+const PREVIEW_EDGE_CACHE_CONTROL = `public, max-age=${PREVIEW_CACHE_TTL_SECONDS}`;
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -162,7 +166,7 @@ async function handleHome(
   const cacheRequest = homeCacheRequest(url, appVersion);
   if (homeCacheEnabled) {
     const cached = await readEdgeCache(cacheRequest);
-    if (cached) return clientHomeResponse(cached);
+    if (cached) return clientCacheResponse(cached);
   }
 
   const [{ items, hasNext }, states, inlineCss, themeInitScript] =
@@ -199,7 +203,7 @@ async function handleHome(
   });
   const clientHeaders = {
     "Content-Type": "text/html; charset=utf-8",
-    "Cache-Control": HOME_CLIENT_CACHE_CONTROL,
+    "Cache-Control": PRIVATE_NO_STORE,
   };
   if (!homeCacheEnabled) {
     return new Response(html, { headers: clientHeaders });
@@ -214,11 +218,11 @@ async function handleHome(
   return new Response(html, { headers: clientHeaders });
 }
 
-/** Rewrites the cached edge copy into the browser-facing copy. The Cache API
+/** Rewrites a cached edge copy into the browser-facing copy. The Cache API
  * keeps the `public` response; clients only ever see `private, no-store`. */
-function clientHomeResponse(cached: Response): Response {
+function clientCacheResponse(cached: Response): Response {
   const headers = new Headers(cached.headers);
-  headers.set("Cache-Control", HOME_CLIENT_CACHE_CONTROL);
+  headers.set("Cache-Control", PRIVATE_NO_STORE);
   return new Response(cached.body, {
     status: cached.status,
     statusText: cached.statusText,
@@ -274,37 +278,94 @@ async function handlePreview(
   const target = normalizePreviewUrl(item.url);
   if (!target) {
     return Response.json(
-      { error: "preview is not available for this article" },
-      { status: 422 },
+      {
+        error: "preview is not available for this article",
+        reason: "invalid_url",
+      },
+      { status: 422, headers: { "Cache-Control": "no-store" } },
     );
   }
 
   const cacheRequest = previewCacheRequest(target);
   const cached = await readEdgeCache(cacheRequest);
-  if (cached) return cached;
+  if (cached) return clientCacheResponse(cached);
 
   try {
     const preview = await fetchArticlePreview(target, {
       userAgent: loadConfig(env).userAgent,
     });
-    const response = Response.json(
-      {
-        url: item.url,
-        title: preview.title || item.title,
-        site_name: preview.siteName,
-        byline: preview.byline ?? null,
-        published_at: preview.publishedAt ?? null,
-        reading_minutes: preview.readingMinutes ?? null,
-        blocks: preview.blocks,
+    const payload = {
+      url: item.url,
+      title: preview.title || item.title,
+      site_name: preview.siteName,
+      byline: preview.byline ?? null,
+      published_at: preview.publishedAt ?? null,
+      reading_minutes: preview.readingMinutes ?? null,
+      blocks: preview.blocks,
+      ...(preview.blocks.length === 0 ? { reason: "no_content" } : {}),
+    };
+    const body = JSON.stringify(payload);
+    const cacheResponse = new Response(body, {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": PREVIEW_EDGE_CACHE_CONTROL,
       },
-      { headers: { "Cache-Control": `max-age=${PREVIEW_CACHE_TTL_SECONDS}` } },
+    });
+    await writeEdgeCache(cacheRequest, cacheResponse, PREVIEW_CACHE_TTL_SECONDS);
+    if (preview.blocks.length === 0) {
+      console.warn(
+        JSON.stringify({
+          event: "preview_empty",
+          url: item.url,
+          reason: "no_content",
+        }),
+      );
+    }
+    return new Response(body, {
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": PRIVATE_NO_STORE,
+      },
+    });
+  } catch (error) {
+    if (error instanceof PreviewUnavailableError) {
+      const upstreamStatus = error.upstreamStatus ?? null;
+      console.warn(
+        JSON.stringify({
+          event: "preview_unavailable",
+          url: item.url,
+          reason: error.reason,
+          upstream_status: upstreamStatus,
+        }),
+      );
+      const status =
+        error.reason === "timeout"
+          ? 504
+          : error.reason === "invalid_url"
+            ? 422
+            : 502;
+      return Response.json(
+        {
+          error: "preview is not available for this article",
+          reason: error.reason,
+          upstream_status: upstreamStatus,
+        },
+        { status, headers: { "Cache-Control": "no-store" } },
+      );
+    }
+    console.warn(
+      JSON.stringify({
+        event: "preview_unavailable",
+        url: item.url,
+        reason: "unexpected",
+      }),
     );
-    await writeEdgeCache(cacheRequest, response.clone());
-    return response;
-  } catch {
     return Response.json(
-      { error: "preview is not available for this article" },
-      { status: 502 },
+      {
+        error: "preview is not available for this article",
+        reason: "unexpected",
+      },
+      { status: 502, headers: { "Cache-Control": "no-store" } },
     );
   }
 }
@@ -354,7 +415,7 @@ async function handleItemsApi(url: URL, repo: D1Repository): Promise<Response> {
   );
 
   const cached = await readEdgeCache(cacheRequest);
-  if (cached) return cached;
+  if (cached) return clientCacheResponse(cached);
 
   const { items, hasNext } = await feedItems(
     repo,
@@ -366,21 +427,30 @@ async function handleItemsApi(url: URL, repo: D1Repository): Promise<Response> {
   );
   const cards = buildCards(items, offset);
 
-  const response = Response.json(
-    {
-      generated_at: new Date().toISOString(),
-      source,
-      sources: selectedSources,
-      query: searchQuery,
-      offset,
-      limit,
-      has_next: hasNext,
-      items: cardsToJson(cards),
+  const payload = {
+    generated_at: new Date().toISOString(),
+    source,
+    sources: selectedSources,
+    query: searchQuery,
+    offset,
+    limit,
+    has_next: hasNext,
+    items: cardsToJson(cards),
+  };
+  const body = JSON.stringify(payload);
+  const cacheResponse = new Response(body, {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": ITEMS_EDGE_CACHE_CONTROL,
     },
-    { headers: { "Cache-Control": `max-age=${ITEMS_CACHE_TTL_SECONDS}` } },
-  );
-  await writeEdgeCache(cacheRequest, response.clone());
-  return response;
+  });
+  await writeEdgeCache(cacheRequest, cacheResponse, ITEMS_CACHE_TTL_SECONDS);
+  return new Response(body, {
+    headers: {
+      "Content-Type": "application/json",
+      "Cache-Control": PRIVATE_NO_STORE,
+    },
+  });
 }
 
 // The home page inlines style.css and theme-init.js so first paint doesn't

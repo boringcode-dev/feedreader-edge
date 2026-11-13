@@ -2313,7 +2313,16 @@
       .then(async (response) => {
         if (requestId !== previewRequestSequence) return null;
         if (!response.ok) {
-          throw new Error(`preview failed: ${response.status}`);
+          const reason = await response
+            .clone()
+            .json()
+            .then((payload) =>
+              typeof payload?.reason === "string" ? payload.reason : "",
+            )
+            .catch(() => "");
+          const error = new Error(`preview failed: ${response.status}`);
+          error.previewReason = reason;
+          throw error;
         }
         return response.json();
       })
@@ -2373,9 +2382,21 @@
         previewContent?.replaceChildren();
         previewByline?.classList.add("is-hidden");
         previewReadingMeta?.classList.add("is-hidden");
-        setPreviewStatus(
-          "Preview isn't available for this article. Open the source to read it.",
-        );
+        const reason =
+          typeof error?.previewReason === "string" ? error.previewReason : "";
+        const message =
+          reason === "blocked"
+            ? "This source blocks reader previews. Open the source to read the article."
+            : reason === "rate_limited" ||
+                reason === "upstream_error" ||
+                reason === "timeout"
+              ? "Preview is temporarily unavailable. Open the source to read the article."
+              : reason === "unsupported_content_type"
+                ? "This article format can't be previewed. Open the source to read the article."
+                : reason === "too_large"
+                  ? "This article is too large to preview. Open the source to read the article."
+                  : "Preview isn't available for this article. Open the source to read it.";
+        setPreviewStatus(message);
       })
       .finally(() => {
         if (requestId === previewRequestSequence) {

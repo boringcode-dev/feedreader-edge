@@ -72,12 +72,16 @@ Use Cloudflare dashboard → Workers & Pages → `feedreader` → Triggers → C
 
 ## Article preview failures
 
-`GET /api/preview?url=…` only previews URLs that still exist in `items`, so a pruned or changed article URL returns `404` even if it is still visible in an open tab. Other statuses:
+`GET /api/preview?url=…` only previews URLs that still exist in `items`, so a pruned or changed article URL returns `404` even if it is still visible in an open tab. Failures include a machine-readable `reason` (and `upstream_status` when applicable):
 
-- `422` — the stored URL is not public http(s) (for example an upstream feed emitted a `javascript:` or localhost link)
-- `502` — the upstream article timed out, returned non-HTML, or refused the fetch; the panel shows its fallback message and the **Open source** link still works
+- `422 invalid_url` — the stored URL is not public http(s) (for example an upstream feed emitted a `javascript:` or localhost link)
+- `502 blocked` — the upstream returned `401`/`403` (for example DataDome/paywall protection)
+- `502 rate_limited` / `502 upstream_error` — the upstream returned `429`/`5xx` after one retry
+- `504 timeout` — the fetch exceeded the 10-second timeout
+- `502 unsupported_content_type` / `empty_body` / `redirect` / `fetch_failed` — other fetch or extraction failures
+- `200` with `reason: "no_content"` — the page was fetched but no readable blocks were found
 
-Successful previews are edge-cached for 30 minutes. Local `wrangler dev` treats the Cache API as a no-op, so repeated clicks re-fetch. If previews start hitting Worker CPU limits, lower `DEFAULT_MAX_BYTES` in `core/preview.ts` (400 KB today) — parsing the upstream HTML with `node-html-parser` is the expensive step.
+The Worker logs `preview_unavailable` and `preview_empty` events with the URL, reason, and upstream status. Successful previews are edge-cached for 30 minutes via the Cache API; browser-facing responses are `private, no-store`. Transient upstream `429`/`5xx` responses are retried once with jitter. If bursts produce transient `503`s, check Workers Logs/CPU: the extractor runs in the request invocation, and sequential retries succeeding usually points at the Workers Free 10 ms CPU limit rather than a lasting upstream block. Lowering `DEFAULT_MAX_BYTES` in `core/preview.ts` (400 KB today) reduces the parse cost.
 
 ## Local SSR smoke procedure
 

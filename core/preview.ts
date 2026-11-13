@@ -118,11 +118,45 @@ export interface ArticlePreview {
   blocks: PreviewBlock[];
 }
 
+export type PreviewFailureReason =
+  | "invalid_url"
+  | "fetch_failed"
+  | "timeout"
+  | "redirect"
+  | "blocked"
+  | "rate_limited"
+  | "upstream_error"
+  | "unsupported_content_type"
+  | "too_large"
+  | "empty_body";
+
 export class PreviewUnavailableError extends Error {
-  constructor(message: string) {
+  readonly reason: PreviewFailureReason;
+  readonly upstreamStatus?: number;
+
+  constructor(
+    message: string,
+    reason: PreviewFailureReason = "fetch_failed",
+    upstreamStatus?: number,
+  ) {
     super(message);
     this.name = "PreviewUnavailableError";
+    this.reason = reason;
+    if (upstreamStatus !== undefined) this.upstreamStatus = upstreamStatus;
   }
+}
+
+function isTimeoutError(error: unknown): boolean {
+  const name = (error as { name?: unknown } | null)?.name;
+  return name === "TimeoutError" || name === "AbortError";
+}
+
+function isTransientStatus(status: number): boolean {
+  return status === 429 || (status >= 500 && status <= 599);
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 type FetchLike = (input: string, init?: RequestInit) => Promise<Response>;
@@ -132,6 +166,10 @@ export interface FetchArticlePreviewOptions {
   fetchImpl?: FetchLike;
   maxBytes?: number;
   timeoutMs?: number;
+  /** Base delay before retrying a transient upstream response. */
+  retryDelayMs?: number;
+  /** Random jitter added to the retry delay. */
+  retryJitterMs?: number;
 }
 
 /**
@@ -165,34 +203,72 @@ export async function fetchArticlePreview(
 ): Promise<ArticlePreview> {
   const target = normalizePreviewUrl(rawUrl);
   if (!target) {
-    throw new PreviewUnavailableError("article URL is not previewable");
+    throw new PreviewUnavailableError(
+      "article URL is not previewable",
+      "invalid_url",
+    );
   }
 
   const fetchImpl = options.fetchImpl ?? fetch;
-  let response: Response;
-  let resolvedUrl: string;
-  try {
-    const result = await fetchWithSafeRedirects(fetchImpl, target, {
-      headers: {
-        Accept: "text/html, application/xhtml+xml",
-        "User-Agent": options.userAgent,
-      },
-      signal: AbortSignal.timeout(options.timeoutMs ?? DEFAULT_TIMEOUT_MS),
-    });
-    response = result.response;
-    resolvedUrl = result.url;
-  } catch (error) {
-    if (error instanceof PreviewUnavailableError) throw error;
-    throw new PreviewUnavailableError("could not fetch article");
+  const timeoutSignal = AbortSignal.timeout(
+    options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+  );
+  let lastResult: { response: Response; url: string } | null = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      lastResult = await fetchWithSafeRedirects(fetchImpl, target, {
+        headers: {
+          Accept: "text/html, application/xhtml+xml",
+          "User-Agent": options.userAgent,
+        },
+        signal: timeoutSignal,
+      });
+    } catch (error) {
+      if (error instanceof PreviewUnavailableError) throw error;
+      throw new PreviewUnavailableError(
+        "could not fetch article",
+        isTimeoutError(error) ? "timeout" : "fetch_failed",
+      );
+    }
+    if (
+      lastResult.response.ok ||
+      !isTransientStatus(lastResult.response.status) ||
+      attempt === 1
+    ) {
+      break;
+    }
+    await lastResult.response.body?.cancel().catch(() => {});
+    const jitter =
+      options.retryJitterMs === 0 ? 0 : Math.random() * (options.retryJitterMs ?? 200);
+    await sleep((options.retryDelayMs ?? 250) + jitter);
+  }
+  if (!lastResult) {
+    throw new PreviewUnavailableError("could not fetch article", "fetch_failed");
   }
 
+  const response = lastResult.response;
+  const resolvedUrl = lastResult.url;
+
   if (!response.ok) {
-    throw new PreviewUnavailableError(`article returned ${response.status}`);
+    const reason: PreviewFailureReason =
+      response.status === 401 || response.status === 403
+        ? "blocked"
+        : response.status === 429
+          ? "rate_limited"
+          : "upstream_error";
+    throw new PreviewUnavailableError(
+      `article returned ${response.status}`,
+      reason,
+      response.status,
+    );
   }
 
   const finalUrl = response.url || resolvedUrl;
   if (!normalizePreviewUrl(finalUrl)) {
-    throw new PreviewUnavailableError("article redirected to an unusable URL");
+    throw new PreviewUnavailableError(
+      "article redirected to an unusable URL",
+      "redirect",
+    );
   }
 
   const contentType = (response.headers.get("content-type") ?? "").toLowerCase();
@@ -201,18 +277,28 @@ export async function fetchArticlePreview(
     !contentType.includes("text/html") &&
     !contentType.includes("application/xhtml+xml")
   ) {
-    throw new PreviewUnavailableError("article is not HTML");
+    throw new PreviewUnavailableError(
+      "article is not HTML",
+      "unsupported_content_type",
+    );
   }
 
-  const html = await readBodyLimited(
+  const { text: html, truncated } = await readBodyLimited(
     response,
     options.maxBytes ?? DEFAULT_MAX_BYTES,
   );
   if (html.trim() === "") {
-    throw new PreviewUnavailableError("article body is empty");
+    throw new PreviewUnavailableError("article body is empty", "empty_body");
   }
 
-  return extractArticlePreview(html, finalUrl);
+  const preview = extractArticlePreview(html, finalUrl);
+  if (truncated && preview.blocks.length === 0) {
+    throw new PreviewUnavailableError(
+      "article body exceeded the preview limit before readable content",
+      "too_large",
+    );
+  }
+  return preview;
 }
 
 export function extractArticlePreview(
@@ -907,7 +993,10 @@ function pickContentRoot(document: HtmlDocument): HtmlElement | null {
   const candidates: HtmlElement[] = [...articles];
   const main = document.querySelector("main, [role=main]");
   if (main) candidates.push(main);
-  if (document.body) candidates.push(document.body);
+  // Truncated documents may not expose a <body> element; fall back to <html>
+  // so a body cap doesn't turn an extractable prefix into "no content".
+  const body = document.body ?? document.querySelector("html");
+  if (body) candidates.push(body);
   if (candidates.length === 0) return null;
 
   let best = candidates[0]!;
@@ -1133,22 +1222,34 @@ async function fetchWithSafeRedirects(
     }
     if (redirects >= MAX_REDIRECTS) {
       await response.body?.cancel().catch(() => {});
-      throw new PreviewUnavailableError("article redirected too many times");
+      throw new PreviewUnavailableError(
+        "article redirected too many times",
+        "redirect",
+      );
     }
 
     const location = response.headers.get("location");
     if (!location) {
-      throw new PreviewUnavailableError("article redirect is missing a location");
+      throw new PreviewUnavailableError(
+        "article redirect is missing a location",
+        "redirect",
+      );
     }
     let nextUrl: string;
     try {
       nextUrl = new URL(location, currentUrl).toString();
     } catch {
-      throw new PreviewUnavailableError("article redirected to an invalid URL");
+      throw new PreviewUnavailableError(
+        "article redirected to an invalid URL",
+        "redirect",
+      );
     }
     const normalized = normalizePreviewUrl(nextUrl);
     if (!normalized) {
-      throw new PreviewUnavailableError("article redirected to an unusable URL");
+      throw new PreviewUnavailableError(
+        "article redirected to an unusable URL",
+        "redirect",
+      );
     }
 
     await response.body?.cancel().catch(() => {});
@@ -1159,15 +1260,20 @@ async function fetchWithSafeRedirects(
 async function readBodyLimited(
   response: Response,
   maxBytes: number,
-): Promise<string> {
+): Promise<{ text: string; truncated: boolean }> {
   if (!response.body) {
-    return (await response.text()).slice(0, maxBytes);
+    const text = await response.text();
+    return {
+      text: text.slice(0, maxBytes),
+      truncated: text.length > maxBytes,
+    };
   }
 
   const reader = response.body.getReader();
   const decoder = new TextDecoder();
   let bytesRead = 0;
   let out = "";
+  let truncated = false;
   try {
     while (bytesRead < maxBytes) {
       const { done, value } = await reader.read();
@@ -1176,12 +1282,19 @@ async function readBodyLimited(
       const remaining = maxBytes - bytesRead;
       const chunk =
         value.byteLength > remaining ? value.subarray(0, remaining) : value;
+      if (value.byteLength > remaining) {
+        truncated = true;
+      }
       bytesRead += chunk.byteLength;
       out += decoder.decode(chunk, { stream: true });
+    }
+    if (!truncated && bytesRead >= maxBytes) {
+      const extra = await reader.read();
+      truncated = !extra.done;
     }
     out += decoder.decode();
   } finally {
     await reader.cancel().catch(() => {});
   }
-  return out;
+  return { text: out, truncated };
 }
