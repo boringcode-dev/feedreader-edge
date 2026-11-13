@@ -75,6 +75,12 @@ const ITEMS_CACHE_TTL_SECONDS = 21600;
 // fresh items are only as current as the last source refresh, and a deploy
 // changes the content through APP_VERSION in the cache key.
 const HOME_CACHE_TTL_SECONDS = 300;
+// The browser copy must always revalidate. `no-store` also keeps Cloudflare's
+// CDN from caching the Worker response, because the zone's Browser Cache TTL
+// setting rewrites `max-age` on CDN-cached HTML (observed as a 4-hour TTL).
+// Edge caching is handled explicitly by the Cache API instead.
+const HOME_CLIENT_CACHE_CONTROL = "private, no-store";
+const HOME_EDGE_CACHE_CONTROL = `public, max-age=${HOME_CACHE_TTL_SECONDS}`;
 
 // Reader previews are fetched on demand when the user opens the side panel.
 // A short edge cache keeps repeated clicks from re-fetching the same article
@@ -156,7 +162,7 @@ async function handleHome(
   const cacheRequest = homeCacheRequest(url, appVersion);
   if (homeCacheEnabled) {
     const cached = await readEdgeCache(cacheRequest);
-    if (cached) return cached;
+    if (cached) return clientHomeResponse(cached);
   }
 
   const [{ items, hasNext }, states, inlineCss, themeInitScript] =
@@ -191,16 +197,33 @@ async function handleHome(
     inlineCss,
     themeInitScript,
   });
-  const response = new Response(html, {
+  const clientHeaders = {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": HOME_CLIENT_CACHE_CONTROL,
+  };
+  if (!homeCacheEnabled) {
+    return new Response(html, { headers: clientHeaders });
+  }
+  const cacheResponse = new Response(html, {
     headers: {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": `public, max-age=0, s-maxage=${HOME_CACHE_TTL_SECONDS}`,
+      "Cache-Control": HOME_EDGE_CACHE_CONTROL,
     },
   });
-  if (homeCacheEnabled) {
-    await writeEdgeCache(cacheRequest, response.clone(), HOME_CACHE_TTL_SECONDS);
-  }
-  return response;
+  await writeEdgeCache(cacheRequest, cacheResponse, HOME_CACHE_TTL_SECONDS);
+  return new Response(html, { headers: clientHeaders });
+}
+
+/** Rewrites the cached edge copy into the browser-facing copy. The Cache API
+ * keeps the `public` response; clients only ever see `private, no-store`. */
+function clientHomeResponse(cached: Response): Response {
+  const headers = new Headers(cached.headers);
+  headers.set("Cache-Control", HOME_CLIENT_CACHE_CONTROL);
+  return new Response(cached.body, {
+    status: cached.status,
+    statusText: cached.statusText,
+    headers,
+  });
 }
 
 async function handleHealthz(
