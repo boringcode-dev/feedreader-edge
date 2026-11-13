@@ -329,30 +329,39 @@ export async function fetchArticlePreview(
     // fallback would reject the partial file anyway.
     const declaredTooLarge =
       Number.isFinite(declaredLength) && declaredLength > maxFallbackBytes;
-    if (fallback && !declaredTooLarge) {
-      try {
-        const { bytes, truncated } = await readBytesLimited(
-          response,
-          maxFallbackBytes,
-        );
-        // A partial PDF/Office file is unlikely to convert; preserve the
-        // original unsupported-content reason instead of spending an AI call.
-        if (!truncated) {
-          const converted = await tryPreviewFallback(fallback, {
-            kind: "unsupported_content_type",
-            url: finalUrl,
-            contentType,
-            bytes,
-          });
-          if (converted) return converted;
+    let tooLarge = false;
+    if (fallback) {
+      if (declaredTooLarge) {
+        tooLarge = true;
+      } else {
+        try {
+          const { bytes, truncated } = await readBytesLimited(
+            response,
+            maxFallbackBytes,
+          );
+          // A partial PDF/Office file is unlikely to convert; report the size
+          // limit rather than spending an AI call on corrupt input.
+          if (truncated) {
+            tooLarge = true;
+          } else {
+            const converted = await tryPreviewFallback(fallback, {
+              kind: "unsupported_content_type",
+              url: finalUrl,
+              contentType,
+              bytes,
+            });
+            if (converted) return converted;
+          }
+        } catch {
+          // The fallback is best-effort; report the original reason below.
         }
-      } catch {
-        // The fallback is best-effort; report the original reason below.
       }
     }
     throw new PreviewUnavailableError(
-      "article is not HTML",
-      "unsupported_content_type",
+      tooLarge
+        ? "article document is too large to preview"
+        : "article is not HTML",
+      tooLarge ? "too_large" : "unsupported_content_type",
     );
   }
 

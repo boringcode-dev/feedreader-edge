@@ -78,7 +78,8 @@ Use Cloudflare dashboard → Workers & Pages → `feedreader` → Triggers → C
 - `502 blocked` — the upstream returned `401`/`403` (for example DataDome/paywall protection)
 - `502 rate_limited` / `502 upstream_error` — the upstream returned `429`/`5xx` after one retry
 - `504 timeout` — the fetch exceeded the 10-second timeout
-- `502 unsupported_content_type` / `empty_body` / `redirect` / `fetch_failed` — other fetch or extraction failures. `unsupported_content_type` also covers a document the AI fallback could not convert (disabled, over 5 MB, timed out, or unsupported by `toMarkdown`).
+- `502 too_large` — the HTML exceeded the 400 KB cap before readable content, or a document exceeded the 5 MB fallback cap
+- `502 unsupported_content_type` / `empty_body` / `redirect` / `fetch_failed` — other fetch or extraction failures. `unsupported_content_type` also covers a document the AI fallback could not convert (disabled, timed out, or unsupported by `toMarkdown`).
 - `200` with `reason: "no_content"` — the page was fetched and had no readable blocks, and the AI fallback was disabled or returned nothing.
 
 Before returning `unsupported_content_type` for a non-HTML response, `too_large` for a truncated page, or `no_content` for an empty HTML page, `fetchArticlePreview` calls the optional Workers AI `toMarkdown` fallback (`platforms/cloudflare/src/previewFallback.ts`). It downloads at most 5 MB (`DEFAULT_MAX_FALLBACK_BYTES`), races the conversion against a 10-second timeout, strips the filename/page-marker headings from PDF output, and maps the Markdown back into validated preview blocks. Standalone images are skipped; the fallback disables AI image-description conversion. Set `FEEDREADER_AI_PREVIEW_FALLBACK=false` to disable it. Document text conversion is free in Workers AI.

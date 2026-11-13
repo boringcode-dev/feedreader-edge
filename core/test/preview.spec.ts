@@ -953,7 +953,7 @@ describe("fetchArticlePreview", () => {
           return null;
         },
       }),
-    ).rejects.toMatchObject({ reason: "unsupported_content_type" });
+    ).rejects.toMatchObject({ reason: "too_large" });
 
     expect(called).toBe(false);
   });
@@ -977,7 +977,7 @@ describe("fetchArticlePreview", () => {
           return null;
         },
       }),
-    ).rejects.toMatchObject({ reason: "unsupported_content_type" });
+    ).rejects.toMatchObject({ reason: "too_large" });
 
     expect(called).toBe(false);
   });
