@@ -125,21 +125,6 @@ export default {
     if (url.pathname.startsWith("/internal/refresh/")) {
       return handleInternalRefresh(request, env, repo, sources, url);
     }
-    // TEMPORARY: full preview-fallback smoke test; removed before merge.
-    if (url.pathname === "/debug/browser-fallback") {
-      const target = normalizePreviewUrl(url.searchParams.get("url") ?? "");
-      if (!target) {
-        return Response.json({ error: "url is required" }, { status: 400 });
-      }
-      const fallback = createPreviewFallback(env, "Browser preview test");
-      const preview = await fallback?.({
-        kind: "no_content",
-        url: target,
-        contentType: "text/html",
-        html: "",
-      });
-      return Response.json({ preview });
-    }
     return new Response("not found", { status: 404 });
   },
 
