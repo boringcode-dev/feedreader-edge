@@ -114,6 +114,17 @@ describe("buildErrors", () => {
       { source: "github", label: "GitHub Trending", error: "boom" },
     ]);
   });
+
+  it("accepts the minimal error projection used by the home handler", () => {
+    expect(
+      buildErrors([
+        { source: "github", label: "GitHub Trending", lastError: "boom" },
+        { source: "hackernews", label: "Hacker News", lastError: "" },
+      ]),
+    ).toEqual([
+      { source: "github", label: "GitHub Trending", error: "boom" },
+    ]);
+  });
 });
 
 function fakeSource(fetch: () => Promise<FeedItem[]>): Source {

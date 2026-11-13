@@ -27,6 +27,11 @@ export interface PageData {
   canonicalUrl: string;
   socialImageUrl: string;
   appVersion: string;
+  /** Injected by the platform layer so first paint doesn't wait on an
+   * external stylesheet request. Kept as parameters so core/render.ts stays
+   * independent of the asset pipeline. */
+  inlineCss: string;
+  themeInitScript: string;
 }
 
 export function escapeHtml(value: unknown): string {
@@ -187,17 +192,16 @@ export function renderIndexPage(data: PageData): string {
     <meta name="apple-mobile-web-app-title" content="reader" />
     <link rel="manifest" href="/site.webmanifest?v=17" />
     <link rel="icon" href="/favicon.svg?v=8" sizes="any" type="image/svg+xml" />
-    <link rel="shortcut icon" href="/favicon.svg?v=8" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=8" />
-    <script src="/static/theme-init.js?v=1"></script>
-    <link rel="stylesheet" href="/static/style.css?v=128" />
-    <script src="/static/app.js?v=105" defer></script>
+    <script>${data.themeInitScript}</script>
+    <style>${data.inlineCss}</style>
+    <script src="/static/app.js?v=106" defer></script>
   </head>
   <body data-app-version="${escapeHtml(data.appVersion)}">
     <header class="shell page-header">
       <div class="toast" data-toast role="status" aria-live="polite"></div>
       <div class="header-top">
-        <h1 class="brand"><img class="brand-mark" src="/favicon.svg?v=7" alt="" aria-hidden="true" /><span>reader</span></h1>
+        <h1 class="brand"><img class="brand-mark" src="/favicon.svg?v=8" alt="" aria-hidden="true" /><span>reader</span></h1>
         <div class="header-actions">
           <span class="connection-indicator is-hidden" data-connection-indicator role="img" aria-label="Internet disconnected" title="Internet disconnected">
             <svg class="theme-icon" viewBox="0 0 24 24" aria-hidden="true">

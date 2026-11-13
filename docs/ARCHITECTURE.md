@@ -62,6 +62,13 @@ interface FeedRepository {
 
 This keeps refresh logic, rendering, and feed shaping independent of D1-specific APIs.
 
+## Caching
+
+- `GET /` is cached per URL (including the raw query string) for five minutes through the Cache API. `APP_VERSION` is part of the key and changes on every deploy, so a release invalidates old HTML; local `wrangler dev` keeps `APP_VERSION` at `dev` and skips the home cache so template/CSS edits are never hidden.
+- `GET /api/items` is edge-cached until the underlying sources next refresh (the key includes `sync_state.last_success_at`). Successful article previews are cached for 30 minutes.
+- `style.css` and `theme-init.js` are read from the `ASSETS` binding once per isolate and inlined into the server-rendered HTML, so first paint has no render-blocking network requests. The files remain the single source of truth and are still served directly for cached shells.
+- [`web-static/_headers`](../web-static/_headers) marks versioned static assets as immutable for a year; `service-worker.js` keeps `must-revalidate` so updates land.
+
 ## Refresh fan-out design
 
 Cloudflare Workers Free has a tight per-invocation CPU budget. Fetching and parsing all three sources in one handler would create unnecessary coupling between unrelated source failures and CPU spikes.

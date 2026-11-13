@@ -2272,8 +2272,13 @@
       for (const button of actionButtons) {
         target.append(button);
       }
-      syncPreviewChromeHeights();
-      if (!previewActionsDialog?.open) refreshPreviewPanelLayer();
+      // Reading offsetHeight here forces a synchronous layout. At startup the
+      // preview panel is hidden, so there is nothing to measure yet — opening
+      // the panel (or the ResizeObserver) syncs the heights then.
+      if (previewPanel && !previewPanel.classList.contains("is-hidden")) {
+        syncPreviewChromeHeights();
+        if (!previewActionsDialog?.open) refreshPreviewPanelLayer();
+      }
     }
   };
 

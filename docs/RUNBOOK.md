@@ -98,6 +98,8 @@ Before considering any `core/render.ts` change done:
    ```
 
 3. Load `http://127.0.0.1:8788` and verify:
+   - the document has no external `style.css` or `theme-init.js` request; both are inlined in `<head>`
+   - the response carries `Cache-Control: public, max-age=0, s-maxage=300`
    - header actions render correctly
    - source filters and search controls render correctly
    - the reader settings dialog opens and closes, its Appearance/Reading/Sources tabs switch via click and arrow keys, and Cancel/Save show their icons
