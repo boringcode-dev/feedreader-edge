@@ -368,6 +368,32 @@ describe("extractArticlePreview", () => {
     ]);
   });
 
+  it("keeps Hugging Face paper extraction inside main", () => {
+    const inside = "Inside main article content that should be previewed. ".repeat(
+      20,
+    ).trim();
+    const outside = "Outside chrome content that must not be previewed. ".repeat(
+      20,
+    ).trim();
+    const html = `<html><head>
+      <meta property="og:title" content="Main Only" />
+    </head><body>
+      <div><p>${outside}</p></div>
+      <main><h1>Main Only</h1><p>${inside}</p></main>
+      <div><p>${outside}</p></div>
+    </body></html>`;
+
+    const preview = extractArticlePreview(
+      html,
+      "https://huggingface.co/papers/2611.00010",
+    );
+
+    expect(preview.title).toBe("Main Only");
+    const text = preview.blocks.map(blockText).join(" ");
+    expect(text).toContain("Inside main article content");
+    expect(text).not.toContain("Outside chrome content");
+  });
+
   it("uses the Hugging Face paper author list as the byline", () => {
     const preview = extractArticlePreview(
       `<html><head>
