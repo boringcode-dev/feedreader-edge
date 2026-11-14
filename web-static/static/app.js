@@ -295,11 +295,11 @@
 
   const previewSkeletonMarkup = `
     <div class="preview-skeleton" data-preview-skeleton aria-hidden="true">
+      <span class="skeleton-line skeleton-line--preview-heading"></span>
       <div class="preview-skeleton-meta">
         <span class="skeleton-line skeleton-line--preview-meta"></span>
         <span class="skeleton-line skeleton-line--preview-meta-short"></span>
       </div>
-      <span class="skeleton-line skeleton-line--preview-heading"></span>
       <span class="skeleton-line skeleton-line--preview-body"></span>
       <span class="skeleton-line skeleton-line--preview-body"></span>
       <span class="skeleton-line skeleton-line--preview-body-short"></span>
@@ -1392,6 +1392,12 @@
     });
   };
 
+  // The provisional card title is hidden only once the delayed skeleton
+  // appears, so a fast response still swaps straight to the fetched title.
+  const setPreviewTitleLoading = (loading) => {
+    previewTitle?.classList.toggle("is-preview-loading", loading);
+  };
+
   const animatePreviewContent = () => {
     if (!previewContent || reducedMotionMedia?.matches === true) return;
     if (typeof previewContent.animate !== "function") return;
@@ -1414,6 +1420,7 @@
   const showPreviewSkeleton = (requestId) => {
     previewSkeletonTimer = null;
     if (requestId !== previewRequestSequence || !previewContent) return;
+    setPreviewTitleLoading(true);
     previewContent.innerHTML = previewSkeletonMarkup;
   };
 
@@ -2199,6 +2206,7 @@
     }
     if (previewTitle) {
       previewTitle.textContent = "Article preview";
+      previewTitle.classList.remove("is-preview-loading");
     }
     if (previewMenuOpenLink) {
       previewMenuOpenLink.href = "#";
@@ -2308,6 +2316,7 @@
     syncPreviewChromeHeights();
     setPreviewCommentsLink(commentsUrl);
     setPreviewTitle(title);
+    setPreviewTitleLoading(false);
     if (previewByline) {
       previewByline.textContent = "";
       previewByline.classList.add("is-hidden");
@@ -2354,6 +2363,7 @@
             ? payload.title
             : title;
         setPreviewTitle(nextTitle);
+        setPreviewTitleLoading(false);
         const bylineParts = [payload.byline, payload.site_name].filter(
           (value) => typeof value === "string" && value.trim() !== "",
         );
@@ -2401,6 +2411,7 @@
         previewContent?.replaceChildren();
         previewByline?.classList.add("is-hidden");
         previewReadingMeta?.classList.add("is-hidden");
+        setPreviewTitleLoading(false);
         const reason =
           typeof error?.previewReason === "string" ? error.previewReason : "";
         const message =
