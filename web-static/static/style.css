@@ -2115,8 +2115,13 @@ body.is-dialog-open {
   height: 0.52rem;
 }
 
-/* Reader-panel skeleton: the card title stays visible, so the placeholder
-   starts at the byline/meta line and mirrors the article block rhythm. */
+/* Reader-panel skeleton: the provisional card title is hidden when this
+   appears, so the placeholder starts with a title line and mirrors the
+   article block rhythm. */
+.preview-panel-title.is-preview-loading {
+  display: none;
+}
+
 .preview-skeleton {
   display: flex;
   flex-direction: column;
