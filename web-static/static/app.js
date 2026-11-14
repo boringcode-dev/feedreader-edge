@@ -227,7 +227,6 @@
   let reconnectRefetchInFlight = false;
   let deferredInstallPrompt = null;
   let previewRequestSequence = 0;
-  let previewSkeletonTimer = null;
   let previewAbortController = null;
   let currentPreviewItem = null;
   let currentCardActionData = null;
@@ -1410,15 +1409,7 @@
     );
   };
 
-  const clearPreviewSkeletonTimer = () => {
-    if (previewSkeletonTimer !== null) {
-      window.clearTimeout(previewSkeletonTimer);
-      previewSkeletonTimer = null;
-    }
-  };
-
   const showPreviewSkeleton = (requestId) => {
-    previewSkeletonTimer = null;
     if (requestId !== previewRequestSequence || !previewContent) return;
     setPreviewTitleLoading(true);
     previewContent.innerHTML = previewSkeletonMarkup;
@@ -2183,7 +2174,6 @@
   }
 
   const resetPreviewPanel = () => {
-    clearPreviewSkeletonTimer();
     resetPreviewSwipeState();
     closePreviewActionsDialog();
     previewPanel?.classList.add("is-hidden");
@@ -2303,7 +2293,6 @@
     previewAbortController?.abort();
     const controller = new AbortController();
     previewAbortController = controller;
-    clearPreviewSkeletonTimer();
 
     lockPreviewScroll();
     previewPanel.classList.remove("is-hidden");
@@ -2316,7 +2305,6 @@
     syncPreviewChromeHeights();
     setPreviewCommentsLink(commentsUrl);
     setPreviewTitle(title);
-    setPreviewTitleLoading(false);
     if (previewByline) {
       previewByline.textContent = "";
       previewByline.classList.add("is-hidden");
@@ -2332,10 +2320,7 @@
     setPreviewStatus("Loading preview…", { visuallyHidden: true });
     previewScroll?.scrollTo({ top: 0 });
     resetPreviewChrome();
-    previewSkeletonTimer = window.setTimeout(
-      () => showPreviewSkeleton(requestId),
-      150,
-    );
+    showPreviewSkeleton(requestId);
 
     fetchPreviewWithRetry(url, controller.signal)
       .then(async (response) => {
@@ -2356,7 +2341,6 @@
       })
       .then((payload) => {
         if (!payload || requestId !== previewRequestSequence) return;
-        clearPreviewSkeletonTimer();
         const blocks = Array.isArray(payload.blocks) ? payload.blocks : [];
         const nextTitle =
           typeof payload.title === "string" && payload.title.trim() !== ""
@@ -2407,7 +2391,6 @@
         ) {
           return;
         }
-        clearPreviewSkeletonTimer();
         previewContent?.replaceChildren();
         previewByline?.classList.add("is-hidden");
         previewReadingMeta?.classList.add("is-hidden");

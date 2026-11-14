@@ -2115,9 +2115,9 @@ body.is-dialog-open {
   height: 0.52rem;
 }
 
-/* Reader-panel skeleton: the provisional card title is hidden when this
-   appears, so the placeholder starts with a title line and mirrors the
-   article block rhythm. */
+/* Reader-panel skeleton: shown immediately, with the provisional card title
+   hidden so a stale title never appears before the fetched one. The first
+   placeholder stands in for the article title. */
 .preview-panel-title.is-preview-loading {
   display: none;
 }
