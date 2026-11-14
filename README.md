@@ -377,7 +377,7 @@ Presentation-layer note:
 ### Article preview
 
 - when enabled in Reader settings, clicking any card (including its title) loads a reader view in a right-hand panel instead of opening a new tab
-- while the preview request is in flight, the panel keeps the card title until the delayed skeleton appears; the skeleton then replaces the provisional title and mimics the article title/byline/body rhythm, and the fetched title and content fade in. A failed request clears the skeleton, restores the card title, and shows a readable error message
+- opening the preview immediately shows the reader skeleton, starting with a title placeholder; the provisional card title is not shown, and the fetched title/content fade in. A failed request clears the skeleton, restores the card title, and shows a readable error message
 - transient upstream `429`/`5xx` responses are retried once with jitter; blocked sources, timeouts, unsupported formats, and failed fetches get specific messages
 - the visible loading message is visually hidden while the skeleton is shown; the panel remains `aria-busy` and a live region announces the loading state
 - `Cmd`/`Ctrl`/`Shift`-clicking a title still opens the article in a new tab
