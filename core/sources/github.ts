@@ -24,6 +24,13 @@ export const gitHubTrendingSource: Source = {
   async fetch(): Promise<FeedItem[]> {
     const response = await getWithRetry(HOMEPAGE_URL);
     if (!response.ok) {
+      if (response.status === 429) {
+        await response.body?.cancel().catch(() => {});
+        throw new HttpError(
+          response.status,
+          "GitHub is temporarily rate-limiting this source; showing cached items until the next refresh",
+        );
+      }
       throw new HttpError(
         response.status,
         await readHttpErrorDetail(response),
