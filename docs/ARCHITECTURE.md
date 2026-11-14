@@ -51,7 +51,7 @@ Browser-only preferences and reading state live in `localStorage`: theme prefere
 - Items are upserted by `(source, external_id)`.
 - A refresh never deletes existing rows — a failed fetch records the failure in `sync_state` and leaves prior data in place.
 - The original `published_at` is preserved across re-fetches via `coalesce(items.published_at, excluded.published_at)` so an upstream source cannot reorder an existing item by later emitting a different date.
-- Source requests share a retry helper with a descriptive `User-Agent`/`Accept` header, `Retry-After`-aware 429 backoff, and error details capped at 200 characters (HTML error pages become a fixed message). Hugging Face uses its daily-papers JSON API (the same 50 entries) instead of scraping the ~1.4 MB trending HTML page, which reduces CPU and avoids HTML challenge bodies.
+- Source requests share a retry helper with a descriptive `User-Agent`/`Accept` header, `Retry-After`-aware 429 backoff, and error details capped at 200 characters (HTML error pages become a fixed message). GitHub 429s become a concise “temporarily rate-limiting; showing cached items” message instead of GitHub's raw JSON. Hugging Face uses its daily-papers JSON API (the same 50 entries) instead of scraping the ~1.4 MB trending HTML page, which reduces CPU and avoids HTML challenge bodies.
 - Sorting and pagination intentionally happen in application memory after SQL filtering. Total item count across the three sources is small enough that keeping one shared comparator is simpler and less error-prone than encoding the full fallback ordering logic separately per adapter.
 
 ## `FeedRepository`

@@ -1,6 +1,14 @@
 // Mirrors internal/sources/github_test.go's fixture and assertions.
-import { describe, expect, it } from "vitest";
-import { parseGitHubTrending } from "../sources/github.ts";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import {
+  gitHubTrendingSource,
+  parseGitHubTrending,
+} from "../sources/github.ts";
+
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+});
 
 describe("parseGitHubTrending", () => {
   it("normalizes the repo path from the href", () => {
@@ -33,5 +41,38 @@ describe("parseGitHubTrending", () => {
     expect(item.metadata.stars_today).toBe(756);
     expect(item.score).toBe(756);
     expect(item.sourceRank).toBe(1);
+  });
+});
+
+describe("gitHubTrendingSource", () => {
+  it("reports a concise message when GitHub rate-limits the source", async () => {
+    vi.useFakeTimers();
+    let calls = 0;
+    vi.stubGlobal("fetch", async () => {
+      calls += 1;
+      return new Response(
+        JSON.stringify({
+          code: "429",
+          message: "Access to this site has been restricted.",
+        }),
+        {
+          status: 429,
+          headers: { "content-type": "application/json" },
+        },
+      );
+    });
+
+    const promise = gitHubTrendingSource.fetch().catch((error) => error);
+    await vi.runAllTimersAsync();
+    const error = await promise;
+
+    expect(calls).toBe(3);
+    expect(error).toBeInstanceOf(Error);
+    if (!(error instanceof Error)) {
+      throw new Error("expected an error");
+    }
+    expect(error.message).toContain("temporarily rate-limiting");
+    expect(error.message).toContain("cached items");
+    expect(error.message).not.toContain("Access to this site");
   });
 });
